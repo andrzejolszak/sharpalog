@@ -1,0 +1,13 @@
+....
+BenchmarkDotNet=v0.11.1, OS=Windows 10.0.19043
+Intel Core i5-7300HQ CPU 2.50GHz (Kaby Lake), 1 CPU, 4 logical and 4 physical cores
+  [Host] : .NET Framework 4.7.2 (CLR 4.0.30319.42000), 64bit RyuJIT-v4.8.4400.0
+  Dry    : .NET Framework 4.7.2 (CLR 4.0.30319.42000), 64bit RyuJIT-v4.8.4400.0
+
+....
+[options="header"]
+|===
+|           Method|  DataSource|     Median|        P90|  Allocated
+|       JustCreate|           ?|  0.2600 ns|  0.3930 ns|        0 B
+|  CreateAndWarmup|           ?|  1.3100 ns|  1.7600 ns|        2 B
+|===

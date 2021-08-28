@@ -1,0 +1,20 @@
+....
+BenchmarkDotNet=v0.11.1, OS=Windows 10.0.19043
+Intel Core i5-7300HQ CPU 2.50GHz (Kaby Lake), 1 CPU, 4 logical and 4 physical cores
+  [Host] : .NET Framework 4.7.2 (CLR 4.0.30319.42000), 64bit RyuJIT-v4.8.4400.0
+  Dry    : .NET Framework 4.7.2 (CLR 4.0.30319.42000), 64bit RyuJIT-v4.8.4400.0
+
+....
+[options="header"]
+|===
+|      Method|     DataSource|           Median|              P90|      Gen 0|     Gen 1|     Gen 2|   Allocated
+|  RunExample|     builtin.dl|       3,962.0 ns|       4,965.5 ns|          -|         -|         -|      2458 B
+|  RunExample|     cerineg.dl|       5,247.0 ns|       6,820.4 ns|          -|         -|         -|      3523 B
+|  RunExample|      family.dl|     610,603.5 ns|     740,380.3 ns|    30.0000|         -|         -|    370609 B
+|  RunExample|        gens.dl|      31,580.5 ns|      37,585.0 ns|          -|         -|         -|     24903 B
+|  RunExample|      negate.dl|       2,303.0 ns|       2,680.6 ns|          -|         -|         -|      1720 B
+|  RunExample|     numbers.dl|       9,758.0 ns|      11,403.6 ns|          -|         -|         -|      6636 B
+|  RunExample|       paths.dl|       4,903.0 ns|       5,720.8 ns|          -|         -|         -|      3195 B
+|  RunExample|  stratified.dl|         454.0 ns|         876.0 ns|          -|         -|         -|       328 B
+|  RunExample|      tum.de.dl|  59,051,929.0 ns|  60,383,439.0 ns|  3050.0000|  830.0000|  180.0000|  30995113 B
+|===

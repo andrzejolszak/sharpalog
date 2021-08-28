@@ -8,7 +8,7 @@
     public class Examples
     {
         private const string ExamplesDir = "./../../../examples/";
-        private const int Iterations = 1000;
+        private const int Iterations = 100;
 
         private Dictionary<string, string> _exampleSources = new Dictionary<string, string>();
 
