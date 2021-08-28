@@ -3,3 +3,12 @@
 ################################################################################
 
 /.vs
+/ConsoleApp1/bin/Debug
+/ConsoleApp1/obj
+/packages
+/Sharplog.Benchmarks/bin/Debug
+/Sharplog.Benchmarks/obj/Debug
+/SharplogTest/bin/Debug
+/SharplogTest/obj/Debug
+/Sharplog.Benchmarks/obj/Release
+/SharplogTest/obj/Release

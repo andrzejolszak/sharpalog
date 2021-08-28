@@ -1,0 +1,241 @@
+% https://datalog.db.in.tum.de/
+% Assistenten(PersNr, Name, Fachgebiet, Boss)
+assistenten(3002,platon,ideenlehre,2125).
+assistenten(3003,aristoteles,syllogistik,2125).
+assistenten(3004,wittgenstein,sprachtheorie,2126).
+assistenten(3005,rhetikus,planetenbewegung,2127).
+assistenten(3006,newton,keplersche_gesetze,2127).
+assistenten(3007,spinoza,gott_und_natur,2134).
+% hoeren(MatrNr, VorlNr)
+hoeren(26120,5001).
+hoeren(27550,5001).
+hoeren(27550,4052).
+hoeren(28106,5041).
+hoeren(28106,5052).
+hoeren(28106,5216).
+hoeren(28106,5259).
+hoeren(29120,5001).
+hoeren(29120,5041).
+hoeren(29120,5049).
+hoeren(29555,5022).
+hoeren(25403,5022).
+hoeren(29555,5001).
+%% pruefen(MatrNr,VorlNr, PersNr, Note)
+pruefen(28106,5001,2126,1).
+pruefen(25403,5041,2125,2).
+pruefen(27550,4630,2137,2).
+%%Vorlesungen(VorlNr, Titel, SWS, gelesenVon)
+vorlesungen(5001,grundzuege,4,2137).
+vorlesungen(5041,ethik,4,2125).
+vorlesungen(5043,erkenntnistheorie,3,2126).
+vorlesungen(5049,maeeutik,2,2125).
+vorlesungen(4052,logik,4,2125).
+vorlesungen(5052,wissenschaftstheorie,3,2126).
+vorlesungen(5216,bioethik,2,2126).
+vorlesungen(5259,der_wiener_kreis,2,2133).
+vorlesungen(5022,glaube_und_wissen,2,2134).
+vorlesungen(4630,die_3_kritiken,4,2137).
+%%Professoren(PersNr,Name,Rang, Raum)
+professoren(2125,sokrates,c4,226).
+professoren(2126,russel,c4,232).
+professoren(2127,kopernikus,c3,310).
+professoren(2133,popper,c3,52).
+professoren(2134,augustinus,c3,309).
+professoren(2136,curie,c4,36).
+professoren(2137,kant,c4,7).
+%%voraussetzen(Vorgaenger,Nachfolger)
+voraussetzen(5001,5041).
+voraussetzen(5001,5043).
+voraussetzen(5001,5049).
+voraussetzen(5041,5216).
+voraussetzen(5043,5052).
+voraussetzen(5041,5052).
+voraussetzen(5052,5259).
+%%Studenten(MatrNr, Name, Semester)
+studenten(24002,xenokrates,18).
+studenten(25403,jonas,12).
+studenten(26120,fichte,10).
+studenten(26830,aristoxenos,8).
+studenten(27550,schopenhauer,6).
+studenten(28106,carnap,3).
+studenten(29120,theophrastos,2).
+studenten(29555,feuerbach,2).         
+kennt(Sn,Pn) :- studenten(M,Sn,_) , hoeren(M,V) , 
+                vorlesungen(V,_,_,P) , professoren(P,Pn,_,_).
+kennt(Sn,Pn) :- studenten(M,Sn,_), pruefen(M,_,P,_), 
+                professoren(P,Pn,_,_).
+
+studenten(MATRNR,NAME,SEMESTER)?
+
+% Orbits of cosmological objects
+% Rafael Caballero-Rold'an, 2007
+
+star(sun).
+
+orbits(earth, sun).
+orbits(moon, earth).
+orbits(X,Y) :-
+  orbits(X,Z), 
+  orbits(Z,Y). % This is correct
+%  orbits(Y,Z). % This is an error
+
+satellite(X,Y) :-
+  orbits(X,Y),
+  not intermediate(X,Y),
+  not star(Y).
+
+planet(X) :-
+  orbits(X,Y),
+  star(Y),
+  not intermediate(X,Y).
+
+intermediate(X,Y) :-
+  orbits(X,Z), 
+  orbits(Z,Y). % This is correct
+%  orbits(Y,Z). % This is an error
+
+satellite(X,earth)?
+
+% Paths in a Graph
+edge(a,b).
+edge(a,c).
+edge(b,a).
+edge(b,d).
+
+path(X,Y) :- path(X,Z), edge(Z,Y).
+path(X,Y) :- edge(X,Y).
+
+path(X,Y)?
+
+% U1
+direkt(olympia_einkaufszentrum,georg_brauchle_ring,u1).
+direkt(georg_brauchle_ring,westfriedhof,u1).
+direkt(westfriedhof,gern,u1).
+direkt(gern,rotkreuzplatz,u1).
+direkt(rotkreuzplatz,maillingerstrasse,u1).
+direkt(maillingerstrasse,stiglmaierplatz,u1).
+direkt(stiglmaierplatz, hauptbahnhof,u1).
+direkt(hauptbahnhof,sendlinger_tor,u1).
+direkt(sendlinger_tor,fraunhoferstrasse,u1).
+direkt(fraunhoferstrasse,kolumbusplatz,u1).
+direkt(kolumbusplatz,candidplatz,u1).
+direkt(candidplatz,wettersteinplatz,u1).
+direkt(wettersteinplatz,st_quirin_platz,u1).
+direkt(st_quirin_platz,mangfallplatz,u1).
+% U2
+direkt(feldmoching,hasenbergl,u2).
+direkt(hasenbergl,duelferstrasse,u2).
+direkt(duelferstrasse,harthof,u2).
+direkt(harthof,am_hart,u2).
+direkt(am_hart,frankfurter_ring,u2).
+direkt(frankfurter_ring,milbertshofen,u2).
+direkt(milbertshofen,scheidplatz,u2).
+direkt(scheidplatz,hohenzollernplatz,u2).
+direkt(hohenzollernplatz,josephsplatz,u2).
+direkt(josephsplatz,theresienstrasse,u2).
+direkt(theresienstrasse,koenigsplatz,u2).
+direkt(koenigsplatz,hauptbahnhof,u2).
+direkt(hauptbahnhof,sendlinger_tor,u2).
+direkt(sendlinger_tor,fraunhoferstrasse,u2).
+direkt(fraunhoferstrasse,kolumbusplatz,u2).
+direkt(kolumbusplatz,silberhornstrasse,u2).
+direkt(silberhornstrasse,unterbergstrasse,u2).
+direkt(unterbergstrasse,giesing,u2).
+direkt(giesing,karl_preis_platz,u2).
+direkt(karl_preis_platz,innsbrucker_ring,u2).
+direkt(innsbrucker_ring,josephsburg,u2).
+direkt(josephsburg,kreillerstrasse,u2).
+direkt(kreillerstrasse,trudering,u2).
+direkt(trudering,moosfeld,u2).
+direkt(moosfeld,messestadt_west,u2).
+direkt(messestadt_west,messestadt_ost,u2).
+% U3
+direkt(moosach,moosacher_st_martins_platz,u3).
+direkt(moosacher_st_martins_platz,olympia_einkaufszentrum,u3).
+direkt(olympia_einkaufszentrum,oberwiesenfeld,u3).
+direkt(oberwiesenfeld,olympiazentrum,u3).
+direkt(olympiazentrum,petuelring,u3).
+direkt(petuelring,scheidplatz,u3).
+direkt(scheidplatz,bonner_platz,u3).
+direkt(bonner_platz,muenchner_freiheit,u3).
+direkt(muenchner_freiheit,giselastrasse,u3).
+direkt(giselastrasse,universitaet,u3).
+direkt(universitaet,odeonsplatz,u3).
+direkt(odeonsplatz,marienplatz,u3).
+direkt(marienplatz,sendlinger_tor,u3).
+direkt(sendlinger_tor,goetheplatz,u3).
+direkt(goetheplatz,poccistrasse,u3).
+direkt(poccistrasse,implerstrasse,u3).
+direkt(implerstrasse,brudermuehlstrasse,u3).
+direkt(brudermuehlstrasse,thalkirchen,u3).
+direkt(thalkirchen,obersendling,u3).
+direkt(obersendling,aidenbachstrasse,u3).
+direkt(aidenbachstrasse,machtlfinger_strasse,u3).
+direkt(machtlfinger_strasse,forstenrieder_allee,u3).
+direkt(forstenrieder_allee,basler_str,u3).
+direkt(basler_str,forstenried_west,u3).
+% U4
+direkt(westendstrasse,heimeranplatz,u4).
+direkt(heimeranplatz,schwanthalerhoehe,u4).
+direkt(schwanthalerhoehe,theresienwiese,u4).
+direkt(theresienwiese,hauptbahnhof,u4).
+direkt(hauptbahnhof,karlsplatz,u4).
+direkt(karlsplatz,odeonsplatz,u4).
+direkt(odeonsplatz,lehel,u4).
+direkt(lehel,max_weber_platz,u4).
+direkt(max_weber_platz,prinzregentenplatz,u4).
+direkt(prinzregentenplatz,boehmerwaldplatz,u4).
+direkt(boehmerwaldplatz,richard_strauss_strasse,u4).
+direkt(richard_strauss_strasse,arabellapark,u4).
+% U5
+direkt(laimer_platz,friedenheimer_strasse,u5).
+direkt(friedenheimer_strasse,westendstrasse,u5).
+direkt(westendstrasse,heimeranplatz,u5).
+direkt(heimeranplatz,schwanthalerhoehe,u5).
+direkt(schwanthalerhoehe,theresienwiese,u5).
+direkt(theresienwiese,hauptbahnhof,u5).
+direkt(hauptbahnhof,karlsplatz,u5).
+direkt(karlsplatz,odeonsplatz,u5).
+direkt(odeonsplatz,lehel,u5).
+direkt(lehel,max_weber_platz,u5).
+direkt(max_weber_platz,ostbahnhof,u5).
+direkt(ostbahnhof,innsbrucker_ring,u5).
+direkt(innsbrucker_ring,michelibad,u5).
+direkt(michelibad,quiddestrasse,u5).
+direkt(quiddestrasse,neuperlach_zentrum,u5).
+direkt(neuperlach_zentrum,therese_giehse_allee,u5).
+direkt(therese_giehse_allee,neuperlach_sued,u5).
+% U6
+direkt(garching_forschungszentrum,garching,u6).
+direkt(garching,garching_hochbrueck,u6).
+direkt(garching_hochbrueck,froettmanning,u6).
+direkt(froettmanning,kieferngarten,u6).
+direkt(kieferngarten,freimann,u6).
+direkt(freimann,studentenstadt,u6).
+direkt(studentenstadt,alte_heide,u6).
+direkt(alte_heide,nordfriedhof,u6).
+direkt(nordfriedhof,dietlindenstrasse,u6).
+direkt(dietlindenstrasse,muenchner_freiheit,u6).
+direkt(muenchner_freiheit,giselastrasse,u6).
+direkt(giselastrasse,universitaet,u6).
+direkt(universitaet,odeonsplatz,u6).
+direkt(odeonsplatz,marienplatz,u6).
+direkt(marienplatz,sendlinger_tor,u6).
+direkt(sendlinger_tor,goetheplatz,u6).
+direkt(goetheplatz,poccistrasse,u6).
+direkt(poccistrasse,implerstrasse,u6).
+direkt(implerstrasse,harras,u6).
+direkt(harras,partnachplatz,u6).
+direkt(partnachplatz,westpark,u6).
+direkt(westpark,holzapfelkreuth,u6).
+direkt(holzapfelkreuth,haderner_stern,u6).
+direkt(haderner_stern,grosshadern,u6).
+direkt(grosshadern,klinikum_grosshadern,u6).
+bidirekt(V,N,L) :- direkt(V,N,L).
+bidirekt(V,N,L) :- direkt(N,V,L).
+bidirekt(A,B,L) :- bidirekt(A,X,L),bidirekt(X,B,L).
+
+indirekt(V,N) :- bidirekt(V,N,_).
+indirekt(V,N) :- bidirekt(V,X,_),indirekt(X,N), N<>V.
+
+indirekt(garching,trudering)?
