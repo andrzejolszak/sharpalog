@@ -8,7 +8,7 @@ namespace Sharplog
     {
         /// <exception cref="Sharplog.DatalogException"/>
         [Test]
-        public virtual void TestValidate()
+        public void TestValidate()
         {
             Rule rule = new Rule(new Expr("p", "A", "B"), new Expr("q", "A"), new Expr("q", "B"), new Expr("<>", "A", "B"));
             rule.Validate();
@@ -139,7 +139,7 @@ namespace Sharplog
 
         /// <exception cref="Sharplog.DatalogException"/>
         [Test]
-        public virtual void TestToString()
+        public void TestToString()
         {
             Rule rule = new Rule(new Expr("p", "A", "B"), new Expr("q", "A"), new Expr("q", "B"), new Expr("<>", "A", "B"));
             Assert.IsTrue(rule.ToString().Equals("p(A, B) :- q(A), q(B), A <> B"));
@@ -147,10 +147,10 @@ namespace Sharplog
 
         /// <exception cref="Sharplog.DatalogException"/>
         [Test]
-        public virtual void TestSubstitute()
+        public void TestSubstitute()
         {
             Rule rule = new Rule(new Expr("p", "A", "B"), new Expr("q", "A"), new Expr("q", "B"), new Expr("<>", "A", "B"));
-            StackMap<string, string> bindings = new StackMap<string, string>();
+            StackMap bindings = new StackMap();
             bindings.Add("A", "aa");
             Rule subsRule = rule.Substitute(bindings.Map);
             Assert.IsTrue(subsRule.Equals(new Rule(new Expr("p", "aa", "B"), new Expr("q", "aa"), new Expr("q", "B"), new Expr("<>", "aa", "B"))));

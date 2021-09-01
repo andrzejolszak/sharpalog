@@ -35,21 +35,20 @@ namespace Sharplog.Engine
         public static IList<IList<Rule>> ComputeStratification(IList<Rule> allRules)
         {
             List<IList<Rule>> strata = new List<IList<Rule>>(10);
-            IDictionary<string, int?> strats = new Dictionary<string, int?>();
+            IDictionary<string, int> strats = new Dictionary<string, int>();
             foreach (Rule rule in allRules)
             {
                 string pred = rule.GetHead().GetPredicate();
-                int? stratum = strats.GetOrNullable(pred);
-                if (stratum == null)
+                if (!strats.TryGetValue(pred, out int stratum))
                 {
                     stratum = DepthFirstSearch(rule.GetHead(), allRules, new List<Expr>(), 0);
                     strats[pred] = stratum;
                 }
-                while (stratum.Value >= strata.Count)
+                while (stratum >= strata.Count)
                 {
                     strata.Add(new List<Rule>());
                 }
-                strata[stratum.Value].Add(rule);
+                strata[stratum].Add(rule);
             }
             strata.Add(allRules);
             return strata;
@@ -97,8 +96,7 @@ namespace Sharplog.Engine
             {
                 foreach (Expr goal in rule.GetBody())
                 {
-                    List<Rule> dependants = map.GetOrNull(goal.GetPredicate().GetHashCode());
-                    if (dependants == null)
+                    if (!map.TryGetValue(goal.GetPredicate().GetHashCode(), out List<Rule> dependants))
                     {
                         dependants = new List<Rule>();
                         map[goal.GetPredicate().GetHashCode()] = dependants;
@@ -112,13 +110,12 @@ namespace Sharplog.Engine
             return map;
         }
 
-        protected internal static IEnumerable<Rule> GetDependentRules(IndexedSet<Expr> facts, IDictionary<int, List<Rule>> dependents)
+        protected internal static IEnumerable<Rule> GetDependentRules(IndexedSet facts, IDictionary<int, List<Rule>> dependents)
         {
             HashSet<Rule> dependantRules = new HashSet<Rule>();
             foreach (int predicate in facts.GetIndexes())
             {
-                IEnumerable<Rule> rules = dependents.GetOrNull(predicate);
-                if (rules != null)
+                if (dependents.TryGetValue(predicate, out List<Rule> rules))
                 {
                     dependantRules.UnionWith(rules);
                 }
@@ -126,14 +123,13 @@ namespace Sharplog.Engine
             return dependantRules;
         }
 
-        protected internal static IEnumerable<IDictionary<string, string>> MatchGoals(IList<Expr> goals, IndexedSet<Expr> facts, StackMap<string, string> bindings)
+        protected internal static IEnumerable<IDictionary<string, string>> MatchGoals(IList<Expr> goals, int index, IndexedSet facts, StackMap bindings)
         {
-            Expr goal = goals[0];
-            // First goal; Assumes goals won't be empty
-            bool lastGoal = (goals.Count == 1);
+            Expr goal = goals[index];
+            bool lastGoal = index >= goals.Count - 1;
             if (goal.IsBuiltIn())
             {
-                StackMap<string, string> newBindings = new StackMap<string, string>(bindings);
+                StackMap newBindings = new StackMap(bindings);
                 bool eval = goal.EvalBuiltIn(newBindings);
                 if (eval && !goal.IsNegated() || !eval && goal.IsNegated())
                 {
@@ -143,7 +139,7 @@ namespace Sharplog.Engine
                     }
                     else
                     {
-                        return MatchGoals(goals.Skip(1).ToList(), facts, newBindings);
+                        return MatchGoals(goals, index + 1, facts, newBindings);
                     }
                 }
                 return new System.Collections.Generic.List<IDictionary<string, string>>();
@@ -156,7 +152,7 @@ namespace Sharplog.Engine
                 // as an answer, otherwise we recursively check the remaining goals.
                 foreach (Expr fact in facts.GetIndexed(goal.GetPredicate().GetHashCode()))
                 {
-                    StackMap<string, string> newBindings = new StackMap<string, string>(bindings);
+                    StackMap newBindings = new StackMap(bindings);
                     if (fact.Unify(goal, newBindings))
                     {
                         if (lastGoal)
@@ -166,7 +162,7 @@ namespace Sharplog.Engine
                         else
                         {
                             // More goals to match. Recurse with the remaining goals.
-                            answers.AddRange(MatchGoals(goals.Skip(1).ToList(), facts, newBindings));
+                            answers.AddRange(MatchGoals(goals, index + 1, facts, newBindings));
                         }
                     }
                 }
@@ -185,7 +181,7 @@ namespace Sharplog.Engine
                 }
                 foreach (Expr fact in facts.GetIndexed(goal.GetPredicate().GetHashCode()))
                 {
-                    StackMap<string, string> newBindings = new StackMap<string, string>(bindings);
+                    StackMap newBindings = new StackMap(bindings);
                     if (fact.Unify(goal, newBindings))
                     {
                         return new System.Collections.Generic.List<IDictionary<string, string>>();
@@ -198,7 +194,7 @@ namespace Sharplog.Engine
                 }
                 else
                 {
-                    answers.AddRange(MatchGoals(goals.Skip(1).ToList(), facts, bindings));
+                    answers.AddRange(MatchGoals(goals, index + 1, facts, bindings));
                 }
             }
             return answers;
@@ -272,7 +268,7 @@ namespace Sharplog.Engine
         * If the goal is a built-in predicate, it is also evaluated here. */
 
         /// <exception cref="Sharplog.DatalogException"/>
-        public IEnumerable<IDictionary<string, string>> Query(Sharplog.Jatalog jatalog, IList<Expr> goals, StackMap<string, string> bindings)
+        public IEnumerable<IDictionary<string, string>> Query(Sharplog.Jatalog jatalog, IList<Expr> goals, StackMap bindings)
         {
             if ((goals.Count == 0))
             {
@@ -283,15 +279,15 @@ namespace Sharplog.Engine
             IEnumerable<string> predicates = GetRelevantPredicates(jatalog, goals);
             IEnumerable<Rule> rules = new HashSet<Rule>(jatalog.GetIdb().Where((Rule rule) => predicates.Contains(rule.GetHead().GetPredicate())));
             // Build an IndexedSet<> with only the relevant facts for this particular query.
-            IndexedSet<Expr> facts = new IndexedSet<Expr>();
+            IndexedSet facts = new IndexedSet();
             foreach (string predicate in predicates)
             {
                 facts.AddAll(jatalog.GetEdbProvider().GetFacts(predicate));
             }
             // Build the database. A Set ensures that the facts are unique
-            IndexedSet<Expr> resultSet = ExpandDatabase(facts, rules);
+            IndexedSet resultSet = ExpandDatabase(facts, rules);
             // Now match the expanded database to the goals
-            return MatchGoals(orderedGoals, resultSet, bindings);
+            return MatchGoals(orderedGoals, 0, resultSet, null);
         }
 
         /* The core of the bottom-up implementation:
@@ -299,7 +295,7 @@ namespace Sharplog.Engine
         * strata in turn, returning a collection of newly derived facts. */
 
         /// <exception cref="Sharplog.DatalogException"/>
-        private IndexedSet<Expr> ExpandDatabase(IndexedSet<Expr> facts, IEnumerable<Rule> allRules)
+        private IndexedSet ExpandDatabase(IndexedSet facts, IEnumerable<Rule> allRules)
         {
             IList<IList<Rule>> strata = ComputeStratification(allRules.ToList());
             for (int i = 0; i < strata.Count; i++)
@@ -317,7 +313,7 @@ namespace Sharplog.Engine
         * facts in each iteration of the loop.
         */
 
-        private IEnumerable<Expr> ExpandStrata(IndexedSet<Expr> facts, IEnumerable<Rule> strataRules)
+        private IEnumerable<Expr> ExpandStrata(IndexedSet facts, IEnumerable<Rule> strataRules)
         {
             if (strataRules == null || (strataRules.Count() == 0))
             {
@@ -328,7 +324,7 @@ namespace Sharplog.Engine
             while (true)
             {
                 // Match each rule to the facts
-                IndexedSet<Expr> newFacts = new IndexedSet<Expr>();
+                IndexedSet newFacts = new IndexedSet();
                 foreach (Rule rule in rules)
                 {
                     newFacts.AddAll(MatchRule(facts, rule));
@@ -346,7 +342,7 @@ namespace Sharplog.Engine
 
         /* Match the facts in the EDB against a specific rule */
 
-        private HashSet<Expr> MatchRule(IndexedSet<Expr> facts, Rule rule)
+        private HashSet<Expr> MatchRule(IndexedSet facts, Rule rule)
         {
             if ((rule.GetBody().Count == 0))
             {
@@ -354,7 +350,7 @@ namespace Sharplog.Engine
                 return new System.Collections.Generic.HashSet<Expr>();
             }
             // Match the rule body to the facts.
-            IEnumerable<IDictionary<string, string>> answers = MatchGoals(rule.GetBody(), facts, null);
+            IEnumerable<IDictionary<string, string>> answers = MatchGoals(rule.GetBody(), 0, facts, null);
             return new HashSet<Expr>(answers.Select((IDictionary<string, string> answer) => rule.GetHead().Substitute(answer)).Where((Expr derivedFact) => !facts.Contains(derivedFact)));
         }
     }

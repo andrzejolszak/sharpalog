@@ -9,21 +9,6 @@ using Sharplog.Engine;
 
 namespace Sharpen
 {
-    public static class Maps
-    {
-        public static V GetOrNull<K, V>(this IDictionary<K, V> map, K key) where V : class
-        {
-            V result;
-            return map.TryGetValue(key, out result) ? result : null;
-        }
-
-        public static V? GetOrNullable<K, V>(this IDictionary<K, V?> map, K key) where V : struct
-        {
-            V? result;
-            return map.TryGetValue(key, out result) ? result : new V?();
-        }
-    }
-
     public class StreamTokenizer : IEnumerable<int>
     {
         /* Only one of these will be non-null */

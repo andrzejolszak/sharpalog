@@ -14,14 +14,9 @@ namespace Sharplog.Statement
         }
 
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual IEnumerable<IDictionary<string, string>> Execute(Sharplog.Jatalog datalog, StackMap<string, string> bindings)
+        public IEnumerable<IDictionary<string, string>> Execute(Sharplog.Jatalog datalog, StackMap bindings)
         {
             return datalog.Query(goals, bindings);
-        }
-
-        public IEnumerable<IDictionary<string, string>> Execute(Jatalog datalog)
-        {
-            return Execute(datalog, null);
         }
 
         public override string ToString()

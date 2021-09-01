@@ -10,24 +10,27 @@ namespace Sharplog.Engine
     /// <see cref="System.Collections.Generic.HashSet<object>{E}"/>
     /// that can quickly access a subset of its elements through an index.
     /// Jatalog uses it to quickly retrieve the facts with a specific predicate.
+    /// foo(bar, car);
+    /// foo(zar);
+    /// ---------------
+    /// foo->{foo(bar, car), foo(zar)}
     /// </summary>
     /// <?/>
     /// <?/>
-    public class IndexedSet<E> : IEnumerable<E>
-        where E : Indexable
+public class IndexedSet : IEnumerable<Expr>
     {
-        private HashSet<E> contents;
+        private HashSet<Expr> contents;
 
-        private IDictionary<int, HashSet<E>> index;
+        private IDictionary<int, HashSet<Expr>> index;
 
         /// <summary>Default constructor.</summary>
         public IndexedSet()
         {
-            index = new Dictionary<int, HashSet<E>>();
-            contents = new HashSet<E>();
+            index = new Dictionary<int, HashSet<Expr>>();
+            contents = new HashSet<Expr>();
         }
 
-        public virtual int Count
+        public int Count
         {
             get
             {
@@ -41,29 +44,27 @@ namespace Sharplog.Engine
         /// </summary>
         /// <param name="key">The indexed element</param>
         /// <returns>The specified subset</returns>
-        public virtual HashSet<E> GetIndexed(int key)
+        public HashSet<Expr> GetIndexed(int key)
         {
-            HashSet<E> elements = index.GetOrNull(key);
-            if (elements == null)
+            if (!index.TryGetValue(key, out HashSet<Expr> elements))
             {
-                return new System.Collections.Generic.HashSet<E>();
+                return new System.Collections.Generic.HashSet<Expr>();
             }
             return elements;
         }
 
-        public virtual IEnumerable<int> GetIndexes()
+        public IEnumerable<int> GetIndexes()
         {
             return index.Keys;
         }
 
-        public virtual bool Add(E element)
+        public bool Add(Expr element)
         {
             if (contents.Add(element))
             {
-                HashSet<E> elements = index.GetOrNull(element.Index());
-                if (elements == null)
+                if (!index.TryGetValue(element.Index(), out HashSet<Expr> elements))
                 {
-                    elements = new HashSet<E>();
+                    elements = new HashSet<Expr>();
                     index[element.Index()] = elements;
                 }
                 elements.Add(element);
@@ -72,7 +73,7 @@ namespace Sharplog.Engine
             return false;
         }
 
-        public virtual bool AddAll(IEnumerable<E> elements)
+        public bool AddAll(IEnumerable<Expr> elements)
         {
             bool result = false;
             foreach (var element in elements)
@@ -85,23 +86,23 @@ namespace Sharplog.Engine
             return result;
         }
 
-        public virtual void Clear()
+        public void ClearTest()
         {
             contents.Clear();
             index.Clear();
         }
 
-        public virtual bool Contains(E o)
+        public bool Contains(Expr o)
         {
             return contents.Contains(o);
         }
 
-        public virtual bool ContainsAll(IEnumerable<E> c)
+        public bool ContainsAll(IEnumerable<Expr> c)
         {
             return c.All(x => contents.Contains(x));
         }
 
-        public IEnumerator<E> GetEnumerator()
+        public IEnumerator<Expr> GetEnumerator()
         {
             return contents.GetEnumerator();
         }
@@ -111,46 +112,36 @@ namespace Sharplog.Engine
             return contents.GetEnumerator();
         }
 
-        public virtual bool Remove(E o)
+        public bool RemoveTest(Expr o)
         {
             if (contents.Remove(o))
             {
-                // This makes the remove O(n), but you need it like this if remove()
-                // is to work through an iterator.
-                // It doesn't really matter, since Jatalog doesn't use this method
-                Reindex();
+                index[o.Index()].Remove(o);
             }
             return false;
         }
 
-        public virtual bool RemoveAll(IEnumerable<E> c)
+        public bool RemoveAll(IEnumerable<Expr> c)
         {
             bool changed = false;
-            foreach (E t in c)
+            foreach (Expr t in c)
             {
-                changed |= contents.Remove(t);
-            }
-
-            if (changed)
-            {
-                Reindex();
-            }
-            return changed;
-        }
-
-        private void Reindex()
-        {
-            index = new Dictionary<int, HashSet<E>>();
-            foreach (E element in contents)
-            {
-                HashSet<E> elements = index.GetOrNull(element.Index());
-                if (elements == null)
+                bool chg = contents.Remove(t);
+                if (chg)
                 {
-                    elements = new HashSet<E>();
-                    index[element.Index()] = elements;
+                    changed = true;
+                    HashSet<Expr> set = index[t.Index()];
+                    set.Remove(t);
+
+                    // Maybe not needed?
+                    if (set.Count == 0)
+                    {
+                        index.Remove(t.Index());
+                    }
                 }
-                elements.Add(element);
             }
+
+            return changed;
         }
     }
 }

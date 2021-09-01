@@ -27,8 +27,8 @@ namespace Sharplog
         /// <param name="body">The list of expressions that make up the body of the rule (right hand side)</param>
         public Rule(Expr head, IList<Expr> body)
         {
-            this.SetHead(head);
-            this.SetBody(Sharplog.Engine.Engine.ReorderQuery(body));
+            this.head = head;
+            this.body = Engine.Engine.ReorderQuery(body);
         }
 
         /// <summary>Constructor for the fluent API that allows a variable number of expressions in the body.</summary>
@@ -55,7 +55,7 @@ namespace Sharplog
         /// </remarks>
         /// <exception cref="DatalogException">if the rule is not valid, with the reason in the message.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual void Validate()
+        public void Validate()
         {
             // Check for /safety/: each variable in the body of a rule should appear at least once in a positive expression,
             // to prevent infinite results. E.g. p(X) :- not q(X, Y) is unsafe because there are an infinite number of values
@@ -156,7 +156,7 @@ namespace Sharplog
         /// </remarks>
         /// <param name="bindings">The bindings to substitute.</param>
         /// <returns>the Rule with the substituted bindings.</returns>
-        public virtual Rule Substitute(IDictionary<string, string> bindings)
+        public Rule Substitute(IDictionary<string, string> bindings)
         {
             IList<Expr> subsBody = new List<Expr>();
             foreach (Expr e in GetBody())
@@ -191,24 +191,14 @@ namespace Sharplog
             return true;
         }
 
-        public virtual Expr GetHead()
+        public Expr GetHead()
         {
             return head;
         }
 
-        public virtual void SetHead(Expr head)
-        {
-            this.head = head;
-        }
-
-        public virtual IList<Expr> GetBody()
+        public IList<Expr> GetBody()
         {
             return body;
-        }
-
-        public virtual void SetBody(IList<Expr> body)
-        {
-            this.body = body;
         }
 
         public override int GetHashCode()

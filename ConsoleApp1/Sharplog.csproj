@@ -51,7 +51,6 @@
     <Compile Include="Sharplog\DatalogException.cs" />
     <Compile Include="Sharplog\EdbProvider.cs" />
     <Compile Include="Sharplog\engine\Engine.cs" />
-    <Compile Include="Sharplog\engine\Indexable.cs" />
     <Compile Include="Sharplog\engine\IndexedSet.cs" />
     <Compile Include="Sharplog\engine\StackMap.cs" />
     <Compile Include="Sharplog\Expr.cs" />
@@ -59,13 +58,12 @@
     <Compile Include="Sharplog\output\QueryOutput.cs" />
     <Compile Include="Sharplog\Parser.cs" />
     <Compile Include="Sharplog\Rule.cs" />
-    <Compile Include="Sharplog\Sharpen.cs" />
+    <Compile Include="Sharplog\StreamTokenizer.cs" />
     <Compile Include="Sharplog\statement\DeleteStatement.cs" />
     <Compile Include="Sharplog\statement\InsertFactStatement.cs" />
     <Compile Include="Sharplog\statement\InsertRuleStatement.cs" />
     <Compile Include="Sharplog\statement\QueryStatement.cs" />
     <Compile Include="Sharplog\statement\Statement.cs" />
-    <Compile Include="Sharplog\statement\StatementFactory.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

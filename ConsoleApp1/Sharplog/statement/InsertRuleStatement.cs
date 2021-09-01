@@ -13,7 +13,7 @@ namespace Sharplog.Statement
         }
 
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual IEnumerable<IDictionary<string, string>> Execute(Sharplog.Jatalog datalog, StackMap<string, string> bindings)
+        public IEnumerable<IDictionary<string, string>> Execute(Sharplog.Jatalog datalog, StackMap bindings)
         {
             Rule newRule;
             if (bindings != null)
@@ -26,11 +26,6 @@ namespace Sharplog.Statement
             }
             datalog.Rule(newRule);
             return null;
-        }
-
-        public IEnumerable<IDictionary<string, string>> Execute(Jatalog datalog)
-        {
-            return Execute(datalog, null);
         }
     }
 }

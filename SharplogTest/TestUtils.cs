@@ -28,10 +28,11 @@ namespace Sharplog
 
         public static bool MapContains(IDictionary<string, string> map, string key, string value)
         {
-            if (map.ContainsKey(key))
+            if (map.ContainsKey(key) && map.TryGetValue(key, out var val))
             {
-                return map.GetOrNull(key).Equals(value);
+                return val.Equals(value);
             }
+
             return false;
         }
 
@@ -43,7 +44,7 @@ namespace Sharplog
                 {
                     return false;
                 }
-                if (!haystack.GetOrNull(key).Equals(needle.GetOrNull(key)))
+                if (!haystack.TryGetValue(key, out var val) || !needle.TryGetValue(key, out var val2) || !val.Equals(val2))
                 {
                     return false;
                 }

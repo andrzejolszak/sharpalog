@@ -10,7 +10,7 @@ namespace Sharplog
         // TODO: Code coverage could be better...
         /// <exception cref="System.Exception"/>
         [Test]
-        public virtual void TestApp()
+        public void TestApp()
         {
             //This is how you would use the fluent API:
             Sharplog.Jatalog jatalog = TestUtils.CreateDatabase();
@@ -53,29 +53,7 @@ namespace Sharplog
 
         /// <exception cref="System.Exception"/>
         [Test]
-        public virtual void TestBindings()
-        {
-            // This is how you would use the fluent API with variable bindings:
-            // They are inspired by JDBC prepared statements
-            Sharplog.Jatalog jatalog = TestUtils.CreateDatabase();
-            jatalog.Validate();
-            Sharplog.Statement.Statement statement = Sharplog.Jatalog.PrepareStatement("sibling(A, B)?");
-            //assertTrue(statement instanceof QueryStatement); // ugh - package private :(
-            StackMap<string, string> bindings = Sharplog.Jatalog.MakeBindings("A", "aaa", "X", "xxx");
-            // Run a query "who are siblings (of `aaa`)?"
-            IEnumerable<IDictionary<string, string>> answers;
-            answers = statement.Execute(jatalog, bindings);
-            Assert.IsTrue(answers != null);
-            // Only aab is a sibling of aaa
-            Assert.IsFalse(TestUtils.AnswerContains(answers, "A", "aab", "B", "aaa"));
-            Assert.IsTrue(TestUtils.AnswerContains(answers, "A", "aaa", "B", "aab"));
-            Assert.IsFalse(TestUtils.AnswerContains(answers, "A", "ab", "B", "aa"));
-            Assert.IsFalse(TestUtils.AnswerContains(answers, "A", "aa", "B", "ab"));
-        }
-
-        /// <exception cref="System.Exception"/>
-        [Test]
-        public virtual void TestMultiGoals()
+        public void TestMultiGoals()
         {
             // You can have multiple goals in queries.
             Sharplog.Jatalog jatalog = TestUtils.CreateDatabase();
@@ -92,7 +70,7 @@ namespace Sharplog
 
         /// <exception cref="System.Exception"/>
         [Test]
-        public virtual void TestExecute()
+        public void TestExecute()
         {
             // The Jatalog.executeAll(String) method runs queries directly.
             Sharplog.Jatalog jatalog = new Sharplog.Jatalog();
@@ -107,7 +85,7 @@ namespace Sharplog
 
         /// <exception cref="System.Exception"/>
         [Test]
-        public virtual void TestDemo()
+        public void TestDemo()
         {
             // This is how you would use the fluent API:
             Sharplog.Jatalog jatalog = new Sharplog.Jatalog();

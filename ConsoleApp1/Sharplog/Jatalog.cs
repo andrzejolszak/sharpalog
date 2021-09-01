@@ -158,40 +158,6 @@ namespace Sharplog
             return stream;
         }
 
-        /// <summary>
-        /// Helper method to create bindings for
-        /// <see cref="Sharplog.Statement.Statement.Execute(Jatalog, System.Collections.Generic.IDictionary{K, V})"/>
-        /// method.
-        /// <p>
-        /// For example, call it like
-        /// <c>Jatalog.makeBindings("A", "aaa", "Z", "zzz")</c>
-        /// to create a
-        /// mapping where A maps to the value "aaa" and Z maps to "zzz":
-        /// <c>&lt;A = "aaa"; Z = "zzz"&gt;</c>
-        /// .
-        /// </p>
-        /// </summary>
-        /// <param name="kvPairs">A list of key-value pairs - there must be an even value of arguments.</param>
-        /// <returns>A Map containing the string values of the key-value pairs.</returns>
-        /// <exception cref="DatalogException">on error</exception>
-        /// <seealso cref="Sharplog.Statement.Statement.Execute(Jatalog, System.Collections.Generic.IDictionary{K, V})"/>
-        /// <exception cref="Sharplog.DatalogException"/>
-        public static StackMap<string, string> MakeBindings(params object[] kvPairs)
-        {
-            StackMap<string, string> mapping = new StackMap<string, string>();
-            if (kvPairs.Length % 2 != 0)
-            {
-                throw new DatalogException("kvPairs must be even");
-            }
-            for (int i = 0; i < kvPairs.Length / 2; i++)
-            {
-                string k = kvPairs[i * 2].ToString();
-                string v = kvPairs[i * 2 + 1].ToString();
-                mapping.Add(k, v);
-            }
-            return mapping;
-        }
-
         /// <summary>Checks whether a term represents a variable.</summary>
         /// <remarks>
         /// Checks whether a term represents a variable.
@@ -250,7 +216,7 @@ namespace Sharplog
         /// <exception cref="DatalogException">on syntax and I/O errors encountered while executing.</exception>
         /// <seealso cref="Sharplog.Output.QueryOutput"/>
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll(System.IO.StreamReader reader, QueryOutput output)
+        public List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll(System.IO.StreamReader reader, QueryOutput output)
         {
             try
             {
@@ -287,7 +253,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">on syntax errors encountered while executing.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual Dictionary<Statement.Statement, List<(Statement.Statement, IDictionary<string, string>)>> ExecuteAll(string statements)
+        public Dictionary<Statement.Statement, List<(Statement.Statement, IDictionary<string, string>)>> ExecuteAll(string statements)
         {
             // It would've been fun to wrap the results in a java.sql.ResultSet, but damn,
             // those are a lot of methods to implement:
@@ -313,7 +279,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">on syntax errors encountered while executing.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual IEnumerable<IDictionary<string, string>> Query(IList<Expr> goals, StackMap<string, string> bindings)
+        public IEnumerable<IDictionary<string, string>> Query(IList<Expr> goals, StackMap bindings)
         {
             return engine.Query(this, goals, bindings);
         }
@@ -333,7 +299,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">on syntax errors encountered while executing.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual IEnumerable<IDictionary<string, string>> Query(params Expr[] goals)
+        public IEnumerable<IDictionary<string, string>> Query(params Expr[] goals)
         {
             return Query(goals.ToList(), null);
         }
@@ -341,7 +307,7 @@ namespace Sharplog
         /// <summary>Validates all the rules and facts in the database.</summary>
         /// <exception cref="DatalogException">If any rules or facts are invalid. The message contains the reason.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual void Validate()
+        public void Validate()
         {
             foreach (Sharplog.Rule rule in idb)
             {
@@ -374,7 +340,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">if the rule is invalid.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual Sharplog.Jatalog Rule(Expr head, params Expr[] body)
+        public Sharplog.Jatalog Rule(Expr head, params Expr[] body)
         {
             Sharplog.Rule newRule = new Sharplog.Rule(head, body);
             return Rule(newRule);
@@ -393,7 +359,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">if the rule is invalid.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual Sharplog.Jatalog Rule(Sharplog.Rule newRule)
+        public Sharplog.Jatalog Rule(Sharplog.Rule newRule)
         {
             newRule.Validate();
             idb.Add(newRule);
@@ -420,7 +386,7 @@ namespace Sharplog
         /// <see cref="Expr.IsNegated()">negated</see>
         /// </exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual Sharplog.Jatalog Fact(string predicate, params string[] terms)
+        public Sharplog.Jatalog Fact(string predicate, params string[] terms)
         {
             return Fact(new Expr(predicate, terms));
         }
@@ -444,7 +410,7 @@ namespace Sharplog
         /// <see cref="Expr.IsNegated()">negated</see>
         /// </exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual Sharplog.Jatalog Fact(Expr newFact)
+        public Sharplog.Jatalog Fact(Expr newFact)
         {
             if (!newFact.IsGround())
             {
@@ -465,7 +431,7 @@ namespace Sharplog
         /// <returns>true if any facts were deleted.</returns>
         /// <exception cref="DatalogException">on errors encountered during evaluation.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual bool Delete(params Expr[] goals)
+        public bool Delete(params Expr[] goals)
         {
             return Delete(goals.ToList(), null);
         }
@@ -476,7 +442,7 @@ namespace Sharplog
         /// <returns>true if any facts were deleted.</returns>
         /// <exception cref="DatalogException">on errors encountered during evaluation.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual bool Delete(IList<Expr> goals, StackMap<string, string> bindings)
+        public bool Delete(IList<Expr> goals, StackMap bindings)
         {
             IEnumerable<IDictionary<string, string>> answers = Query(goals, bindings);
             IList<Expr> facts = answers.SelectMany((IDictionary<string, string> answer) => goals.Select((Expr goal) => goal.Substitute(answer))).ToList();
@@ -539,7 +505,7 @@ namespace Sharplog
         /// The
         /// <see cref="EdbProvider"/>
         /// </returns>
-        public virtual EdbProvider GetEdbProvider()
+        public EdbProvider GetEdbProvider()
         {
             return edbProvider;
         }
@@ -549,12 +515,12 @@ namespace Sharplog
         /// the
         /// <see cref="EdbProvider"/>
         /// </param>
-        public virtual void SetEdbProvider(EdbProvider edbProvider)
+        public void SetEdbProvider(EdbProvider edbProvider)
         {
             this.edbProvider = edbProvider;
         }
 
-        public virtual IEnumerable<Sharplog.Rule> GetIdb()
+        public IEnumerable<Sharplog.Rule> GetIdb()
         {
             return idb;
         }
@@ -592,7 +558,7 @@ namespace Sharplog
             Sharplog.Statement.Statement statement = Parser.ParseStmt(scan);
             try
             {
-                IEnumerable<IDictionary<string, string>> answers = statement.Execute(this);
+                IEnumerable<IDictionary<string, string>> answers = statement.Execute(this, null);
                 if (answers != null && output != null)
                 {
                     output.WriteResult(statement, answers);

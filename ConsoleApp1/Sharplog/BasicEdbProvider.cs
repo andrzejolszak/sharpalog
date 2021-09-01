@@ -12,29 +12,29 @@ namespace Sharplog
     /// </summary>
     public class BasicEdbProvider : EdbProvider
     {
-        private IndexedSet<Expr> edb;
+        private IndexedSet edb;
 
         public BasicEdbProvider()
         {
-            edb = new IndexedSet<Expr>();
+            edb = new IndexedSet();
         }
 
-        public virtual IEnumerable<Expr> AllFacts()
+        public IEnumerable<Expr> AllFacts()
         {
             return edb;
         }
 
-        public virtual void Add(Expr fact)
+        public void Add(Expr fact)
         {
             edb.Add(fact);
         }
 
-        public virtual bool RemoveAll(IEnumerable<Expr> facts)
+        public bool RemoveAll(IEnumerable<Expr> facts)
         {
             return edb.RemoveAll(facts);
         }
 
-        public virtual IEnumerable<Expr> GetFacts(string predicate)
+        public IEnumerable<Expr> GetFacts(string predicate)
         {
             return edb.GetIndexed(predicate.GetHashCode());
         }

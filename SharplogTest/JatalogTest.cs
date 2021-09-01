@@ -6,7 +6,7 @@ namespace Sharplog
     public class JatalogTest
     {
         [Test]
-        public virtual void TestEquals()
+        public void TestEquals()
         {
             /* Truth be told the only reason I need Jatalog.equals() to work
 			* is so that I can test Jatalog.toString() */
@@ -19,7 +19,7 @@ namespace Sharplog
         }
 
         [Test]
-        public virtual void TestToString()
+        public void TestToString()
         {
             Sharplog.Jatalog thisJatalog = TestUtils.CreateDatabase();
             string @string = thisJatalog.ToString();

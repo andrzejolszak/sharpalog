@@ -8,9 +8,9 @@ namespace Sharplog
     public class IndexedSetTest
     {
         [Test]
-        public virtual void TestBase()
+        public void TestBase()
         {
-            IndexedSet<Expr> indexedSet = new IndexedSet<Expr>();
+            IndexedSet indexedSet = new IndexedSet();
             Assert.IsTrue((indexedSet.Count == 0));
             indexedSet.Add(Expr.CreateExpr("foo", "a"));
             indexedSet.Add(Expr.CreateExpr("foo", "b"));
@@ -29,7 +29,7 @@ namespace Sharplog
             Assert.IsTrue(set.Contains(Expr.CreateExpr("foo", "c")));
             Assert.IsFalse(set.Contains(Expr.CreateExpr("foo", "d")));
             Assert.IsTrue(indexedSet.Contains(Expr.CreateExpr("bar", "a")));
-            indexedSet.Remove(Expr.CreateExpr("bar", "a"));
+            indexedSet.RemoveTest(Expr.CreateExpr("bar", "a"));
             Assert.IsFalse(indexedSet.Contains(Expr.CreateExpr("bar", "a")));
             HashSet<Expr> toRemove = new HashSet<Expr>();
             toRemove.Add(Expr.CreateExpr("foo", "a"));
@@ -42,7 +42,7 @@ namespace Sharplog
             Assert.IsFalse(indexedSet.Contains(Expr.CreateExpr("foo", "a")));
             Assert.IsFalse(indexedSet.Contains(Expr.CreateExpr("bar", "b")));
             Assert.IsFalse(indexedSet.RemoveAll(toRemove));
-            indexedSet.Clear();
+            indexedSet.ClearTest();
             Assert.IsTrue(indexedSet.Count == 0);
             Assert.IsTrue((indexedSet.Count == 0));
             Assert.IsTrue(indexedSet.GetIndexes().Count() == 0);

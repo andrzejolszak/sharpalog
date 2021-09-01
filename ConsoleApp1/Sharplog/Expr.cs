@@ -24,7 +24,7 @@ namespace Sharplog
     /// The number of terms is the expression's <i>arity</i>.
     /// </p>
     /// </remarks>
-    public class Expr : Indexable
+    public class Expr
     {
         protected internal bool negated = false;
         private string predicate;
@@ -176,14 +176,14 @@ namespace Sharplog
         /// does not enforce it (expressions with the same predicates but different arities wont unify).
         /// </remarks>
         /// <returns>the arity</returns>
-        public virtual int Arity()
+        public int Arity()
         {
             return terms.Count;
         }
 
         /// <summary>An expression is said to be ground if none of its terms are variables.</summary>
         /// <returns>true if the expression is ground</returns>
-        public virtual bool IsGround()
+        public bool IsGround()
         {
             foreach (string term in terms)
             {
@@ -201,7 +201,7 @@ namespace Sharplog
         /// <c>not foo(bar, baz)</c>
         /// </remarks>
         /// <returns>true if the expression is negated</returns>
-        public virtual bool IsNegated()
+        public bool IsNegated()
         {
             return negated;
         }
@@ -222,7 +222,7 @@ namespace Sharplog
         /// it against the goals.
         /// </remarks>
         /// <returns>true if the expression is a built-in predicate.</returns>
-        public virtual bool IsBuiltIn()
+        public bool IsBuiltIn()
         {
             char op = predicate[0];
             return !char.IsLetterOrDigit(op) && op != '\"';
@@ -236,7 +236,7 @@ namespace Sharplog
         /// <param name="that">The expression to unify with</param>
         /// <param name="bindings">The bindings of variables to values after unification</param>
         /// <returns>true if the expressions unify.</returns>
-        public virtual bool Unify(Sharplog.Expr that, StackMap<string, string> bindings)
+        public bool Unify(Sharplog.Expr that, StackMap bindings)
         {
             if (!this.predicate.Equals(that.predicate) || this.Arity() != that.Arity())
             {
@@ -282,26 +282,18 @@ namespace Sharplog
         /// <summary>Substitutes the variables in this expression with bindings from a unification.</summary>
         /// <param name="bindings">The bindings to substitute.</param>
         /// <returns>A new expression with the variables replaced with the values in bindings.</returns>
-        public virtual Sharplog.Expr Substitute(IDictionary<string, string> bindings)
+        public Sharplog.Expr Substitute(IDictionary<string, string> bindings)
         {
             // that.terms.add() below doesn't work without the new ArrayList()
-            Sharplog.Expr that = new Sharplog.Expr(this.predicate, new List<string>());
+            Sharplog.Expr that = new Sharplog.Expr(this.predicate, new List<string>(this.terms.Count));
             that.negated = negated;
             foreach (string term in this.terms)
             {
-                string value;
-                if (Sharplog.Jatalog.IsVariable(term))
-                {
-                    value = bindings.GetOrNull(term);
-                    if (value == null)
-                    {
-                        value = term;
-                    }
-                }
-                else
+                if (!bindings.TryGetValue(term, out string value))
                 {
                     value = term;
                 }
+
                 that.terms.Add(value);
             }
             return that;
@@ -310,22 +302,24 @@ namespace Sharplog
         /// <summary>Evaluates a built-in predicate.</summary>
         /// <param name="bindings">A map of variable bindings</param>
         /// <returns>true if the operator matched.</returns>
-        public virtual bool EvalBuiltIn(StackMap<string, string> bindings)
+        public bool EvalBuiltIn(StackMap bindings)
         {
             // This method may throw a RuntimeException for a variety of possible reasons, but
             // these conditions are supposed to have been caught earlier in the chain by
             // methods such as Rule#validate().
             // The RuntimeException is a requirement of using the Streams API.
             string term1 = terms[0];
-            if (Sharplog.Jatalog.IsVariable(term1) && bindings.ContainsKey(term1))
+            if (bindings.TryGetValue(term1, out string term1v))
             {
-                term1 = bindings.Get(term1);
+                term1 = term1v;
             }
+
             string term2 = terms[1];
-            if (Sharplog.Jatalog.IsVariable(term2) && bindings.ContainsKey(term2))
+            if (bindings.TryGetValue(term2, out string term2v))
             {
-                term2 = bindings.Get(term2);
+                term2 = term2v;
             }
+
             if (predicate.Equals("="))
             {
                 // '=' is special
@@ -428,12 +422,12 @@ namespace Sharplog
             throw new InvalidOperationException("Unimplemented built-in predicate " + predicate);
         }
 
-        public virtual string GetPredicate()
+        public string GetPredicate()
         {
             return predicate;
         }
 
-        public virtual IList<string> GetTerms()
+        public IList<string> GetTerms()
         {
             return terms;
         }
@@ -519,7 +513,7 @@ namespace Sharplog
         /// </remarks>
         /// <exception cref="DatalogException">if the fact is invalid.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public virtual void ValidFact()
+        public void ValidFact()
         {
             if (!IsGround())
             {

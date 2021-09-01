@@ -15,10 +15,10 @@ namespace Sharplog
 
         /// <exception cref="Sharplog.DatalogException"/>
         [Test]
-        public virtual void TestBase()
+        public void TestBase()
         {
-            StackMap<string, string> parent = new StackMap<string, string>();
-            StackMap<string, string> child = new StackMap<string, string>(parent);
+            StackMap parent = new StackMap();
+            StackMap child = new StackMap(parent);
             Assert.IsTrue((child.Count == 0));
             parent.Add("W", "0");
             parent.Add("X", "1");
@@ -43,10 +43,6 @@ namespace Sharplog
             Assert.IsTrue(child.ToString().Contains("Y: 2"));
             Assert.IsTrue(child.ToString().Contains("W: 0"));
             IDictionary<string, string> flat = child.Flatten();
-            Assert.IsTrue(flat.GetOrNull("W").Equals("0"));
-            Assert.IsTrue(flat.GetOrNull("X").Equals("5"));
-            Assert.IsTrue(flat.GetOrNull("Y").Equals("2"));
-            Assert.IsTrue(flat.GetOrNull("Z") == null);
             child.Clear();
             Assert.IsTrue(parent.Get("X").Equals("1"));
             Assert.IsTrue(child.Count == 0);

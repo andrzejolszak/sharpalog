@@ -68,25 +68,25 @@ namespace Sharplog.Engine
     /// , but it proved to be significantly slower.
     /// </p>
     /// </summary>
-    public class StackMap<K, V>
+    public class StackMap
     {
-        private IDictionary<K, V> self;
+        private IDictionary<string, string> self;
 
-        private StackMap<K, V> parent;
+        private StackMap parent;
 
         public StackMap()
         {
-            self = new Dictionary<K, V>();
+            self = new Dictionary<string, string>();
             this.parent = null;
         }
 
-        public StackMap(StackMap<K, V> parent)
+        public StackMap(StackMap parent)
         {
-            self = new Dictionary<K, V>();
+            self = new Dictionary<string, string>();
             this.parent = parent;
         }
 
-        public virtual int Count
+        public int Count
         {
             get
             {
@@ -95,7 +95,7 @@ namespace Sharplog.Engine
                 {
                     // Work around situations where self contains a `key` that's already in `parent`.
                     // These situations shouldn't occur in Jatalog, though
-                    foreach (K k in parent.Map.Keys)
+                    foreach (string k in parent.Map.Keys)
                     {
                         if (!self.ContainsKey(k))
                         {
@@ -107,7 +107,7 @@ namespace Sharplog.Engine
             }
         }
 
-        public virtual IEnumerable<V> Values
+        public IEnumerable<string> Values
         {
             get
             {
@@ -121,7 +121,7 @@ namespace Sharplog.Engine
             }
         }
 
-        public virtual IDictionary<K, V> Map
+        public IDictionary<string, string> Map
         {
             get
             {
@@ -147,9 +147,9 @@ namespace Sharplog.Engine
         /// .
         /// </remarks>
         /// <returns>a new flattened Map.</returns>
-        public virtual IDictionary<K, V> Flatten()
+        public IDictionary<string, string> Flatten()
         {
-            IDictionary<K, V> map = parent != null ? new Dictionary<K, V>(parent.Map) : new Dictionary<K, V>();
+            IDictionary<string, string> map = parent != null ? new Dictionary<string, string>(parent.Map) : new Dictionary<string, string>();
             // I don't use map.putAll(this) to avoid relying on entrySet()
             foreach (var e in self)
             {
@@ -161,11 +161,11 @@ namespace Sharplog.Engine
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder("{");
-            HashSet<K> keys = new HashSet<K>(self.Keys);
+            HashSet<string> keys = new HashSet<string>(self.Keys);
             keys.UnionWith(parent.Map.Keys);
             int s = keys.Count;
             int i = 0;
-            foreach (K k in keys)
+            foreach (string k in keys)
             {
                 sb.Append(k).Append(": ");
                 sb.Append(this.Get(k));
@@ -178,35 +178,35 @@ namespace Sharplog.Engine
             return sb.ToString();
         }
 
-        public virtual bool ContainsKey(object key)
+        public bool ContainsKey(object key)
         {
-            if (self.ContainsKey((K)key))
+            if (self.ContainsKey((string)key))
             {
                 return true;
             }
             if (parent != null)
             {
-                return parent.ContainsKey((K)key);
+                return parent.ContainsKey((string)key);
             }
             return false;
         }
 
-        public virtual V Get(object key)
+        public string Get(object key)
         {
-            self.TryGetValue((K)key, out V value);
+            self.TryGetValue((string)key, out string value);
             if (value != null)
             {
                 return value;
             }
             if (parent != null)
             {
-                parent.Map.TryGetValue((K)key, out value);
+                parent.Map.TryGetValue((string)key, out value);
                 return value;
             }
-            return default(V);
+            return default(string);
         }
 
-        public virtual void Clear()
+        public void Clear()
         {
             // We don't want to modify the parent, so we just orphan this
             parent = null;
@@ -226,19 +226,19 @@ namespace Sharplog.Engine
         public override int GetHashCode()
         {
             int h = 0;
-            foreach (KeyValuePair<K, V> entry in self)
+            foreach (KeyValuePair<string, string> entry in self)
             {
                 h += entry.GetHashCode();
             }
             return h;
         }
 
-        public virtual bool ContainsValue(object value)
+        public bool ContainsValue(object value)
         {
             return self.Any(x => x.Value.Equals(value)) || (parent != null && parent.Values.Any(x => x.Equals(value)));
         }
 
-        public void Add(K key, V value)
+        public void Add(string key, string value)
         {
             if (parent != null && parent.ContainsKey(key))
             {
@@ -248,7 +248,7 @@ namespace Sharplog.Engine
             self.Add(key, value);
         }
 
-        public bool TryGetValue(K key, out V result)
+        public bool TryGetValue(string key, out string result)
         {
             return self.TryGetValue(key, out result) || (parent?.TryGetValue(key, out result) ?? false);
         }

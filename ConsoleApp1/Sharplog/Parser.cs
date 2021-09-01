@@ -46,13 +46,13 @@ namespace Sharplog
                         throw new DatalogException("[line " + scan.LineNumber + "] Expected '.' after rule");
                     }
                     Rule newRule = new Rule(head, body);
-                    return StatementFactory.InsertRule(newRule);
+                    return new InsertRuleStatement(newRule);
                 }
                 else if (scan.ttype == '.')
                 {
                     // We're dealing with a fact, or a query
                     // It's a fact
-                    return StatementFactory.InsertFact(head);
+                    return new InsertFactStatement(head);
                 }
                 else
                 {
@@ -72,11 +72,11 @@ namespace Sharplog
                     }
                     if (scan.ttype == '?')
                     {
-                        return StatementFactory.Query(goals);
+                        return new QueryStatement(goals);
                     }
                     else if (scan.ttype == '~')
                     {
-                        return StatementFactory.DeleteFacts(goals);
+                        return new DeleteStatement(goals);
                     }
                     else
                     {
