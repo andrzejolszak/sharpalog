@@ -19,7 +19,7 @@ namespace Sharplog
             edb = new IndexedSet();
         }
 
-        public IEnumerable<Expr> AllFacts()
+        public IndexedSet AllFacts()
         {
             return edb;
         }

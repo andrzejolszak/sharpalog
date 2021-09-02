@@ -1,15 +1,10 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
-using Sharplog.Engine;
 
 namespace Sharpen
 {
-    public class StreamTokenizer : IEnumerable<int>
+    public class StreamTokenizer
     {
         /* Only one of these will be non-null */
         public const int TT_EOF = -1;
@@ -134,40 +129,6 @@ namespace Sharpen
          */
         public double NumberValue { get; private set; }
 
-        /** Private constructor that initializes everything except the streams. */
-        /**
-         * Create a tokenizer that parses the given character stream.
-         *
-         * @param r  a Reader object providing the input stream.
-         */
-        /**
-         * Resets this tokenizer's syntax table so that all characters are
-         * "ordinary." See the <code>ordinaryChar</code> method
-         * for more information on a character being ordinary.
-         */
-
-        public bool SlashStarComments
-        {
-            get { return slashStarCommentsP; }
-            set { slashStarCommentsP = value; }
-        }
-
-        public bool SlashSlashComments
-        {
-            get { return slashSlashCommentsP; }
-            set { slashSlashCommentsP = value; }
-        }
-
-        public bool LowerCaseMode
-        {
-            set { forceLower = value; }
-        }
-
-        public void ResetSyntax()
-        {
-            Array.Clear(characterType, 0, characterType.Length);
-        }
-
         /**
          * Specifies that all characters <i>c</i> in the range
          * <code>low&nbsp;&lt;=&nbsp;<i>c</i>&nbsp;&lt;=&nbsp;high</code>
@@ -234,22 +195,6 @@ namespace Sharpen
          * @param   hi    the high end of the range.
          * @see     java.io.StreamTokenizer#ordinaryChar(int)
          */
-
-        public void OrdinaryChars(int low, int hi)
-        {
-            if (low < 0)
-            {
-                low = 0;
-            }
-            if (hi >= characterType.Length)
-            {
-                hi = characterType.Length - 1;
-            }
-            while (low <= hi)
-            {
-                characterType[low++] = 0;
-            }
-        }
 
         /**
          * Specifies that the character argument is "ordinary"
@@ -367,11 +312,6 @@ namespace Sharpen
          *                 are separate tokens; <code>false</code> indicates that
          *                 end-of-line characters are white space.
          */
-
-        public void EolIsSignificant(bool flag)
-        {
-            eolIsSignificantP = flag;
-        }
 
         /**
          * Determines whether or not the tokenizer recognizes C-style comments.
@@ -751,25 +691,6 @@ namespace Sharpen
                     }
             }
             return "Token[" + ret + "], line " + LineNumber;
-        }
-
-        public IEnumerator<int> GetEnumerator()
-        {
-            ResetSyntax();
-            while (true)
-            {
-                int token = NextToken();
-                if (token == TT_EOF)
-                {
-                    yield break;
-                }
-                yield return token;
-            }
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
         }
 
         private int Read()

@@ -141,7 +141,7 @@ namespace Sharplog
                 {
                     throw new DatalogException("[line " + scan.LineNumber + "] Expected '(' after predicate or an operator");
                 }
-                IList<string> terms = new List<string>();
+                List<string> terms = new List<string>();
                 if (scan.NextToken() != ')')
                 {
                     scan.PushBack();

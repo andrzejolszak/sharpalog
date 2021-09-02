@@ -94,7 +94,7 @@ namespace Sharplog
     {
         private EdbProvider edbProvider;
 
-        private List<Sharplog.Rule> idb;
+        private HashSet<Rule> idb;
 
         private Sharplog.Engine.Engine engine = new Sharplog.Engine.Engine();
 
@@ -110,7 +110,7 @@ namespace Sharplog
             // Facts
             // Rules
             this.edbProvider = new BasicEdbProvider();
-            this.idb = new List<Sharplog.Rule>();
+            this.idb = new HashSet<Rule>();
         }
 
         /// <summary>Parses a string into a statement that can be executed against the database.</summary>
@@ -216,13 +216,13 @@ namespace Sharplog
         /// <exception cref="DatalogException">on syntax and I/O errors encountered while executing.</exception>
         /// <seealso cref="Sharplog.Output.QueryOutput"/>
         /// <exception cref="Sharplog.DatalogException"/>
-        public List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll(System.IO.StreamReader reader, QueryOutput output)
+        public List<(Statement.Statement, StackMap)> ExecuteAll(System.IO.StreamReader reader, QueryOutput output)
         {
             try
             {
                 StreamTokenizer scan = GetTokenizer(reader);
                 // Tracks all query answers
-                List<(Statement.Statement, IDictionary<string, string>)> answers = new List<(Statement.Statement, IDictionary<string, string>)>();
+                List<(Statement.Statement, StackMap)> answers = new List<(Statement.Statement, StackMap)>();
                 scan.NextToken();
                 while (scan.ttype != StreamTokenizer.TT_EOF)
                 {
@@ -253,7 +253,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">on syntax errors encountered while executing.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public Dictionary<Statement.Statement, List<(Statement.Statement, IDictionary<string, string>)>> ExecuteAll(string statements)
+        public Dictionary<Statement.Statement, List<(Statement.Statement, StackMap)>> ExecuteAll(string statements)
         {
             // It would've been fun to wrap the results in a java.sql.ResultSet, but damn,
             // those are a lot of methods to implement:
@@ -279,7 +279,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">on syntax errors encountered while executing.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public IEnumerable<IDictionary<string, string>> Query(IList<Expr> goals, StackMap bindings)
+        public IEnumerable<StackMap> Query(IList<Expr> goals, StackMap bindings)
         {
             return engine.Query(this, goals, bindings);
         }
@@ -299,7 +299,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">on syntax errors encountered while executing.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public IEnumerable<IDictionary<string, string>> Query(params Expr[] goals)
+        public IEnumerable<StackMap> Query(params Expr[] goals)
         {
             return Query(goals.ToList(), null);
         }
@@ -314,11 +314,11 @@ namespace Sharplog
                 rule.Validate();
             }
             // Search for negated loops:
-            Sharplog.Engine.Engine.ComputeStratification(idb.ToList());
+            Sharplog.Engine.Engine.ComputeStratification(idb);
             // Different EdbProvider implementations may have different ideas about how
             // to iterate through the EDB in the most efficient manner. so in the future
             // it may be better to have the edbProvider validate the facts itself.
-            foreach (Expr fact in edbProvider.AllFacts())
+            foreach (Expr fact in edbProvider.AllFacts().All)
             {
                 fact.ValidFact();
             }
@@ -444,60 +444,10 @@ namespace Sharplog
         /// <exception cref="Sharplog.DatalogException"/>
         public bool Delete(IList<Expr> goals, StackMap bindings)
         {
-            IEnumerable<IDictionary<string, string>> answers = Query(goals, bindings);
-            IList<Expr> facts = answers.SelectMany((IDictionary<string, string> answer) => goals.Select((Expr goal) => goal.Substitute(answer))).ToList();
+            IEnumerable<StackMap> answers = Query(goals, bindings);
+            IList<Expr> facts = answers.SelectMany((StackMap answer) => goals.Select((Expr goal) => goal.Substitute(answer))).ToList();
             // and substitute the answer on each goal
             return edbProvider.RemoveAll(facts);
-        }
-
-        public override string ToString()
-        {
-            // The output of this method should be parseable again and produce an exact replica of the database
-            StringBuilder sb = new StringBuilder("% Facts:\n");
-            foreach (Expr fact in edbProvider.AllFacts())
-            {
-                sb.Append(fact).Append(".\n");
-            }
-            sb.Append("\n% Rules:\n");
-            foreach (Sharplog.Rule rule in idb)
-            {
-                sb.Append(rule).Append(".\n");
-            }
-            return sb.ToString();
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (obj == null || !(obj is Sharplog.Jatalog))
-            {
-                return false;
-            }
-            Sharplog.Jatalog that = ((Sharplog.Jatalog)obj);
-            if (this.idb.Count() != that.idb.Count())
-            {
-                return false;
-            }
-            foreach (Sharplog.Rule rule in idb)
-            {
-                if (!that.idb.Contains(rule))
-                {
-                    return false;
-                }
-            }
-            IEnumerable<Expr> theseFacts = this.edbProvider.AllFacts();
-            IEnumerable<Expr> thoseFacts = that.edbProvider.AllFacts();
-            if (theseFacts.Count() != thoseFacts.Count())
-            {
-                return false;
-            }
-            foreach (Expr fact in theseFacts)
-            {
-                if (!thoseFacts.Contains(fact))
-                {
-                    return false;
-                }
-            }
-            return true;
         }
 
         /// <summary>Retrieves the EdbProvider</summary>
@@ -527,14 +477,6 @@ namespace Sharplog
 
         /* Specific tokenizer for our syntax */
 
-        public override int GetHashCode()
-        {
-            var hashCode = 1357634632;
-            hashCode = hashCode * -1521134295 + EqualityComparer<EdbProvider>.Default.GetHashCode(edbProvider);
-            hashCode = hashCode * -1521134295 + EqualityComparer<List<Rule>>.Default.GetHashCode(idb);
-            return hashCode;
-        }
-
         /// <exception cref="System.IO.IOException"/>
         private static StreamTokenizer GetTokenizer(System.IO.StreamReader reader)
         {
@@ -553,12 +495,12 @@ namespace Sharplog
         /* Internal method for executing one and only one statement */
 
         /// <exception cref="Sharplog.DatalogException"/>
-        private List<(Statement.Statement, IDictionary<string, string>)> ExecuteSingleStatement(StreamTokenizer scan, System.IO.StreamReader reader, QueryOutput output)
+        private List<(Statement.Statement, StackMap)> ExecuteSingleStatement(StreamTokenizer scan, System.IO.StreamReader reader, QueryOutput output)
         {
             Sharplog.Statement.Statement statement = Parser.ParseStmt(scan);
             try
             {
-                IEnumerable<IDictionary<string, string>> answers = statement.Execute(this, null);
+                IEnumerable<StackMap> answers = statement.Execute(this, null);
                 if (answers != null && output != null)
                 {
                     output.WriteResult(statement, answers);

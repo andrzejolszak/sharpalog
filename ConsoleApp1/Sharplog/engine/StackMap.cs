@@ -74,19 +74,13 @@ namespace Sharplog.Engine
 
         private StackMap parent;
 
-        public StackMap()
-        {
-            self = new Dictionary<string, string>();
-            this.parent = null;
-        }
-
         public StackMap(StackMap parent)
         {
             self = new Dictionary<string, string>();
             this.parent = parent;
         }
 
-        public int Count
+        public int CountTest
         {
             get
             {
@@ -95,7 +89,7 @@ namespace Sharplog.Engine
                 {
                     // Work around situations where self contains a `key` that's already in `parent`.
                     // These situations shouldn't occur in Jatalog, though
-                    foreach (string k in parent.Map.Keys)
+                    foreach (string k in parent.self.Keys)
                     {
                         if (!self.ContainsKey(k))
                         {
@@ -107,135 +101,58 @@ namespace Sharplog.Engine
             }
         }
 
-        public IEnumerable<string> Values
+        public IEnumerable<string> KeysTest()
         {
-            get
+            List<string> res = self.Keys.ToList();
+            if (parent != null)
             {
-                if (parent != null)
-                {
-                    self = Flatten();
-                    // caveat emptor
-                    parent = null;
-                }
-                return self.Values;
+                res.AddRange(parent.KeysTest());
             }
+
+            return res;
         }
 
-        public IDictionary<string, string> Map
+        public bool ContainsKey(string key)
         {
-            get
-            {
-                if (parent != null)
-                {
-                    self = Flatten();
-                    // caveat emptor
-                    parent = null;
-                }
-                return self;
-            }
-        }
-
-        /// <summary>
-        /// Returns a new Map&lt;K,V&gt; that contains all the elements of this map,
-        /// but does not have a parent anymore.
-        /// </summary>
-        /// <remarks>
-        /// Returns a new Map&lt;K,V&gt; that contains all the elements of this map,
-        /// but does not have a parent anymore.
-        /// The returned map is actually a
-        /// <c>java.util.HashMap</c>
-        /// .
-        /// </remarks>
-        /// <returns>a new flattened Map.</returns>
-        public IDictionary<string, string> Flatten()
-        {
-            IDictionary<string, string> map = parent != null ? new Dictionary<string, string>(parent.Map) : new Dictionary<string, string>();
-            // I don't use map.putAll(this) to avoid relying on entrySet()
-            foreach (var e in self)
-            {
-                map.Add(e.Key, e.Value);
-            }
-            return map;
-        }
-
-        public override string ToString()
-        {
-            StringBuilder sb = new StringBuilder("{");
-            HashSet<string> keys = new HashSet<string>(self.Keys);
-            keys.UnionWith(parent.Map.Keys);
-            int s = keys.Count;
-            int i = 0;
-            foreach (string k in keys)
-            {
-                sb.Append(k).Append(": ");
-                sb.Append(this.Get(k));
-                if (++i < s)
-                {
-                    sb.Append(", ");
-                }
-            }
-            sb.Append("}");
-            return sb.ToString();
-        }
-
-        public bool ContainsKey(object key)
-        {
-            if (self.ContainsKey((string)key))
+            // PERF: merge containsKey with Get into TryGet
+            if (self.ContainsKey(key))
             {
                 return true;
             }
             if (parent != null)
             {
-                return parent.ContainsKey((string)key);
+                return parent.ContainsKey(key);
             }
             return false;
         }
 
-        public string Get(object key)
+        public string Get(string key)
         {
-            self.TryGetValue((string)key, out string value);
+            // PERF
+            self.TryGetValue(key, out string value);
             if (value != null)
             {
                 return value;
             }
+
             if (parent != null)
             {
-                parent.Map.TryGetValue((string)key, out value);
-                return value;
+                return parent.Get(key);
             }
+
             return default(string);
         }
 
-        public void Clear()
+        public void ClearTest()
         {
             // We don't want to modify the parent, so we just orphan this
             parent = null;
             self.Clear();
         }
 
-        public override bool Equals(object o)
+        public bool ContainsValueTest(object value)
         {
-            if (o == null || !(o is IDictionary))
-            {
-                return false;
-            }
-            var that = (IDictionary<object, object>)o;
-            return this.Equals(that);
-        }
-
-        public override int GetHashCode()
-        {
-            int h = 0;
-            foreach (KeyValuePair<string, string> entry in self)
-            {
-                h += entry.GetHashCode();
-            }
-            return h;
-        }
-
-        public bool ContainsValue(object value)
-        {
-            return self.Any(x => x.Value.Equals(value)) || (parent != null && parent.Values.Any(x => x.Equals(value)));
+            return self.Any(x => x.Value.Equals(value)) || (parent != null && parent.ContainsValueTest(value));
         }
 
         public void Add(string key, string value)

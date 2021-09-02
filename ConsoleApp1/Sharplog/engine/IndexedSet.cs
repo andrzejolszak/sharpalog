@@ -17,7 +17,7 @@ namespace Sharplog.Engine
     /// </summary>
     /// <?/>
     /// <?/>
-public class IndexedSet : IEnumerable<Expr>
+public class IndexedSet
     {
         private HashSet<Expr> contents;
 
@@ -86,6 +86,8 @@ public class IndexedSet : IEnumerable<Expr>
             return result;
         }
 
+        public HashSet<Expr> All => this.contents;
+
         public void ClearTest()
         {
             contents.Clear();
@@ -97,19 +99,9 @@ public class IndexedSet : IEnumerable<Expr>
             return contents.Contains(o);
         }
 
-        public bool ContainsAll(IEnumerable<Expr> c)
+        public bool ContainsAllTest(IEnumerable<Expr> c)
         {
             return c.All(x => contents.Contains(x));
-        }
-
-        public IEnumerator<Expr> GetEnumerator()
-        {
-            return contents.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return contents.GetEnumerator();
         }
 
         public bool RemoveTest(Expr o)

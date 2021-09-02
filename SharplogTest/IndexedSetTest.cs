@@ -34,9 +34,9 @@ namespace Sharplog
             HashSet<Expr> toRemove = new HashSet<Expr>();
             toRemove.Add(Expr.CreateExpr("foo", "a"));
             toRemove.Add(Expr.CreateExpr("bar", "b"));
-            Assert.IsTrue(indexedSet.ContainsAll(toRemove));
+            Assert.IsTrue(indexedSet.ContainsAllTest(toRemove));
             toRemove.Add(Expr.CreateExpr("bar", "c"));
-            Assert.IsFalse(indexedSet.ContainsAll(toRemove));
+            Assert.IsFalse(indexedSet.ContainsAllTest(toRemove));
             indexedSet.RemoveAll(toRemove);
             Assert.IsFalse(indexedSet.GetIndexes().Contains("bar".GetHashCode()));
             Assert.IsFalse(indexedSet.Contains(Expr.CreateExpr("foo", "a")));

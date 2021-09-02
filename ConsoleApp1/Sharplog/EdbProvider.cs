@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Sharpen;
+using Sharplog.Engine;
 
 namespace Sharplog
 {
@@ -31,7 +32,7 @@ namespace Sharplog
 		/// of all the facts in the database.
 		/// </summary>
 		/// <returns>All the facts in the EDB</returns>
-		IEnumerable<Expr> AllFacts();
+		IndexedSet AllFacts();
 
 		/// <summary>Adds a fact to the EDB database.</summary>
 		/// <param name="fact">The fact to add</param>

@@ -24,17 +24,18 @@ namespace Sharplog
     /// The number of terms is the expression's <i>arity</i>.
     /// </p>
     /// </remarks>
-    public class Expr
+    public sealed class Expr
     {
-        protected internal bool negated = false;
+        internal bool negated = false;
         private string predicate;
 
-        private IList<string> terms;
+        private readonly List<string> terms;
+        private readonly int _hashCode;
 
         /// <summary>Standard constructor that accepts a predicate and a list of terms.</summary>
         /// <param name="predicate">The predicate of the expression.</param>
         /// <param name="terms">The terms of the expression.</param>
-        public Expr(string predicate, IList<string> terms)
+        public Expr(string predicate, List<string> terms)
         {
             this.predicate = predicate;
             // I've seen both versions of the symbol for not equals being used, so I allow
@@ -43,7 +44,14 @@ namespace Sharplog
             {
                 this.predicate = "<>";
             }
+
             this.terms = terms;
+
+            this._hashCode = predicate.GetHashCode();
+            foreach (string term in terms)
+            {
+                this._hashCode += term.GetHashCode();
+            }
         }
 
         /// <summary>Constructor for the fluent API that allows a variable number of terms.</summary>
@@ -238,6 +246,7 @@ namespace Sharplog
         /// <returns>true if the expressions unify.</returns>
         public bool Unify(Sharplog.Expr that, StackMap bindings)
         {
+            // PERF
             if (!this.predicate.Equals(that.predicate) || this.Arity() != that.Arity())
             {
                 return false;
@@ -252,6 +261,7 @@ namespace Sharplog
                     {
                         if (!bindings.ContainsKey(term1))
                         {
+                            // PERF dict resizes
                             bindings.Add(term1, term2);
                         }
                         else if (!bindings.Get(term1).Equals(term2))
@@ -264,6 +274,7 @@ namespace Sharplog
                 {
                     if (!bindings.ContainsKey(term2))
                     {
+                        // PERF dict resizes
                         bindings.Add(term2, term1);
                     }
                     else if (!bindings.Get(term2).Equals(term1))
@@ -282,20 +293,34 @@ namespace Sharplog
         /// <summary>Substitutes the variables in this expression with bindings from a unification.</summary>
         /// <param name="bindings">The bindings to substitute.</param>
         /// <returns>A new expression with the variables replaced with the values in bindings.</returns>
-        public Sharplog.Expr Substitute(IDictionary<string, string> bindings)
+        public Sharplog.Expr Substitute(StackMap bindings)
         {
-            // that.terms.add() below doesn't work without the new ArrayList()
-            Sharplog.Expr that = new Sharplog.Expr(this.predicate, new List<string>(this.terms.Count));
-            that.negated = negated;
+            List<string> newTerms = new List<string>(this.terms.Count);
+            bool anyChange = false;
             foreach (string term in this.terms)
             {
                 if (!bindings.TryGetValue(term, out string value))
                 {
                     value = term;
                 }
+                else
+                {
+                    anyChange = true;
+                }
 
-                that.terms.Add(value);
+                newTerms.Add(value);
             }
+
+            if (!anyChange)
+            {
+                return this;
+            }
+
+            Expr that = new Expr(this.predicate, newTerms)
+            {
+                negated = negated
+            };
+
             return that;
         }
 
@@ -427,18 +452,18 @@ namespace Sharplog
             return predicate;
         }
 
-        public IList<string> GetTerms()
+        public List<string> GetTerms()
         {
             return terms;
         }
 
         public override bool Equals(object other)
         {
-            if (other == null || !(other is Sharplog.Expr))
+            if (other == null || !(other is Expr that))
             {
                 return false;
             }
-            Sharplog.Expr that = ((Sharplog.Expr)other);
+
             if (!this.predicate.Equals(that.predicate))
             {
                 return false;
@@ -459,12 +484,7 @@ namespace Sharplog
 
         public override int GetHashCode()
         {
-            int hash = predicate.GetHashCode();
-            foreach (string term in terms)
-            {
-                hash += term.GetHashCode();
-            }
-            return hash;
+            return _hashCode;
         }
 
         public override string ToString()

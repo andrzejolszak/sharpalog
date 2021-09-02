@@ -16,7 +16,7 @@
             string src = File.ReadAllText(ExamplesDir + "builtin.dl");
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?'), res.Count);
-            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.CountTest > 0)));
         }
 
         [Test]
@@ -42,7 +42,7 @@
             string src = File.ReadAllText(ExamplesDir + "cerineg.dl");
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?'), res.Count);
-            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.CountTest > 0)));
         }
 
         [Test]
@@ -52,7 +52,7 @@
             string src = File.ReadAllText(ExamplesDir + "family.dl");
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?') - 1, res.Count);
-            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0 || y.Item1.ToString().All(c => !char.IsUpper(c)))));
+            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.CountTest > 0 || y.Item1.ToString().All(c => !char.IsUpper(c)))));
         }
 
         [Test]
@@ -62,7 +62,7 @@
             string src = File.ReadAllText(ExamplesDir + "gens.dl");
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?'), res.Count);
-            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.CountTest > 0)));
         }
 
         [Test]
@@ -72,7 +72,7 @@
             string src = File.ReadAllText(ExamplesDir + "negate.dl");
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?'), res.Count);
-            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.CountTest > 0)));
         }
 
         [Test]
@@ -82,7 +82,7 @@
             string src = File.ReadAllText(ExamplesDir + "numbers.dl");
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?') - 1, res.Count);
-            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.CountTest > 0)));
         }
 
         [Test]
@@ -92,7 +92,7 @@
             string src = File.ReadAllText(ExamplesDir + "paths.dl");
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?') - 1, res.Count);
-            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0 || y.Item1.ToString().All(c => !char.IsUpper(c)))));
+            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.CountTest > 0 || y.Item1.ToString().All(c => !char.IsUpper(c)))));
         }
 
         [Test]
@@ -102,7 +102,7 @@
             string src = File.ReadAllText(ExamplesDir + "tum.de.dl");
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?') - 1, res.Count);
-            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.CountTest > 0)));
         }
 
         [Test]
@@ -112,7 +112,7 @@
             string src = File.ReadAllText(ExamplesDir + "stratified.dl");
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?') - 1, res.Count);
-            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.CountTest > 0)));
         }
     }
 }

@@ -1,3 +1,4 @@
+using Sharplog.Engine;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -144,7 +145,6 @@ namespace Sharplog
             }
             return sb.ToString();
         }
-
         /// <summary>Creates a new Rule with all variables from bindings substituted.</summary>
         /// <remarks>
         /// Creates a new Rule with all variables from bindings substituted.
@@ -156,7 +156,7 @@ namespace Sharplog
         /// </remarks>
         /// <param name="bindings">The bindings to substitute.</param>
         /// <returns>the Rule with the substituted bindings.</returns>
-        public Rule Substitute(IDictionary<string, string> bindings)
+        public Rule Substitute(StackMap bindings)
         {
             IList<Expr> subsBody = new List<Expr>();
             foreach (Expr e in GetBody())
@@ -164,31 +164,6 @@ namespace Sharplog
                 subsBody.Add(e.Substitute(bindings));
             }
             return new Rule(this.GetHead().Substitute(bindings), subsBody);
-        }
-
-        public override bool Equals(object other)
-        {
-            if (other == null || !(other is Rule))
-            {
-                return false;
-            }
-            Rule that = ((Rule)other);
-            if (!this.GetHead().Equals(that.GetHead()))
-            {
-                return false;
-            }
-            if (this.GetBody().Count != that.GetBody().Count)
-            {
-                return false;
-            }
-            foreach (Expr e in this.GetBody())
-            {
-                if (!that.GetBody().Contains(e))
-                {
-                    return false;
-                }
-            }
-            return true;
         }
 
         public Expr GetHead()
@@ -199,14 +174,6 @@ namespace Sharplog
         public IList<Expr> GetBody()
         {
             return body;
-        }
-
-        public override int GetHashCode()
-        {
-            var hashCode = -1150395728;
-            hashCode = hashCode * -1521134295 + EqualityComparer<Expr>.Default.GetHashCode(head);
-            hashCode = hashCode * -1521134295 + EqualityComparer<IList<Expr>>.Default.GetHashCode(body);
-            return hashCode;
         }
     }
 }

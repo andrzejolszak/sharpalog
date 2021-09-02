@@ -150,12 +150,12 @@ namespace Sharplog
         public void TestSubstitute()
         {
             Rule rule = new Rule(new Expr("p", "A", "B"), new Expr("q", "A"), new Expr("q", "B"), new Expr("<>", "A", "B"));
-            StackMap bindings = new StackMap();
+            StackMap bindings = new StackMap(null);
             bindings.Add("A", "aa");
-            Rule subsRule = rule.Substitute(bindings.Map);
-            Assert.IsTrue(subsRule.Equals(new Rule(new Expr("p", "aa", "B"), new Expr("q", "aa"), new Expr("q", "B"), new Expr("<>", "aa", "B"))));
+            Rule subsRule = rule.Substitute(bindings);
+            Assert.IsTrue(subsRule.ToString().Equals(new Rule(new Expr("p", "aa", "B"), new Expr("q", "aa"), new Expr("q", "B"), new Expr("<>", "aa", "B")).ToString()));
             // Original rule unchanged?
-            Assert.IsTrue(rule.Equals(new Rule(new Expr("p", "A", "B"), new Expr("q", "A"), new Expr("q", "B"), new Expr("<>", "A", "B"))));
+            Assert.IsTrue(rule.ToString().Equals(new Rule(new Expr("p", "A", "B"), new Expr("q", "A"), new Expr("q", "B"), new Expr("<>", "A", "B")).ToString()));
         }
     }
 }
