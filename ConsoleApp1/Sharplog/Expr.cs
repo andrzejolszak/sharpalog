@@ -292,20 +292,16 @@ namespace Sharplog
         /// <returns>A new expression with the variables replaced with the values in bindings.</returns>
         public Expr Substitute(StackMap bindings)
         {
-            List<string> newTerms = new List<string>(this.terms.Count);
+            List<string> newTerms = new List<string>(this.terms);
             bool anyChange = false;
-            foreach (string term in this.terms)
+            for (int i = 0; i < newTerms.Count; i++)
             {
+                string term = newTerms[i];
                 if (Jatalog.IsVariable(term) && bindings.TryGetValue(term, out string value))
                 {
                     anyChange = true;
-                    newTerms.Add(value);
+                    newTerms[i] = value;
                 }
-                else
-                {
-                    newTerms.Add(term);
-                }
-
             }
 
             if (!anyChange)

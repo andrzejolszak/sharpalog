@@ -36,7 +36,7 @@ namespace Sharplog.Engine
         public static IList<HashSet<Rule>> ComputeStratification(HashSet<Rule> allRules)
         {
             List<HashSet<Rule>> strata = new List<HashSet<Rule>>(10);
-            IDictionary<string, int> strats = new Dictionary<string, int>();
+            IDictionary<string, int> strats = new Dictionary<string, int>(allRules.Count);
             foreach (Rule rule in allRules)
             {
                 string pred = rule.GetHead().GetPredicate();
@@ -90,7 +90,7 @@ namespace Sharplog.Engine
             return relevant;
         }
 
-        protected internal static IDictionary<int, List<Rule>> BuildDependentRules(IEnumerable<Rule> rules)
+        protected internal static IDictionary<int, List<Rule>> BuildDependentRules(HashSet<Rule> rules)
         {
             IDictionary<int, List<Rule>> map = new Dictionary<int, List<Rule>>();
             foreach (Rule rule in rules)
@@ -99,9 +99,10 @@ namespace Sharplog.Engine
                 {
                     if (!map.TryGetValue(goal.GetPredicate().GetHashCode(), out List<Rule> dependants))
                     {
-                        dependants = new List<Rule>();
+                        dependants = new List<Rule>(rules.Count);
                         map[goal.GetPredicate().GetHashCode()] = dependants;
                     }
+
                     if (!dependants.Contains(rule))
                     {
                         dependants.Add(rule);
@@ -121,6 +122,7 @@ namespace Sharplog.Engine
                     dependantRules.UnionWith(rules);
                 }
             }
+
             return dependantRules;
         }
 
@@ -205,22 +207,20 @@ namespace Sharplog.Engine
         }
 
         /// <exception cref="Sharplog.DatalogException"/>
-        private static int DepthFirstSearch(Expr goal, IEnumerable<Rule> graph, IList<Expr> visited, int level)
+        private static int DepthFirstSearch(Expr goal, HashSet<Rule> graph, List<Expr> visited, int level)
         {
             string pred = goal.GetPredicate();
             // Step (1): Guard against negative recursion
             bool negated = goal.IsNegated();
-            StringBuilder route = new StringBuilder(pred);
             // for error reporting
             for (int i = visited.Count - 1; i >= 0; i--)
             {
                 Expr e = visited[i];
-                route.Append(e.IsNegated() ? " <- ~" : " <- ").Append(e.GetPredicate());
                 if (e.GetPredicate().Equals(pred))
                 {
                     if (negated)
                     {
-                        throw new DatalogException("Program is not stratified - predicate " + pred + " has a negative recursion: " + route);
+                        throw new DatalogException("Program is not stratified - predicate " + pred + " has a negative recursion");
                     }
                     return 0;
                 }
