@@ -76,7 +76,7 @@ namespace Sharplog.Engine
 
         public StackMap(StackMap parent)
         {
-            self = new Dictionary<string, string>();
+            self = new Dictionary<string, string>(3);
             this.parent = parent;
         }
 
@@ -112,37 +112,6 @@ namespace Sharplog.Engine
             return res;
         }
 
-        public bool ContainsKey(string key)
-        {
-            // PERF: merge containsKey with Get into TryGet
-            if (self.ContainsKey(key))
-            {
-                return true;
-            }
-            if (parent != null)
-            {
-                return parent.ContainsKey(key);
-            }
-            return false;
-        }
-
-        public string Get(string key)
-        {
-            // PERF
-            self.TryGetValue(key, out string value);
-            if (value != null)
-            {
-                return value;
-            }
-
-            if (parent != null)
-            {
-                return parent.Get(key);
-            }
-
-            return default(string);
-        }
-
         public void ClearTest()
         {
             // We don't want to modify the parent, so we just orphan this
@@ -157,7 +126,7 @@ namespace Sharplog.Engine
 
         public void Add(string key, string value)
         {
-            if (parent != null && parent.ContainsKey(key))
+            if (value == null || (parent?.self.ContainsKey(key) ?? false))
             {
                 throw new InvalidOperationException();
             }

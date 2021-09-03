@@ -64,11 +64,11 @@ namespace Sharplog
             bindings.ClearTest();
             Expr e4 = new Expr("foo", "Y", "X");
             Assert.IsTrue(e1.Unify(e4, bindings));
-            Assert.IsTrue(bindings.Get("Y").Equals("a"));
+            Assert.IsTrue(bindings.TryGetValue("Y", out string yVal) && yVal.Equals("a"));
             bindings.ClearTest();
             Assert.IsTrue(e4.Unify(e1, bindings));
-            Assert.IsTrue(bindings.Get("Y").Equals("a"));
-            Assert.IsTrue(bindings.Get("X").Equals("b"));
+            Assert.IsTrue(bindings.TryGetValue("Y", out string yVal2) && yVal2.Equals("a"));
+            Assert.IsTrue(bindings.TryGetValue("X", out string xVal) && xVal.Equals("b"));
         }
 
         [Test]
@@ -141,10 +141,10 @@ namespace Sharplog
             Assert.IsFalse(e1.Unify(e3, bindings));
             bindings.ClearTest();
             Assert.IsTrue(e1.Unify(e2, bindings));
-            Assert.IsTrue(bindings.Get("X").Equals("\"This is a quoted string"));
+            Assert.IsTrue(bindings.TryGetValue("X", out string xVal) && xVal.Equals("\"This is a quoted string"));
             bindings.ClearTest();
             Assert.IsTrue(e2.Unify(e1, bindings));
-            Assert.IsTrue(bindings.Get("X").Equals("\"This is a quoted string"));
+            Assert.IsTrue(bindings.TryGetValue("X", out string xVal2) && xVal2.Equals("\"This is a quoted string"));
         }
 
         /// <exception cref="System.Exception"/>
@@ -159,15 +159,15 @@ namespace Sharplog
             bindings.ClearTest();
             bindings.Add("X", "hello");
             Assert.IsTrue(e1.EvalBuiltIn(bindings));
-            Assert.IsTrue(bindings.Get("Y").Equals("hello"));
+            Assert.IsTrue(bindings.TryGetValue("Y", out string yVal) && yVal.Equals("hello"));
             bindings.ClearTest();
             bindings.Add("Y", "hello");
             Assert.IsTrue(e1.EvalBuiltIn(bindings));
-            Assert.IsTrue(bindings.Get("X").Equals("hello"));
+            Assert.IsTrue(bindings.TryGetValue("X", out string xVal) && xVal.Equals("hello"));
             bindings.ClearTest();
             bindings.Add("X", "hello");
             Assert.IsTrue(e1.EvalBuiltIn(bindings));
-            Assert.IsTrue(bindings.Get("Y").Equals("hello"));
+            Assert.IsTrue(bindings.TryGetValue("Y", out string yVal2) && yVal2.Equals("hello"));
             try
             {
                 bindings.ClearTest();

@@ -251,6 +251,7 @@ namespace Sharplog
             {
                 return false;
             }
+
             for (int i = 0; i < this.Arity(); i++)
             {
                 string term1 = this.terms[i];
@@ -259,12 +260,12 @@ namespace Sharplog
                 {
                     if (!term1.Equals(term2))
                     {
-                        if (!bindings.ContainsKey(term1))
+                        if (!bindings.TryGetValue(term1, out string term1Val))
                         {
                             // PERF dict resizes
                             bindings.Add(term1, term2);
                         }
-                        else if (!bindings.Get(term1).Equals(term2))
+                        else if (!term1Val.Equals(term2))
                         {
                             return false;
                         }
@@ -272,12 +273,12 @@ namespace Sharplog
                 }
                 else if (Sharplog.Jatalog.IsVariable(term2))
                 {
-                    if (!bindings.ContainsKey(term2))
+                    if (!bindings.TryGetValue(term2, out string term2Val))
                     {
                         // PERF dict resizes
                         bindings.Add(term2, term1);
                     }
-                    else if (!bindings.Get(term2).Equals(term1))
+                    else if (!term2Val.Equals(term1))
                     {
                         return false;
                     }

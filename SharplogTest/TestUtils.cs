@@ -29,7 +29,7 @@ namespace Sharplog
 
         public static bool MapContains(StackMap map, string key, string value)
         {
-            if (map.ContainsKey(key) && map.TryGetValue(key, out var val))
+            if (map.TryGetValue(key, out var val))
             {
                 return val.Equals(value);
             }
@@ -41,10 +41,6 @@ namespace Sharplog
         {
             foreach (string key in needle.KeysTest())
             {
-                if (!haystack.ContainsKey(key))
-                {
-                    return false;
-                }
                 if (!haystack.TryGetValue(key, out var val) || !needle.TryGetValue(key, out var val2) || !val.Equals(val2))
                 {
                     return false;
