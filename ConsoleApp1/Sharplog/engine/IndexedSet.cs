@@ -113,7 +113,7 @@ public class IndexedSet
             return false;
         }
 
-        public bool RemoveAll(IEnumerable<Expr> c)
+        public bool RemoveAll(List<Expr> c)
         {
             bool changed = false;
             foreach (Expr t in c)

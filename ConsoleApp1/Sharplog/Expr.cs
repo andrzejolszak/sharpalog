@@ -265,7 +265,7 @@ namespace Sharplog
                         // PERF dict resizes
                         if (newBindings is null)
                         {
-                            newBindings = new StackMap(bindings);
+                            newBindings = new StackMap(bindings, this.Arity - i);
                         }
 
                         newBindings.Add(term2, term1);

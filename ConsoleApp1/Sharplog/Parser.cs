@@ -21,7 +21,7 @@ namespace Sharplog
         /// <exception cref="Sharplog.DatalogException"/>
         internal static Statement.Statement ParseStmt(StreamTokenizer scan)
         {
-            IList<Expr> goals = new List<Expr>();
+            List<Expr> goals = new List<Expr>();
             try
             {
                 Expr head = ParseExpr(scan);

@@ -5,9 +5,9 @@ namespace Sharplog.Statement
 {
     internal class DeleteStatement : Sharplog.Statement.Statement
     {
-        private IList<Expr> goals;
+        private List<Expr> goals;
 
-        internal DeleteStatement(IList<Expr> goals)
+        internal DeleteStatement(List<Expr> goals)
         {
             this.goals = goals;
         }

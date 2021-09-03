@@ -29,7 +29,7 @@ namespace Sharplog
             edb.Add(fact);
         }
 
-        public bool RemoveAll(IEnumerable<Expr> facts)
+        public bool RemoveAll(List<Expr> facts)
         {
             return edb.RemoveAll(facts);
         }

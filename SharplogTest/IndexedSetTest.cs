@@ -31,7 +31,7 @@ namespace Sharplog
             Assert.IsTrue(indexedSet.Contains(Expr.CreateExpr("bar", "a")));
             indexedSet.RemoveTest(Expr.CreateExpr("bar", "a"));
             Assert.IsFalse(indexedSet.Contains(Expr.CreateExpr("bar", "a")));
-            HashSet<Expr> toRemove = new HashSet<Expr>();
+            List<Expr> toRemove = new List<Expr>();
             toRemove.Add(Expr.CreateExpr("foo", "a"));
             toRemove.Add(Expr.CreateExpr("bar", "b"));
             Assert.IsTrue(indexedSet.ContainsAllTest(toRemove));

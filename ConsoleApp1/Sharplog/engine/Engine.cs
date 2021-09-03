@@ -124,7 +124,7 @@ namespace Sharplog.Engine
             return dependantRules;
         }
 
-        protected internal static IEnumerable<StackMap> MatchGoals(IList<Expr> goals, int index, IndexedSet facts, StackMap bindings)
+        protected internal static List<StackMap> MatchGoals(IList<Expr> goals, int index, IndexedSet facts, StackMap bindings)
         {
             // PERF this flow allocs a lot of StackMaps with their Dictionaries
             Expr goal = goals[index];
@@ -272,11 +272,11 @@ namespace Sharplog.Engine
         * If the goal is a built-in predicate, it is also evaluated here. */
 
         /// <exception cref="Sharplog.DatalogException"/>
-        public IEnumerable<StackMap> Query(Sharplog.Jatalog jatalog, IList<Expr> goals, StackMap bindings)
+        public List<StackMap> Query(Sharplog.Jatalog jatalog, IList<Expr> goals, StackMap bindings)
         {
             if ((goals.Count == 0))
             {
-                return new System.Collections.Generic.List<StackMap>();
+                return new List<StackMap>();
             }
             // Reorganize the goals so that negated literals are at the end.
             IList<Expr> orderedGoals = Sharplog.Engine.Engine.ReorderQuery(goals);
@@ -348,14 +348,27 @@ namespace Sharplog.Engine
 
         private HashSet<Expr> MatchRule(IndexedSet facts, Rule rule)
         {
+#if DEBUG
             if ((rule.GetBody().Count == 0))
             {
                 // If this happens, you're using the API wrong.
-                return new System.Collections.Generic.HashSet<Expr>();
+                throw new InvalidOperationException();
             }
+#endif
+
             // Match the rule body to the facts.
-            IEnumerable<StackMap> answers = MatchGoals(rule.GetBody(), 0, facts, null);
-            return new HashSet<Expr>(answers.Select((StackMap answer) => rule.GetHead().Substitute(answer)).Where((Expr derivedFact) => !facts.Contains(derivedFact)));
+            List<StackMap> answers = MatchGoals(rule.GetBody(), 0, facts, null);
+            HashSet<Expr> res = new HashSet<Expr>();
+            foreach (StackMap answer in answers)
+            {
+                Expr derivedFact = rule.GetHead().Substitute(answer);
+                if (!facts.Contains(derivedFact))
+                {
+                    res.Add(derivedFact);
+                }
+            }
+
+            return res;
         }
     }
 }

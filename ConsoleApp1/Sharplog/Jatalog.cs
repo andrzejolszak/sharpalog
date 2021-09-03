@@ -279,7 +279,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">on syntax errors encountered while executing.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public IEnumerable<StackMap> Query(IList<Expr> goals, StackMap bindings)
+        public List<StackMap> Query(IList<Expr> goals, StackMap bindings)
         {
             return engine.Query(this, goals, bindings);
         }
@@ -442,10 +442,19 @@ namespace Sharplog
         /// <returns>true if any facts were deleted.</returns>
         /// <exception cref="DatalogException">on errors encountered during evaluation.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public bool Delete(IList<Expr> goals, StackMap bindings)
+        public bool Delete(List<Expr> goals, StackMap bindings)
         {
-            IEnumerable<StackMap> answers = Query(goals, bindings);
-            IList<Expr> facts = answers.SelectMany((StackMap answer) => goals.Select((Expr goal) => goal.Substitute(answer))).ToList();
+            List<StackMap> answers = Query(goals, bindings);
+            List<Expr> facts = new List<Expr>(answers.Count * goals.Count);
+            foreach (StackMap answer in answers)
+            {
+                foreach (Expr goal in goals)
+                {
+                    Expr derivedFact = goal.Substitute(answer);
+                    facts.Add(derivedFact);
+                }
+            }
+
             // and substitute the answer on each goal
             return edbProvider.RemoveAll(facts);
         }

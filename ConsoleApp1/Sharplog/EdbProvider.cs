@@ -41,7 +41,7 @@ namespace Sharplog
 		/// <summary>Removes facts from the database</summary>
 		/// <param name="facts">the facts to remove</param>
 		/// <returns>true if facts were removed</returns>
-		bool RemoveAll(IEnumerable<Expr> facts);
+		bool RemoveAll(List<Expr> facts);
 
 		/// <summary>Retrieves all the facts in the database that match specific predicate.</summary>
 		/// <param name="predicate">The predicate of the facts to be retrieved.</param>
