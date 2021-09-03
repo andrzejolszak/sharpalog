@@ -74,9 +74,9 @@ namespace Sharplog.Engine
 
         private StackMap parent;
 
-        public StackMap(StackMap parent)
+        public StackMap(StackMap parent, int initDictSize = 3)
         {
-            self = new Dictionary<string, string>(3);
+            self = new Dictionary<string, string>(initDictSize);
             this.parent = parent;
         }
 
@@ -126,10 +126,12 @@ namespace Sharplog.Engine
 
         public void Add(string key, string value)
         {
-            if (value == null || (parent?.self.ContainsKey(key) ?? false))
+#if DEBUG 
+            if (value == null || (parent?.self.ContainsKey(key) ?? false) || !Jatalog.IsVariable(key) || Jatalog.IsVariable(value))
             {
                 throw new InvalidOperationException();
             }
+#endif
 
             self.Add(key, value);
         }

@@ -163,6 +163,7 @@ namespace Sharplog
             {
                 subsBody.Add(e.Substitute(bindings));
             }
+
             return new Rule(this.GetHead().Substitute(bindings), subsBody);
         }
 

@@ -31,7 +31,6 @@ namespace Sharpen
          */
         private int peekc = NEED_CHAR;
         private bool pushedBack;
-        private bool forceLower;
         /** The line number of the last token Read */
 
         private bool eolIsSignificantP = false;
@@ -478,8 +477,6 @@ namespace Sharpen
                 } while ((ctype & (CT_ALPHA | CT_DIGIT)) != 0);
                 peekc = c;
                 StringValue = buf.ToString();
-                if (forceLower)
-                    StringValue = StringValue.ToLower();
                 return ttype = TT_WORD;
             }
 

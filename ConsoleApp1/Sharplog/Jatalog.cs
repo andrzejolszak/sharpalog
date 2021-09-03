@@ -410,7 +410,7 @@ namespace Sharplog
         /// <see cref="Expr.IsNegated()">negated</see>
         /// </exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public Sharplog.Jatalog Fact(Expr newFact)
+        public Jatalog Fact(Expr newFact)
         {
             if (!newFact.IsGround())
             {

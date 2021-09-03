@@ -18,10 +18,8 @@ namespace Sharplog
         */
         private static readonly IList<string> validOperators = new List<string> { "=", "!=", "<>", "<", "<=", ">", ">=" };
 
-        private static readonly Regex numberPattern = new Regex("[+-]?\\d+(\\.\\d*)?([Ee][+-]?\\d+)?", RegexOptions.Compiled);
-
         /// <exception cref="Sharplog.DatalogException"/>
-        internal static Sharplog.Statement.Statement ParseStmt(StreamTokenizer scan)
+        internal static Statement.Statement ParseStmt(StreamTokenizer scan)
         {
             IList<Expr> goals = new List<Expr>();
             try
@@ -117,7 +115,7 @@ namespace Sharplog
                 }
                 else if (scan.ttype == StreamTokenizer.TT_NUMBER)
                 {
-                    lhs = NumberToString(scan.NumberValue);
+                    lhs = scan.NumberValue.ToString();
                     builtInExpected = true;
                 }
                 else
@@ -157,7 +155,7 @@ namespace Sharplog
                         }
                         else if (scan.ttype == StreamTokenizer.TT_NUMBER)
                         {
-                            terms.Add(NumberToString(scan.NumberValue));
+                            terms.Add(scan.NumberValue.ToString());
                         }
                         else
                         {
@@ -184,11 +182,6 @@ namespace Sharplog
         * It is represented internally as a Expr with the operator as the predicate and the
         * operands as its terms, eg. <>(X, Y)
         */
-
-        internal static bool TryParseDouble(string str)
-        {
-            return numberPattern.Match(str).Success;
-        }
 
         /// <exception cref="Sharplog.DatalogException"/>
         private static Expr ParseBuiltInPredicate(string lhs, StreamTokenizer scan)
@@ -231,7 +224,7 @@ namespace Sharplog
                 }
                 else if (scan.ttype == StreamTokenizer.TT_NUMBER)
                 {
-                    rhs = NumberToString(scan.NumberValue);
+                    rhs = scan.NumberValue.ToString();
                 }
                 else
                 {
@@ -244,25 +237,5 @@ namespace Sharplog
                 throw new DatalogException(e);
             }
         }
-
-        /* Converts a number to a string - The StreamTokenizer returns numbers as doubles by default
-        * so we need to convert them back to strings to store them in the expressions */
-
-        private static string NumberToString(double nval)
-        {
-            // Remove trailing zeros; http://stackoverflow.com/a/14126736/115589
-            if (nval == (long)nval)
-            {
-                return ((long)nval).ToString();
-            }
-            else
-            {
-                return nval.ToString();
-            }
-        }
-
-        // Regex for tryParseDouble()
-        // There are several suggestions at http://stackoverflow.com/q/1102891/115589, but I chose to roll my own.
-        /* Checks, via regex, if a String can be parsed as a Double */
     }
 }

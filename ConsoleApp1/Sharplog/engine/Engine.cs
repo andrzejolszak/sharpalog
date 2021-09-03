@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -130,21 +131,22 @@ namespace Sharplog.Engine
             bool lastGoal = index >= goals.Count - 1;
             if (goal.IsBuiltIn())
             {
-                StackMap newBindings = new StackMap(bindings);
-                bool eval = goal.EvalBuiltIn(newBindings);
-                if (eval && !goal.IsNegated() || !eval && goal.IsNegated())
+                bool eval = goal.EvalBuiltIn(bindings, out StackMap newBindings);
+                if ((eval && !goal.IsNegated()) || (!eval && goal.IsNegated()))
                 {
                     if (lastGoal)
                     {
-                        return System.Linq.Enumerable.ToList(new[] { newBindings });
+                        return new List<StackMap> { newBindings ?? new StackMap(bindings) };
                     }
                     else
                     {
                         return MatchGoals(goals, index + 1, facts, newBindings);
                     }
                 }
-                return new System.Collections.Generic.List<StackMap>();
+
+                return new List<StackMap>();
             }
+
             List<StackMap> answers = new List<StackMap>();
             if (!goal.IsNegated())
             {
@@ -153,12 +155,11 @@ namespace Sharplog.Engine
                 // as an answer, otherwise we recursively check the remaining goals.
                 foreach (Expr fact in facts.GetIndexed(goal.GetPredicate().GetHashCode()))
                 {
-                    StackMap newBindings = new StackMap(bindings);
-                    if (fact.Unify(goal, newBindings))
+                    if (fact.GroundUnifyWith(goal, bindings, out StackMap newBindings))
                     {
                         if (lastGoal)
                         {
-                            answers.Add(newBindings);
+                            answers.Add(newBindings ?? new StackMap(bindings));
                         }
                         else
                         {
@@ -180,14 +181,15 @@ namespace Sharplog.Engine
                 {
                     goal = goal.Substitute(bindings);
                 }
+
                 foreach (Expr fact in facts.GetIndexed(goal.GetPredicate().GetHashCode()))
                 {
-                    StackMap newBindings = new StackMap(bindings);
-                    if (fact.Unify(goal, newBindings))
+                    if (fact.GroundUnifyWith(goal, bindings, out _))
                     {
-                        return new System.Collections.Generic.List<StackMap>();
+                        return new List<StackMap>(0);
                     }
                 }
+
                 // not found
                 if (lastGoal)
                 {
@@ -198,6 +200,7 @@ namespace Sharplog.Engine
                     answers.AddRange(MatchGoals(goals, index + 1, facts, bindings));
                 }
             }
+
             return answers;
         }
 

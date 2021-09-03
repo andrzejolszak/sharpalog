@@ -37,3 +37,16 @@ bar(2).
 tar(X) :- foo(X), bar(X).
 tar(X) :- tar(X).
 tar(0).
+
+a(X) :- b(Y, Z), b(P, T), c(X), X = T, X = Z, Z = T, T = T.
+b(1, 2).
+c(2).
+a(X)?
+
+ppp(1, 1).
+ppp(1, 2).
+ppp(2, 2).
+ppp(X, Y)?
+ppp(X, Y), X != Y?
+ppp(X, Y), X = Y?
+ppp(X, X)?

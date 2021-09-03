@@ -30,7 +30,7 @@ namespace Sharplog
         private string predicate;
 
         private readonly List<string> terms;
-        private readonly int _hashCode;
+        private int? _hashCode;
 
         /// <summary>Standard constructor that accepts a predicate and a list of terms.</summary>
         /// <param name="predicate">The predicate of the expression.</param>
@@ -40,18 +40,12 @@ namespace Sharplog
             this.predicate = predicate;
             // I've seen both versions of the symbol for not equals being used, so I allow
             // both, but we convert to "<>" internally to simplify matters later.
-            if (this.predicate.Equals("!="))
+            if (this.predicate == "!=")
             {
                 this.predicate = "<>";
             }
 
             this.terms = terms;
-
-            this._hashCode = predicate.GetHashCode();
-            foreach (string term in terms)
-            {
-                this._hashCode += term.GetHashCode();
-            }
         }
 
         /// <summary>Constructor for the fluent API that allows a variable number of terms.</summary>
@@ -184,10 +178,7 @@ namespace Sharplog
         /// does not enforce it (expressions with the same predicates but different arities wont unify).
         /// </remarks>
         /// <returns>the arity</returns>
-        public int Arity()
-        {
-            return terms.Count;
-        }
+        public int Arity => terms.Count;
 
         /// <summary>An expression is said to be ground if none of its terms are variables.</summary>
         /// <returns>true if the expression is ground</returns>
@@ -195,11 +186,12 @@ namespace Sharplog
         {
             foreach (string term in terms)
             {
-                if (Sharplog.Jatalog.IsVariable(term))
+                if (Jatalog.IsVariable(term))
                 {
                     return false;
                 }
             }
+
             return true;
         }
 
@@ -240,81 +232,85 @@ namespace Sharplog
         /// Unifies
         /// <c>this</c>
         /// expression with another expression.
+        /// This expression is assumed to be fully ground, this allows for performance optimization.
         /// </summary>
         /// <param name="that">The expression to unify with</param>
         /// <param name="bindings">The bindings of variables to values after unification</param>
         /// <returns>true if the expressions unify.</returns>
-        public bool Unify(Sharplog.Expr that, StackMap bindings)
+        public bool GroundUnifyWith(Expr that, StackMap bindings, out StackMap newBindings)
         {
+#if DEBUG
+            if (!this.IsGround())
+            {
+                throw new InvalidOperationException();
+            }
+#endif
+
             // PERF
-            if (!this.predicate.Equals(that.predicate) || this.Arity() != that.Arity())
+            newBindings = null;
+            if (this.predicate != that.predicate || this.Arity != that.Arity)
             {
                 return false;
             }
 
-            for (int i = 0; i < this.Arity(); i++)
+            for (int i = 0; i < this.Arity; i++)
             {
                 string term1 = this.terms[i];
                 string term2 = that.terms[i];
-                if (Sharplog.Jatalog.IsVariable(term1))
+                if (Jatalog.IsVariable(term2))
                 {
-                    if (!term1.Equals(term2))
-                    {
-                        if (!bindings.TryGetValue(term1, out string term1Val))
-                        {
-                            // PERF dict resizes
-                            bindings.Add(term1, term2);
-                        }
-                        else if (!term1Val.Equals(term2))
-                        {
-                            return false;
-                        }
-                    }
-                }
-                else if (Sharplog.Jatalog.IsVariable(term2))
-                {
-                    if (!bindings.TryGetValue(term2, out string term2Val))
+                    string term2Val = term1;
+                    if (!((newBindings ?? bindings)?.TryGetValue(term2, out term2Val) ?? false))
                     {
                         // PERF dict resizes
-                        bindings.Add(term2, term1);
+                        if (newBindings is null)
+                        {
+                            newBindings = new StackMap(bindings);
+                        }
+
+                        newBindings.Add(term2, term1);
                     }
-                    else if (!term2Val.Equals(term1))
+                    else if (term2Val != term1)
                     {
+                        newBindings = null;
                         return false;
                     }
                 }
-                else if (!term1.Equals(term2))
+                else if (term1 != term2)
                 {
+                    newBindings = null;
                     return false;
                 }
             }
+
+            newBindings = newBindings ?? bindings;
             return true;
         }
 
         /// <summary>Substitutes the variables in this expression with bindings from a unification.</summary>
         /// <param name="bindings">The bindings to substitute.</param>
         /// <returns>A new expression with the variables replaced with the values in bindings.</returns>
-        public Sharplog.Expr Substitute(StackMap bindings)
+        public Expr Substitute(StackMap bindings)
         {
             List<string> newTerms = new List<string>(this.terms.Count);
             bool anyChange = false;
             foreach (string term in this.terms)
             {
-                if (!bindings.TryGetValue(term, out string value))
+                if (Jatalog.IsVariable(term) && bindings.TryGetValue(term, out string value))
                 {
-                    value = term;
+                    anyChange = true;
+                    newTerms.Add(value);
                 }
                 else
                 {
-                    anyChange = true;
+                    newTerms.Add(term);
                 }
 
-                newTerms.Add(value);
             }
 
             if (!anyChange)
             {
-                return this;
+                throw new InvalidOperationException();
             }
 
             Expr that = new Expr(this.predicate, newTerms)
@@ -328,20 +324,20 @@ namespace Sharplog
         /// <summary>Evaluates a built-in predicate.</summary>
         /// <param name="bindings">A map of variable bindings</param>
         /// <returns>true if the operator matched.</returns>
-        public bool EvalBuiltIn(StackMap bindings)
+        public bool EvalBuiltIn(StackMap bindings, out StackMap newBinding)
         {
             // This method may throw a RuntimeException for a variety of possible reasons, but
             // these conditions are supposed to have been caught earlier in the chain by
             // methods such as Rule#validate().
             // The RuntimeException is a requirement of using the Streams API.
             string term1 = terms[0];
-            if (bindings.TryGetValue(term1, out string term1v))
+            if (Jatalog.IsVariable(term1) && bindings.TryGetValue(term1, out string term1v))
             {
                 term1 = term1v;
             }
 
             string term2 = terms[1];
-            if (bindings.TryGetValue(term2, out string term2v))
+            if (Jatalog.IsVariable(term2) && bindings.TryGetValue(term2, out string term2v))
             {
                 term2 = term2v;
             }
@@ -349,102 +345,103 @@ namespace Sharplog
             if (predicate.Equals("="))
             {
                 // '=' is special
-                if (Sharplog.Jatalog.IsVariable(term1))
+                if (Jatalog.IsVariable(term1))
                 {
-                    if (Sharplog.Jatalog.IsVariable(term2))
+#if DEBUG
+                    if (Jatalog.IsVariable(term2))
                     {
                         // Rule#validate() was supposed to catch this condition
                         throw new InvalidOperationException("Both operands of '=' are unbound (" + term1 + ", " + term2 + ") in evaluation of " + this);
                     }
+#endif
 
-                    bindings.Add(term1, term2);
-
+                    newBinding = new StackMap(bindings, 1);
+                    newBinding.Add(term1, term2);
                     return true;
                 }
-                else if (Sharplog.Jatalog.IsVariable(term2))
+                else if (Jatalog.IsVariable(term2))
                 {
-                    bindings.Add(term2, term1);
+                    newBinding = new StackMap(bindings, 1);
+                    newBinding.Add(term2, term1);
                     return true;
                 }
-                else if (Parser.TryParseDouble(term1) && Parser.TryParseDouble(term2))
+                else if (double.TryParse(term1, out double d1) && double.TryParse(term2, out double d2))
                 {
-                    double d1 = double.Parse(term1);
-                    double d2 = double.Parse(term2);
-                    return d1 == d2;
+                    bool res = d1 == d2;
+                    newBinding = res ? bindings : null;
+                    return res;
                 }
                 else
                 {
-                    return term1.Equals(term2);
+                    bool res = term1 == term2;
+                    newBinding = res ? bindings : null;
+                    return res;
                 }
             }
             else
             {
-                try
+                // These errors can be detected in the validate method:
+                if (Jatalog.IsVariable(term1) || Jatalog.IsVariable(term2))
                 {
-                    // These errors can be detected in the validate method:
-                    if (Sharplog.Jatalog.IsVariable(term1) || Sharplog.Jatalog.IsVariable(term2))
+                    // Rule#validate() was supposed to catch this condition
+                    throw new InvalidOperationException("Unbound variable in evaluation of " + this);
+                }
+                if (predicate.Equals("<>"))
+                {
+                    // '<>' is also a bit special
+                    if (double.TryParse(term1, out double d1) && double.TryParse(term2, out double d2))
                     {
-                        // Rule#validate() was supposed to catch this condition
-                        throw new InvalidOperationException("Unbound variable in evaluation of " + this);
-                    }
-                    if (predicate.Equals("<>"))
-                    {
-                        // '<>' is also a bit special
-                        if (Parser.TryParseDouble(term1) && Parser.TryParseDouble(term2))
-                        {
-                            double d1 = double.Parse(term1);
-                            double d2 = double.Parse(term2);
-                            return d1 != d2;
-                        }
-                        else
-                        {
-                            return !term1.Equals(term2);
-                        }
+                        bool res = d1 != d2;
+                        newBinding = res ? bindings : null;
+                        return res;
                     }
                     else
                     {
-                        // Ordinary comparison operator
-                        // If the term doesn't parse to a double it gets treated as 0.0.
-                        double d1 = 0.0;
-                        double d2 = 0.0;
-                        if (Parser.TryParseDouble(term1))
-                        {
-                            d1 = double.Parse(term1);
-                        }
-                        if (Parser.TryParseDouble(term2))
-                        {
-                            d2 = double.Parse(term2);
-                        }
-                        switch (predicate)
-                        {
-                            case "<":
-                                {
-                                    return d1 < d2;
-                                }
-
-                            case "<=":
-                                {
-                                    return d1 <= d2;
-                                }
-
-                            case ">":
-                                {
-                                    return d1 > d2;
-                                }
-
-                            case ">=":
-                                {
-                                    return d1 >= d2;
-                                }
-                        }
+                        bool res = term1 != term2;
+                        newBinding = res ? bindings : null;
+                        return res;
                     }
                 }
-                catch (FormatException e)
+                else
                 {
-                    // You found a way to write a double in a way that the regex in tryParseDouble() doesn't understand.
-                    throw new InvalidOperationException("tryParseDouble() experienced a false positive!?", e);
+                    // Ordinary comparison operator
+                    // If the term doesn't parse to a double it gets treated as 0.0.
+                    double.TryParse(term1, out double d1);
+                    double.TryParse(term2, out double d2);
+
+                    switch (predicate)
+                    {
+                        case "<":
+                            {
+                                bool res = d1 < d2;
+                                newBinding = res ? bindings : null;
+                                return res;
+                            }
+
+                        case "<=":
+                            {
+                                bool res = d1 <= d2;
+                                newBinding = res ? bindings : null;
+                                return res;
+                            }
+
+                        case ">":
+                            {
+                                bool res = d1 > d2;
+                                newBinding = res ? bindings : null;
+                                return res;
+                            }
+
+                        case ">=":
+                            {
+                                bool res = d1 >= d2;
+                                newBinding = res ? bindings : null;
+                                return res;
+                            }
+                    }
                 }
             }
+
             throw new InvalidOperationException("Unimplemented built-in predicate " + predicate);
         }
 
@@ -469,7 +466,7 @@ namespace Sharplog
             {
                 return false;
             }
-            if (Arity() != that.Arity() || negated != that.negated)
+            if (this.Arity != that.Arity || negated != that.negated)
             {
                 return false;
             }
@@ -485,7 +482,16 @@ namespace Sharplog
 
         public override int GetHashCode()
         {
-            return _hashCode;
+            if(this._hashCode is null)
+            {
+                this._hashCode = predicate.GetHashCode();
+                foreach (string term in terms)
+                {
+                    this._hashCode += term.GetHashCode();
+                }
+            }
+
+            return _hashCode.Value;
         }
 
         public override string ToString()
@@ -540,6 +546,7 @@ namespace Sharplog
             {
                 throw new DatalogException("Fact " + this + " is not ground");
             }
+
             else if (IsNegated())
             {
                 throw new DatalogException("Fact " + this + " is negated");

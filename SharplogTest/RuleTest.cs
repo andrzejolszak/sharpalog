@@ -152,8 +152,9 @@ namespace Sharplog
             Rule rule = new Rule(new Expr("p", "A", "B"), new Expr("q", "A"), new Expr("q", "B"), new Expr("<>", "A", "B"));
             StackMap bindings = new StackMap(null);
             bindings.Add("A", "aa");
+            bindings.Add("B", "bb");
             Rule subsRule = rule.Substitute(bindings);
-            Assert.IsTrue(subsRule.ToString().Equals(new Rule(new Expr("p", "aa", "B"), new Expr("q", "aa"), new Expr("q", "B"), new Expr("<>", "aa", "B")).ToString()));
+            Assert.IsTrue(subsRule.ToString().Equals(new Rule(new Expr("p", "aa", "bb"), new Expr("q", "aa"), new Expr("q", "bb"), new Expr("<>", "aa", "bb")).ToString()));
             // Original rule unchanged?
             Assert.IsTrue(rule.ToString().Equals(new Rule(new Expr("p", "A", "B"), new Expr("q", "A"), new Expr("q", "B"), new Expr("<>", "A", "B")).ToString()));
         }
