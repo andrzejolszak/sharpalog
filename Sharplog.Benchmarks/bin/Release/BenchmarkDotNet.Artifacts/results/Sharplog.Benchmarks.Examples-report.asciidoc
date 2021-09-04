@@ -7,14 +7,14 @@ Intel Core i5-7300HQ CPU 2.50GHz (Kaby Lake), 1 CPU, 4 logical and 4 physical co
 ....
 [options="header"]
 |===
-|      Method|     DataSource|           Median|              P90|      Gen 0|     Gen 1|     Gen 2|   Allocated
-|  RunExample|     builtin.dl|       3,757.0 ns|       4,483.3 ns|          -|         -|         -|      2405 B
-|  RunExample|     cerineg.dl|       5,133.0 ns|       6,072.8 ns|          -|         -|         -|      3523 B
-|  RunExample|      family.dl|     565,006.5 ns|     585,884.5 ns|    30.0000|         -|         -|    370609 B
-|  RunExample|        gens.dl|      30,227.0 ns|      34,695.2 ns|          -|         -|         -|     24903 B
-|  RunExample|      negate.dl|       2,793.5 ns|       3,743.7 ns|          -|         -|         -|      1720 B
-|  RunExample|     numbers.dl|       9,259.0 ns|      10,910.4 ns|          -|         -|         -|      6636 B
-|  RunExample|       paths.dl|       5,080.5 ns|       5,941.3 ns|          -|         -|         -|      3195 B
-|  RunExample|  stratified.dl|         489.0 ns|         808.8 ns|          -|         -|         -|       328 B
-|  RunExample|      tum.de.dl|  51,047,293.5 ns|  51,948,509.7 ns|  3000.0000|  780.0000|  170.0000|  30995180 B
+|      Method|     DataSource|           Median|              P90|    Gen 0|  Allocated
+|  RunExample|     builtin.dl|       2,842.0 ns|       4,190.9 ns|        -|     1720 B
+|  RunExample|     cerineg.dl|       2,778.0 ns|       3,333.8 ns|        -|     1802 B
+|  RunExample|      family.dl|     253,047.0 ns|     261,956.0 ns|  10.0000|   122553 B
+|  RunExample|        gens.dl|      21,565.0 ns|      26,312.8 ns|        -|    19087 B
+|  RunExample|      negate.dl|       1,400.0 ns|       2,096.2 ns|        -|      901 B
+|  RunExample|     numbers.dl|       5,707.0 ns|       7,010.2 ns|        -|     3850 B
+|  RunExample|       paths.dl|       2,459.0 ns|       3,033.0 ns|        -|     1393 B
+|  RunExample|  stratified.dl|         340.0 ns|         553.8 ns|        -|      246 B
+|  RunExample|      tum.de.dl|  16,533,614.0 ns|  16,748,681.8 ns|  10.0000|  1365278 B
 |===
