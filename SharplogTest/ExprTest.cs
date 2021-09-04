@@ -174,7 +174,7 @@ namespace Sharplog
                 e1.EvalBuiltIn(bindings, out bindings);
                 Assert.IsFalse(true);
             }
-            catch (Exception ex)
+            catch (DatalogException ex)
             {
                 Assert.IsTrue(true);
             }
@@ -231,7 +231,7 @@ namespace Sharplog
                 e1.EvalBuiltIn(bindings, out bindings);
                 Assert.IsFalse(true);
             }
-            catch (Exception ex)
+            catch (DatalogException ex)
             {
                 Assert.IsTrue(true);
             }
@@ -242,7 +242,7 @@ namespace Sharplog
                 e1.EvalBuiltIn(bindings, out bindings);
                 Assert.IsFalse(true);
             }
-            catch (Exception ex)
+            catch (DatalogException ex)
             {
                 Assert.IsTrue(true);
             }
@@ -253,7 +253,7 @@ namespace Sharplog
                 e1.EvalBuiltIn(bindings, out bindings);
                 Assert.IsFalse(true);
             }
-            catch (Exception ex)
+            catch (DatalogException ex)
             {
                 Assert.IsTrue(true);
             }
@@ -281,7 +281,7 @@ namespace Sharplog
                 e1.EvalBuiltIn(bindings, out bindings);
                 Assert.IsTrue(false);
             }
-            catch (Exception ex)
+            catch (DatalogException ex)
             {
                 Assert.IsTrue(true);
             }

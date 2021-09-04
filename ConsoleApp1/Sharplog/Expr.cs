@@ -347,7 +347,7 @@ namespace Sharplog
                     if (Jatalog.IsVariable(term2))
                     {
                         // Rule#validate() was supposed to catch this condition
-                        throw new InvalidOperationException("Both operands of '=' are unbound (" + term1 + ", " + term2 + ") in evaluation of " + this);
+                        throw new DatalogException("Both operands of '=' are unbound (" + term1 + ", " + term2 + ") in evaluation of " + this);
                     }
 #endif
 
@@ -376,12 +376,15 @@ namespace Sharplog
             }
             else
             {
+#if DEBUG
                 // These errors can be detected in the validate method:
                 if (Jatalog.IsVariable(term1) || Jatalog.IsVariable(term2))
                 {
                     // Rule#validate() was supposed to catch this condition
-                    throw new InvalidOperationException("Unbound variable in evaluation of " + this);
+                    throw new DatalogException("Unbound variable in evaluation of " + this);
                 }
+#endif
+
                 if (predicate.Equals("<>"))
                 {
                     // '<>' is also a bit special
@@ -438,7 +441,7 @@ namespace Sharplog
                 }
             }
 
-            throw new InvalidOperationException("Unimplemented built-in predicate " + predicate);
+            throw new DatalogException("Unimplemented built-in predicate " + predicate);
         }
 
         public string GetPredicate()
