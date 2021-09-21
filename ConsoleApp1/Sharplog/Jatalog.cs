@@ -216,13 +216,13 @@ namespace Sharplog
         /// <exception cref="DatalogException">on syntax and I/O errors encountered while executing.</exception>
         /// <seealso cref="Sharplog.Output.QueryOutput"/>
         /// <exception cref="Sharplog.DatalogException"/>
-        public List<(Statement.Statement, StackMap)> ExecuteAll(System.IO.StreamReader reader, QueryOutput output)
+        public List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll(System.IO.StreamReader reader, QueryOutput output)
         {
             try
             {
                 StreamTokenizer scan = GetTokenizer(reader);
                 // Tracks all query answers
-                List<(Statement.Statement, StackMap)> answers = new List<(Statement.Statement, StackMap)>();
+                List<(Statement.Statement, IDictionary<string, string>)> answers = new List<(Statement.Statement, IDictionary<string, string>)>();
                 scan.NextToken();
                 while (scan.ttype != StreamTokenizer.TT_EOF)
                 {
@@ -253,7 +253,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">on syntax errors encountered while executing.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public Dictionary<Statement.Statement, List<(Statement.Statement, StackMap)>> ExecuteAll(string statements)
+        public Dictionary<Statement.Statement, List<(Statement.Statement, IDictionary<string, string>)>> ExecuteAll(string statements)
         {
             // It would've been fun to wrap the results in a java.sql.ResultSet, but damn,
             // those are a lot of methods to implement:
@@ -279,7 +279,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">on syntax errors encountered while executing.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public List<StackMap> Query(IList<Expr> goals, StackMap bindings)
+        public List<IDictionary<string, string>> Query(IList<Expr> goals, StackMap bindings)
         {
             return engine.Query(this, goals, bindings);
         }
@@ -299,7 +299,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">on syntax errors encountered while executing.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public IEnumerable<StackMap> Query(params Expr[] goals)
+        public IEnumerable<IDictionary<string, string>> Query(params Expr[] goals)
         {
             return Query(goals.ToList(), null);
         }
@@ -444,9 +444,9 @@ namespace Sharplog
         /// <exception cref="Sharplog.DatalogException"/>
         public bool Delete(List<Expr> goals, StackMap bindings)
         {
-            List<StackMap> answers = Query(goals, bindings);
+            List<IDictionary<string, string>> answers = Query(goals, bindings);
             List<Expr> facts = new List<Expr>(answers.Count * goals.Count);
-            foreach (StackMap answer in answers)
+            foreach (IDictionary<string, string> answer in answers)
             {
                 foreach (Expr goal in goals)
                 {
@@ -504,12 +504,12 @@ namespace Sharplog
         /* Internal method for executing one and only one statement */
 
         /// <exception cref="Sharplog.DatalogException"/>
-        private List<(Statement.Statement, StackMap)> ExecuteSingleStatement(StreamTokenizer scan, System.IO.StreamReader reader, QueryOutput output)
+        private List<(Statement.Statement, IDictionary<string, string>)> ExecuteSingleStatement(StreamTokenizer scan, System.IO.StreamReader reader, QueryOutput output)
         {
             Sharplog.Statement.Statement statement = Parser.ParseStmt(scan);
             try
             {
-                IEnumerable<StackMap> answers = statement.Execute(this, null);
+                IEnumerable<IDictionary<string, string>> answers = statement.Execute(this, null);
                 if (answers != null && output != null)
                 {
                     output.WriteResult(statement, answers);

@@ -126,30 +126,30 @@ namespace Sharplog.Engine
             return dependantRules;
         }
 
-        protected internal static List<StackMap> MatchGoals(IList<Expr> goals, int index, IndexedSet facts, StackMap bindings)
+        protected internal static List<IDictionary<string, string>> MatchGoals(IList<Expr> goals, int index, IndexedSet facts, StackMap bindings)
         {
             // PERF this flow allocs a lot of StackMaps with their Dictionaries
             Expr goal = goals[index];
             bool lastGoal = index >= goals.Count - 1;
             if (goal.IsBuiltIn())
             {
-                bool eval = goal.EvalBuiltIn(bindings, out StackMap newBindings);
+                bool eval = goal.EvalBuiltIn(bindings);
                 if ((eval && !goal.IsNegated()) || (!eval && goal.IsNegated()))
                 {
                     if (lastGoal)
                     {
-                        return new List<StackMap> { newBindings ?? new StackMap(bindings) };
+                        return new List<IDictionary<string, string>> { bindings.CloneAsDictionary() };
                     }
                     else
                     {
-                        return MatchGoals(goals, index + 1, facts, newBindings);
+                        return MatchGoals(goals, index + 1, facts, bindings);
                     }
                 }
 
-                return new List<StackMap>();
+                return new List<IDictionary<string, string>>(0);
             }
 
-            List<StackMap> answers = new List<StackMap>();
+            List<IDictionary<string, string>> answers = new List<IDictionary<string, string>>();
             if (!goal.IsNegated())
             {
                 // Positive rule: Match each fact to the first goal.
@@ -157,18 +157,21 @@ namespace Sharplog.Engine
                 // as an answer, otherwise we recursively check the remaining goals.
                 foreach (Expr fact in facts.GetIndexed(goal.GetPredicate().GetHashCode()))
                 {
-                    if (fact.GroundUnifyWith(goal, bindings, out StackMap newBindings))
+                    int stackPointer = bindings.Stack.Count;
+                    if (fact.GroundUnifyWith(goal, bindings))
                     {
                         if (lastGoal)
                         {
-                            answers.Add(newBindings ?? new StackMap(bindings));
+                            answers.Add(bindings.CloneAsDictionary());
                         }
                         else
                         {
                             // More goals to match. Recurse with the remaining goals.
-                            answers.AddRange(MatchGoals(goals, index + 1, facts, newBindings));
+                            answers.AddRange(MatchGoals(goals, index + 1, facts, bindings));
                         }
                     }
+                    
+                    bindings.RemoveUntil(stackPointer);
                 }
             }
             else
@@ -181,21 +184,21 @@ namespace Sharplog.Engine
                 // for the fact grad(a).
                 if (bindings != null)
                 {
-                    goal = goal.Substitute(bindings);
+                    goal = goal.Substitute(bindings.DictionaryObject());
                 }
 
                 foreach (Expr fact in facts.GetIndexed(goal.GetPredicate().GetHashCode()))
                 {
-                    if (fact.GroundUnifyWith(goal, bindings, out _))
+                    if (fact.GroundUnifyWith(goal, bindings))
                     {
-                        return new List<StackMap>(0);
+                        return new List<IDictionary<string, string>>(0);
                     }
                 }
 
                 // not found
                 if (lastGoal)
                 {
-                    answers.Add(bindings);
+                    answers.Add(bindings.CloneAsDictionary());
                 }
                 else
                 {
@@ -272,11 +275,11 @@ namespace Sharplog.Engine
         * If the goal is a built-in predicate, it is also evaluated here. */
 
         /// <exception cref="Sharplog.DatalogException"/>
-        public List<StackMap> Query(Sharplog.Jatalog jatalog, IList<Expr> goals, StackMap bindings)
+        public List<IDictionary<string, string>> Query(Sharplog.Jatalog jatalog, IList<Expr> goals, StackMap bindings)
         {
             if ((goals.Count == 0))
             {
-                return new List<StackMap>();
+                return new List<IDictionary<string, string>>(0);
             }
             // Reorganize the goals so that negated literals are at the end.
             IList<Expr> orderedGoals = Sharplog.Engine.Engine.ReorderQuery(goals);
@@ -291,7 +294,7 @@ namespace Sharplog.Engine
             // Build the database. A Set ensures that the facts are unique
             IndexedSet resultSet = ExpandDatabase(facts, rules);
             // Now match the expanded database to the goals
-            return MatchGoals(orderedGoals, 0, resultSet, null);
+            return MatchGoals(orderedGoals, 0, resultSet, new StackMap());
         }
 
         /* The core of the bottom-up implementation:
@@ -354,21 +357,109 @@ namespace Sharplog.Engine
                 // If this happens, you're using the API wrong.
                 throw new InvalidOperationException();
             }
+
+            if (rule.GetHead().GetTerms().Count(x => Jatalog.IsVariable(x)) == 0)
+            {
+                // If this happens, you're using the API wrong.
+                throw new InvalidOperationException();
+            }
 #endif
 
             // Match the rule body to the facts.
-            List<StackMap> answers = MatchGoals(rule.GetBody(), 0, facts, null);
             HashSet<Expr> res = new HashSet<Expr>();
-            foreach (StackMap answer in answers)
+            MatchGoals(rule.GetHead(), rule.GetBody(), 0, facts, new StackMap(), res, null);
+            return res;
+        }
+
+        protected internal static void MatchGoals(Expr ruleHead, IList<Expr> goals, int index, IndexedSet facts, StackMap bindings, HashSet<Expr> res, string[] reusableArray)
+        {
+            // TODO: duplicated
+            Expr goal = goals[index];
+            bool lastGoal = index >= goals.Count - 1;
+            if (goal.IsBuiltIn())
             {
-                Expr derivedFact = rule.GetHead().Substitute(answer);
-                if (!facts.Contains(derivedFact))
+                bool eval = goal.EvalBuiltIn(bindings);
+                if ((eval && !goal.IsNegated()) || (!eval && goal.IsNegated()))
                 {
-                    res.Add(derivedFact);
+                    if (lastGoal)
+                    {
+                        DeriveAndAddFact();
+                    }
+                    else
+                    {
+                        MatchGoals(ruleHead, goals, index + 1, facts, bindings, res, reusableArray);
+                    }
+                }
+
+                return;
+            }
+
+            if (!goal.IsNegated())
+            {
+                // Positive rule: Match each fact to the first goal.
+                // If the fact matches: If it is the last/only goal then we can return the bindings
+                // as an answer, otherwise we recursively check the remaining goals.
+                foreach (Expr fact in facts.GetIndexed(goal.GetPredicate().GetHashCode()))
+                {
+                    int stackPointer = bindings.Stack.Count;
+                    if (fact.GroundUnifyWith(goal, bindings))
+                    {
+                        if (lastGoal)
+                        {
+                            DeriveAndAddFact();
+                        }
+                        else
+                        {
+                            // More goals to match. Recurse with the remaining goals.
+                            MatchGoals(ruleHead, goals, index + 1, facts, bindings, res, reusableArray);
+                        }
+                    }
+
+                    bindings.RemoveUntil(stackPointer);
+                }
+            }
+            else
+            {
+                // Negated rule: If you find any fact that matches the goal, then the goal is false.
+                // See definition 4.3.2 of [bra2] and section VI-B of [ceri].
+                // Substitute the bindings in the rule first.
+                // If your rule is `und(X) :- stud(X), not grad(X)` and you're at the `not grad` part, and in the
+                // previous goal stud(a) was true, then bindings now contains X:a so we want to search the database
+                // for the fact grad(a).
+                if (bindings != null)
+                {
+                    goal = goal.Substitute(bindings.DictionaryObject());
+                }
+
+                foreach (Expr fact in facts.GetIndexed(goal.GetPredicate().GetHashCode()))
+                {
+                    if (fact.GroundUnifyWith(goal, bindings))
+                    {
+                        return;
+                    }
+                }
+
+                // not found
+                if (lastGoal)
+                {
+                    DeriveAndAddFact();
+                }
+                else
+                {
+                    MatchGoals(ruleHead, goals, index + 1, facts, bindings, res, reusableArray);
                 }
             }
 
-            return res;
+            void DeriveAndAddFact()
+            {
+                reusableArray = reusableArray ?? new string[ruleHead.Arity];
+                Expr derivedFact = ruleHead.Substitute(bindings.DictionaryObject(), reusableArray);
+                if (!facts.Contains(derivedFact))
+                {
+                    res.Add(derivedFact);
+                    reusableArray = null;
+                }
+            }
         }
     }
 }

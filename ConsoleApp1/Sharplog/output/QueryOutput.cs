@@ -28,6 +28,6 @@ namespace Sharplog.Output
 		/// <summary>Method called by the engine to output the results of a query.</summary>
 		/// <param name="statement">The statement that was evaluated to produce the output.</param>
 		/// <param name="answers">The result of the query, as a Collection of variable mappings.</param>
-		void WriteResult(Sharplog.Statement.Statement statement, IEnumerable<StackMap> answers);
+		void WriteResult(Sharplog.Statement.Statement statement, IEnumerable<IDictionary<string, string>> answers);
 	}
 }

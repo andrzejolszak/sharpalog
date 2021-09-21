@@ -15,7 +15,7 @@ namespace Sharplog
             //This is how you would use the fluent API:
             Sharplog.Jatalog jatalog = TestUtils.CreateDatabase();
             jatalog.Validate();
-            IEnumerable<StackMap> answers;
+            IEnumerable<IDictionary<string, string>> answers;
             // Run a query "who are siblings?"; print the answers
             answers = jatalog.Query(Expr.CreateExpr("sibling", "A", "B"));
             // Siblings are aaa-aab and aa-ab as well as the reverse
@@ -92,7 +92,7 @@ namespace Sharplog
             Sharplog.Jatalog jatalog = new Sharplog.Jatalog();
             jatalog.Fact("parent", "alice", "bob").Fact("parent", "bob", "carol");
             jatalog.Rule(Expr.CreateExpr("ancestor", "X", "Y"), Expr.CreateExpr("parent", "X", "Z"), Expr.CreateExpr("ancestor", "Z", "Y")).Rule(Expr.CreateExpr("ancestor", "X", "Y"), Expr.CreateExpr("parent", "X", "Y"));
-            IEnumerable<StackMap> answers;
+            IEnumerable<IDictionary<string, string>> answers;
             answers = jatalog.Query(Expr.CreateExpr("ancestor", "X", "carol"));
             Assert.IsTrue(TestUtils.AnswerContains(answers, "X", "alice"));
             Assert.IsTrue(TestUtils.AnswerContains(answers, "X", "bob"));

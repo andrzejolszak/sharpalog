@@ -48,6 +48,6 @@ namespace Sharplog.Statement
 		/// </returns>
 		/// <exception cref="Sharplog.DatalogException">if an error occurs in processing the statement</exception>
 		/// <seealso cref="Sharplog.Output.OutputUtils.AnswersToString(System.Collections.Generic.IEnumerable{E})"/>
-		IEnumerable<StackMap> Execute(Sharplog.Jatalog datalog, StackMap bindings);
+		IEnumerable<IDictionary<string, string>> Execute(Sharplog.Jatalog datalog, StackMap bindings);
 	}
 }

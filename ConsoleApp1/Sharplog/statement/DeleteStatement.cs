@@ -13,7 +13,7 @@ namespace Sharplog.Statement
         }
 
         /// <exception cref="Sharplog.DatalogException"/>
-        public IEnumerable<StackMap> Execute(Sharplog.Jatalog datalog, StackMap bindings)
+        public IEnumerable<IDictionary<string, string>> Execute(Sharplog.Jatalog datalog, StackMap bindings)
         {
             datalog.Delete(goals, bindings);
             return null;

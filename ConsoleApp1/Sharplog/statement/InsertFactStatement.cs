@@ -13,12 +13,12 @@ namespace Sharplog.Statement
         }
 
         /// <exception cref="Sharplog.DatalogException"/>
-        public IEnumerable<StackMap> Execute(Sharplog.Jatalog datalog, StackMap bindings)
+        public IEnumerable<IDictionary<string, string>> Execute(Sharplog.Jatalog datalog, StackMap bindings)
         {
             Expr newFact;
             if (bindings != null)
             {
-                newFact = fact.Substitute(bindings);
+                newFact = fact.Substitute(bindings.DictionaryObject());
             }
             else
             {

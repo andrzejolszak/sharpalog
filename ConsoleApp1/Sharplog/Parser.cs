@@ -168,7 +168,7 @@ namespace Sharplog
                         throw new DatalogException("[line " + scan.LineNumber + "] Expected ')'");
                     }
                 }
-                Expr e_1 = new Expr(lhs, terms);
+                Expr e_1 = new Expr(lhs, terms.ToArray());
                 e_1.negated = negated;
                 return e_1;
             }

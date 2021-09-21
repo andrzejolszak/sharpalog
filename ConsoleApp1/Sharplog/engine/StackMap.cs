@@ -72,73 +72,55 @@ namespace Sharplog.Engine
     {
         private IDictionary<string, string> self;
 
-        private StackMap parent;
+        public List<string> Stack { get; } = new List<string>();
 
-        public StackMap(StackMap parent, int initDictSize = 3)
+        public StackMap(int initDictSize = 3)
         {
             self = new Dictionary<string, string>(initDictSize);
-            this.parent = parent;
-        }
-
-        public int CountTest
-        {
-            get
-            {
-                int s = self.Count;
-                if (parent != null)
-                {
-                    // Work around situations where self contains a `key` that's already in `parent`.
-                    // These situations shouldn't occur in Jatalog, though
-                    foreach (string k in parent.self.Keys)
-                    {
-                        if (!self.ContainsKey(k))
-                        {
-                            s++;
-                        }
-                    }
-                }
-                return s;
-            }
-        }
-
-        public IEnumerable<string> KeysTest()
-        {
-            List<string> res = self.Keys.ToList();
-            if (parent != null)
-            {
-                res.AddRange(parent.KeysTest());
-            }
-
-            return res;
         }
 
         public void ClearTest()
         {
             // We don't want to modify the parent, so we just orphan this
-            parent = null;
             self.Clear();
+            Stack.Clear();
         }
 
-        public bool ContainsValueTest(object value)
+        public IDictionary<string, string> CloneAsDictionary()
         {
-            return self.Any(x => x.Value.Equals(value)) || (parent != null && parent.ContainsValueTest(value));
+            return new Dictionary<string, string>(this.self);
+        }
+
+        public IDictionary<string, string> DictionaryObject()
+        {
+            return this.self;
         }
 
         public void Add(string key, string value)
         {
 #if DEBUG 
-            if (value == null || (parent?.self.ContainsKey(key) ?? false) || !Jatalog.IsVariable(key) || Jatalog.IsVariable(value))
+            if (value == null || !Jatalog.IsVariable(key) || Jatalog.IsVariable(value))
             {
                 throw new InvalidOperationException();
             }
 #endif
 
             self.Add(key, value);
+            Stack.Add(key);
+        }
+
+        public void RemoveUntil(int stack)
+        {
+            while (this.Stack.Count > stack)
+            {
+                self.Remove(this.Stack[this.Stack.Count - 1]);
+                this.Stack.RemoveAt(this.Stack.Count - 1);
+            }
         }
 
         public bool TryGetValue(string key, out string result)
         {
-            return self.TryGetValue(key, out result) || (parent?.TryGetValue(key, out result) ?? false);
+            return self.TryGetValue(key, out result);
         }
     }
 }

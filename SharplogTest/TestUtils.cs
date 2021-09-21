@@ -27,7 +27,7 @@ namespace Sharplog
             return jatalog;
         }
 
-        public static bool MapContains(StackMap map, string key, string value)
+        public static bool MapContains(IDictionary<string, string> map, string key, string value)
         {
             if (map.TryGetValue(key, out var val))
             {
@@ -37,9 +37,9 @@ namespace Sharplog
             return false;
         }
 
-        public static bool MapContains(StackMap haystack, StackMap needle)
+        public static bool MapContains(IDictionary<string, string> haystack, IDictionary<string, string> needle)
         {
-            foreach (string key in needle.KeysTest())
+            foreach (string key in needle.Keys)
             {
                 if (!haystack.TryGetValue(key, out var val) || !needle.TryGetValue(key, out var val2) || !val.Equals(val2))
                 {
@@ -50,9 +50,9 @@ namespace Sharplog
         }
 
         /// <exception cref="System.Exception"/>
-        public static bool AnswerContains(IDictionary<Statement.Statement, List<(Statement.Statement, StackMap)>> answers, params string[] kvPairs)
+        public static bool AnswerContains(IDictionary<Statement.Statement, List<(Statement.Statement, IDictionary<string, string>)>> answers, params string[] kvPairs)
         {
-            StackMap needle = new StackMap(null);
+            IDictionary<string, string> needle = new Dictionary<string, string>();
             if (kvPairs.Length % 2 != 0)
             {
                 throw new Exception("kvPairs must be even");
@@ -63,7 +63,7 @@ namespace Sharplog
                 string v = kvPairs[i * 2 + 1];
                 needle.Add(k, v);
             }
-            foreach ((Statement.Statement, StackMap) answer in answers.Values.SelectMany(x => x))
+            foreach ((Statement.Statement, IDictionary<string, string>) answer in answers.Values.SelectMany(x => x))
             {
                 if (MapContains(answer.Item2, needle))
                 {
@@ -73,9 +73,9 @@ namespace Sharplog
             return false;
         }
 
-        public static bool AnswerContains(IEnumerable<StackMap> answers, params string[] kvPairs)
+        public static bool AnswerContains(IEnumerable<IDictionary<string, string>> answers, params string[] kvPairs)
         {
-            StackMap needle = new StackMap(null);
+            IDictionary<string, string> needle = new Dictionary<string, string>();
             if (kvPairs.Length % 2 != 0)
             {
                 throw new Exception("kvPairs must be even");
@@ -86,7 +86,7 @@ namespace Sharplog
                 string v = kvPairs[i * 2 + 1];
                 needle.Add(k, v);
             }
-            foreach (StackMap answer in answers)
+            foreach (IDictionary<string, string> answer in answers)
             {
                 if (MapContains(answer, needle))
                 {

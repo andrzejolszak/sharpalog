@@ -29,13 +29,13 @@ namespace Sharplog
         internal bool negated = false;
         private string predicate;
 
-        private readonly List<string> terms;
+        private readonly string[] terms;
         private int? _hashCode;
 
-        /// <summary>Standard constructor that accepts a predicate and a list of terms.</summary>
+        /// <summary>Constructor for the fluent API that allows a variable number of terms.</summary>
         /// <param name="predicate">The predicate of the expression.</param>
         /// <param name="terms">The terms of the expression.</param>
-        public Expr(string predicate, List<string> terms)
+        public Expr(string predicate, params string[] terms)
         {
             this.predicate = predicate;
             // I've seen both versions of the symbol for not equals being used, so I allow
@@ -45,15 +45,14 @@ namespace Sharplog
                 this.predicate = "<>";
             }
 
-            this.terms = terms;
-        }
+#if DEBUG
+            if (terms.Length > 5)
+            {
+                throw new InvalidOperationException();
+            }
+#endif
 
-        /// <summary>Constructor for the fluent API that allows a variable number of terms.</summary>
-        /// <param name="predicate">The predicate of the expression.</param>
-        /// <param name="terms">The terms of the expression.</param>
-        public Expr(string predicate, params string[] terms)
-            : this(predicate, terms.ToList())
-        {
+            this.terms = terms;
         }
 
         /// <summary>Helper method for creating a new expression.</summary>
@@ -178,7 +177,7 @@ namespace Sharplog
         /// does not enforce it (expressions with the same predicates but different arities wont unify).
         /// </remarks>
         /// <returns>the arity</returns>
-        public int Arity => terms.Count;
+        public int Arity => terms.Length;
 
         /// <summary>An expression is said to be ground if none of its terms are variables.</summary>
         /// <returns>true if the expression is ground</returns>
@@ -237,7 +236,7 @@ namespace Sharplog
         /// <param name="that">The expression to unify with</param>
         /// <param name="bindings">The bindings of variables to values after unification</param>
         /// <returns>true if the expressions unify.</returns>
-        public bool GroundUnifyWith(Expr that, StackMap bindings, out StackMap newBindings)
+        public bool GroundUnifyWith(Expr that, StackMap bindings)
         {
 #if DEBUG
             if (!this.IsGround())
@@ -247,7 +246,6 @@ namespace Sharplog
 #endif
 
             // PERF
-            newBindings = null;
             if (this.predicate != that.predicate || this.Arity != that.Arity)
             {
                 return false;
@@ -260,41 +258,33 @@ namespace Sharplog
                 if (Jatalog.IsVariable(term2))
                 {
                     string term2Val = term1;
-                    if (!((newBindings ?? bindings)?.TryGetValue(term2, out term2Val) ?? false))
+                    if (!bindings.TryGetValue(term2, out term2Val))
                     {
-                        // PERF dict resizes
-                        if (newBindings is null)
-                        {
-                            newBindings = new StackMap(bindings, this.Arity - i);
-                        }
-
-                        newBindings.Add(term2, term1);
+                        bindings.Add(term2, term1);
                     }
                     else if (term2Val != term1)
                     {
-                        newBindings = null;
                         return false;
                     }
                 }
                 else if (term1 != term2)
                 {
-                    newBindings = null;
                     return false;
                 }
             }
 
-            newBindings = newBindings ?? bindings;
             return true;
         }
 
         /// <summary>Substitutes the variables in this expression with bindings from a unification.</summary>
         /// <param name="bindings">The bindings to substitute.</param>
         /// <returns>A new expression with the variables replaced with the values in bindings.</returns>
-        public Expr Substitute(StackMap bindings)
+        public Expr Substitute(IDictionary<string, string> bindings, string[] array = null)
         {
-            List<string> newTerms = new List<string>(this.terms);
+            string[] newTerms = array ?? new string[this.terms.Length];
+            Array.Copy(this.terms, newTerms, newTerms.Length);
             bool anyChange = false;
-            for (int i = 0; i < newTerms.Count; i++)
+            for (int i = 0; i < newTerms.Length; i++)
             {
                 string term = newTerms[i];
                 if (Jatalog.IsVariable(term) && bindings.TryGetValue(term, out string value))
@@ -320,7 +310,7 @@ namespace Sharplog
         /// <summary>Evaluates a built-in predicate.</summary>
         /// <param name="bindings">A map of variable bindings</param>
         /// <returns>true if the operator matched.</returns>
-        public bool EvalBuiltIn(StackMap bindings, out StackMap newBinding)
+        public bool EvalBuiltIn(StackMap bindings)
         {
             // This method may throw a RuntimeException for a variety of possible reasons, but
             // these conditions are supposed to have been caught earlier in the chain by
@@ -351,26 +341,22 @@ namespace Sharplog
                     }
 #endif
 
-                    newBinding = new StackMap(bindings, 1);
-                    newBinding.Add(term1, term2);
+                    bindings.Add(term1, term2);
                     return true;
                 }
                 else if (Jatalog.IsVariable(term2))
                 {
-                    newBinding = new StackMap(bindings, 1);
-                    newBinding.Add(term2, term1);
+                    bindings.Add(term2, term1);
                     return true;
                 }
                 else if (double.TryParse(term1, out double d1) && double.TryParse(term2, out double d2))
                 {
                     bool res = d1 == d2;
-                    newBinding = res ? bindings : null;
                     return res;
                 }
                 else
                 {
                     bool res = term1 == term2;
-                    newBinding = res ? bindings : null;
                     return res;
                 }
             }
@@ -391,13 +377,11 @@ namespace Sharplog
                     if (double.TryParse(term1, out double d1) && double.TryParse(term2, out double d2))
                     {
                         bool res = d1 != d2;
-                        newBinding = res ? bindings : null;
                         return res;
                     }
                     else
                     {
                         bool res = term1 != term2;
-                        newBinding = res ? bindings : null;
                         return res;
                     }
                 }
@@ -413,28 +397,24 @@ namespace Sharplog
                         case "<":
                             {
                                 bool res = d1 < d2;
-                                newBinding = res ? bindings : null;
                                 return res;
                             }
 
                         case "<=":
                             {
                                 bool res = d1 <= d2;
-                                newBinding = res ? bindings : null;
                                 return res;
                             }
 
                         case ">":
                             {
                                 bool res = d1 > d2;
-                                newBinding = res ? bindings : null;
                                 return res;
                             }
 
                         case ">=":
                             {
                                 bool res = d1 >= d2;
-                                newBinding = res ? bindings : null;
                                 return res;
                             }
                     }
@@ -449,7 +429,7 @@ namespace Sharplog
             return predicate;
         }
 
-        public List<string> GetTerms()
+        public string[] GetTerms()
         {
             return terms;
         }
@@ -469,7 +449,7 @@ namespace Sharplog
             {
                 return false;
             }
-            for (int i = 0; i < terms.Count; i++)
+            for (int i = 0; i < terms.Length; i++)
             {
                 if (!terms[i].Equals(that.terms[i]))
                 {
@@ -509,11 +489,11 @@ namespace Sharplog
             else
             {
                 sb.Append(predicate).Append('(');
-                for (int i = 0; i < terms.Count; i++)
+                for (int i = 0; i < terms.Length; i++)
                 {
                     string term = terms[i];
                     TermToString(sb, term);
-                    if (i < terms.Count - 1)
+                    if (i < terms.Length - 1)
                     {
                         sb.Append(", ");
                     }

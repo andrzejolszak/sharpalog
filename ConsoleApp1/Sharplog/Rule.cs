@@ -70,7 +70,7 @@ namespace Sharplog
             {
                 if (clause.IsBuiltIn())
                 {
-                    if (clause.GetTerms().Count != 2)
+                    if (clause.GetTerms().Length != 2)
                     {
                         throw new DatalogException("Operator " + clause.GetPredicate() + " must have only two operands");
                     }
@@ -161,10 +161,10 @@ namespace Sharplog
             IList<Expr> subsBody = new List<Expr>();
             foreach (Expr e in GetBody())
             {
-                subsBody.Add(e.Substitute(bindings));
+                subsBody.Add(e.Substitute(bindings.DictionaryObject()));
             }
 
-            return new Rule(this.GetHead().Substitute(bindings), subsBody);
+            return new Rule(this.GetHead().Substitute(bindings.DictionaryObject()), subsBody);
         }
 
         public Expr GetHead()
