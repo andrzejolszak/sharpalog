@@ -19,10 +19,11 @@ namespace Sharplog
             indexedSet.Add(Expr.CreateExpr("bar", "b"));
             Assert.IsFalse((indexedSet.Count == 0));
             Assert.IsTrue(indexedSet.GetIndexes().Count() == 2);
-            Assert.IsTrue(indexedSet.GetIndexes().Contains("foo".GetHashCode()));
-            Assert.IsTrue(indexedSet.GetIndexes().Contains("bar".GetHashCode()));
+            Assert.IsTrue(indexedSet.GetIndexes().Contains("foo/1".GetHashCode()));
+            Assert.IsTrue(indexedSet.GetIndexes().Contains("bar/1".GetHashCode()));
             Assert.IsFalse(indexedSet.GetIndexes().Contains("baz".GetHashCode()));
-            HashSet<Expr> set = indexedSet.GetIndexed("foo".GetHashCode());
+            Assert.IsFalse(indexedSet.GetIndexes().Contains("baz/1".GetHashCode()));
+            HashSet<Expr> set = indexedSet.GetIndexed(new Expr("foo", "a"));
             Assert.IsTrue(set.Count == 3);
             Assert.IsTrue(set.Contains(Expr.CreateExpr("foo", "a")));
             Assert.IsTrue(set.Contains(Expr.CreateExpr("foo", "b")));
@@ -38,7 +39,7 @@ namespace Sharplog
             toRemove.Add(Expr.CreateExpr("bar", "c"));
             Assert.IsFalse(indexedSet.ContainsAllTest(toRemove));
             indexedSet.RemoveAll(toRemove);
-            Assert.IsFalse(indexedSet.GetIndexes().Contains("bar".GetHashCode()));
+            Assert.IsFalse(indexedSet.GetIndexes().Contains("bar/1".GetHashCode()));
             Assert.IsFalse(indexedSet.Contains(Expr.CreateExpr("foo", "a")));
             Assert.IsFalse(indexedSet.Contains(Expr.CreateExpr("bar", "b")));
             Assert.IsFalse(indexedSet.RemoveAll(toRemove));

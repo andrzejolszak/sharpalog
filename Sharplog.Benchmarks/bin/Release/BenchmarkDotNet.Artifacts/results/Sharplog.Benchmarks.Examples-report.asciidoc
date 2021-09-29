@@ -7,14 +7,14 @@ Intel Core i5-7300HQ CPU 2.50GHz (Kaby Lake), 1 CPU, 4 logical and 4 physical co
 ....
 [options="header"]
 |===
-|      Method|     DataSource|           Median|              P90|  Allocated
-|  RunExample|     builtin.dl|       2,157.0 ns|       3,639.8 ns|     1475 B
-|  RunExample|     cerineg.dl|       2,155.0 ns|       3,162.8 ns|     1311 B
-|  RunExample|      family.dl|     171,264.0 ns|     192,387.0 ns|    18596 B
-|  RunExample|        gens.dl|      19,622.0 ns|      29,042.0 ns|    14580 B
-|  RunExample|      negate.dl|       1,278.0 ns|       1,806.0 ns|      655 B
-|  RunExample|     numbers.dl|       4,130.5 ns|       5,617.7 ns|     2048 B
-|  RunExample|       paths.dl|       1,924.0 ns|       2,706.8 ns|      737 B
-|  RunExample|  stratified.dl|         401.0 ns|         651.0 ns|      328 B
-|  RunExample|      tum.de.dl|  11,711,636.0 ns|  12,240,101.2 ns|   123925 B
+|      Method|     DataSource|          Median|             P90|  Allocated
+|  RunExample|     builtin.dl|      2,215.0 ns|      3,246.5 ns|     1475 B
+|  RunExample|     cerineg.dl|      1,772.0 ns|      2,329.0 ns|     1147 B
+|  RunExample|      family.dl|     91,045.5 ns|     96,936.7 ns|    30310 B
+|  RunExample|        gens.dl|     14,928.0 ns|     17,468.2 ns|    15661 B
+|  RunExample|      negate.dl|      1,023.0 ns|      1,638.0 ns|      655 B
+|  RunExample|     numbers.dl|      3,471.5 ns|      4,637.8 ns|     2212 B
+|  RunExample|       paths.dl|      1,498.5 ns|      2,060.9 ns|      819 B
+|  RunExample|  stratified.dl|        394.0 ns|        630.6 ns|      328 B
+|  RunExample|      tum.de.dl|  4,230,258.0 ns|  4,538,415.1 ns|   241186 B
 |===

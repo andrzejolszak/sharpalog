@@ -44,11 +44,11 @@ public class IndexedSet
         /// </summary>
         /// <param name="key">The indexed element</param>
         /// <returns>The specified subset</returns>
-        public HashSet<Expr> GetIndexed(int key)
+        public HashSet<Expr> GetIndexed(Expr key)
         {
-            if (!index.TryGetValue(key, out HashSet<Expr> elements))
+            if (!index.TryGetValue(key.Index(), out HashSet<Expr> elements))
             {
-                return new System.Collections.Generic.HashSet<Expr>();
+                return new HashSet<Expr>();
             }
             return elements;
         }
@@ -67,6 +67,7 @@ public class IndexedSet
                     elements = new HashSet<Expr>();
                     index[element.Index()] = elements;
                 }
+
                 elements.Add(element);
                 return true;
             }
@@ -97,6 +98,11 @@ public class IndexedSet
         public bool Contains(Expr o)
         {
             return contents.Contains(o);
+        }
+
+        public bool ContainsIndex(Expr o)
+        {
+            return index.ContainsKey(o.Index());
         }
 
         public bool ContainsAllTest(IEnumerable<Expr> c)

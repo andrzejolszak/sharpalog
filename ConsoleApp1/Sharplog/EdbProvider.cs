@@ -19,7 +19,7 @@ namespace Sharplog
 	/// <see cref="BasicEdbProvider"/>
 	/// by default, which simply stores facts in memory, but it
 	/// can be changed through the
-	/// <see cref="Jatalog.SetEdbProvider(EdbProvider)"/>
+	/// <see cref="Universe.SetEdbProvider(EdbProvider)"/>
 	/// method.
 	/// </p>
 	/// </remarks>
@@ -49,6 +49,6 @@ namespace Sharplog
 		/// A collection of facts matching the
 		/// <paramref name="predicate"/>
 		/// </returns>
-		IEnumerable<Expr> GetFacts(string predicate);
+		IEnumerable<Expr> GetFacts(Expr predicate);
 	}
 }

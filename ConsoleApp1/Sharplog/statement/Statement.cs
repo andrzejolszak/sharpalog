@@ -16,11 +16,9 @@ namespace Sharplog.Statement
 	/// .
 	/// </p><p>
 	/// Strings can be parsed to Statements through
-	/// <see cref="Sharplog.Jatalog.PrepareStatement(string)"/>
 	/// </p>
 	/// </remarks>
 	/// <seealso cref="StatementFactory"/>
-	/// <seealso cref="Sharplog.Jatalog.PrepareStatement(string)"/>
 	public interface Statement
 	{
 		/// <summary>Executes a statement against a Jatalog database.</summary>
@@ -48,6 +46,6 @@ namespace Sharplog.Statement
 		/// </returns>
 		/// <exception cref="Sharplog.DatalogException">if an error occurs in processing the statement</exception>
 		/// <seealso cref="Sharplog.Output.OutputUtils.AnswersToString(System.Collections.Generic.IEnumerable{E})"/>
-		IEnumerable<IDictionary<string, string>> Execute(Sharplog.Jatalog datalog, StackMap bindings);
+		IEnumerable<IDictionary<string, string>> Execute(Sharplog.Universe datalog);
 	}
 }

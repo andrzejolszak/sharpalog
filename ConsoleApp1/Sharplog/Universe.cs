@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Sharpen;
 using Sharplog.Engine;
 using Sharplog.Output;
@@ -90,13 +89,13 @@ namespace Sharplog
     /// <see cref="Expr"/>
     /// </i>
     /// </remarks>
-    public class Jatalog
+    public class Universe
     {
         private EdbProvider edbProvider;
 
-        private HashSet<Rule> idb;
+        private Dictionary<string, HashSet<Rule>> idb;
 
-        private Sharplog.Engine.Engine engine = new Sharplog.Engine.Engine();
+        private IEngine engine;
 
         /// <summary>Default constructor.</summary>
         /// <remarks>
@@ -105,50 +104,27 @@ namespace Sharplog
         /// Creates a Jatalog instance with an empty IDB and EDB.
         /// </p>
         /// </remarks>
-        public Jatalog()
+        public Universe(bool bottomUpEvaluation = true)
         {
             // Facts
             // Rules
             this.edbProvider = new BasicEdbProvider();
-            this.idb = new HashSet<Rule>();
+            this.idb = new Dictionary<string, HashSet<Rule>>();
+            /*
+            TODO: Top-down evaluation just an experiment for now
+            if (bottomUpEvaluation)
+            {
+                engine = new BottomUpEngine();
+            }
+            else
+            {
+                engine = new TopDownEngine();
+            }*/
+
+            engine = new BottomUpEngine();
         }
 
-        /// <summary>Parses a string into a statement that can be executed against the database.</summary>
-        /// <param name="statement">
-        /// The string of the statement to parse.
-        /// <ul>
-        /// <li> Statements ending with '.'s will insert either rules or facts.
-        /// <li> Statements ending with '?' are queries.
-        /// <li> Statements ending with '~' are retract statements - they will remove
-        /// facts from the database.
-        /// </ul>
-        /// </param>
-        /// <returns>
-        /// A Statement object whose
-        /// <see cref="Sharplog.Statement.Statement.Execute(Jatalog)">execute</see>
-        /// method
-        /// can be called against the database at a later stage.
-        /// </returns>
-        /// <exception cref="DatalogException">
-        /// on error, such as inserting invalid facts or rules or
-        /// running invalid queries.
-        /// </exception>
-        /// <seealso cref="Sharplog.Statement.Statement"/>
-        /// <exception cref="Sharplog.DatalogException"/>
-        public static Sharplog.Statement.Statement PrepareStatement(string statement)
-        {
-            try
-            {
-                StreamTokenizer scan = GetTokenizer(new StreamReader(ToStream(statement)));
-                return Parser.ParseStmt(scan);
-            }
-            catch (IOException e)
-            {
-                throw new DatalogException(e);
-            }
-        }
-
-        public static Stream ToStream(string str)
+        public static MemoryStream ToStream(string str)
         {
             MemoryStream stream = new MemoryStream();
             StreamWriter writer = new StreamWriter(stream);
@@ -216,18 +192,18 @@ namespace Sharplog
         /// <exception cref="DatalogException">on syntax and I/O errors encountered while executing.</exception>
         /// <seealso cref="Sharplog.Output.QueryOutput"/>
         /// <exception cref="Sharplog.DatalogException"/>
-        public List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll(System.IO.StreamReader reader, QueryOutput output)
+        public List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll(MemoryStream stream, QueryOutput output)
         {
             try
             {
-                StreamTokenizer scan = GetTokenizer(reader);
+                StreamTokenizer scan = GetTokenizer(stream);
                 // Tracks all query answers
                 List<(Statement.Statement, IDictionary<string, string>)> answers = new List<(Statement.Statement, IDictionary<string, string>)>();
                 scan.NextToken();
                 while (scan.ttype != StreamTokenizer.TT_EOF)
                 {
                     scan.PushBack();
-                    var res = ExecuteSingleStatement(scan, reader, output);
+                    var res = ExecuteSingleStatement(scan, output);
                     if (res != null)
                     {
                         answers.AddRange(res);
@@ -258,8 +234,7 @@ namespace Sharplog
             // It would've been fun to wrap the results in a java.sql.ResultSet, but damn,
             // those are a lot of methods to implement:
             // https://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html
-            StreamReader reader = new StreamReader(ToStream(statements));
-            return GroupByAsDictionary(ExecuteAll(reader, null), x => x.Item1);
+            return GroupByAsDictionary(ExecuteAll(ToStream(statements), null), x => x.Item1);
         }
 
         public Dictionary<TKey, List<TSource>> GroupByAsDictionary<TSource, TKey>(IEnumerable<TSource> that, Func<TSource, TKey> groupKeySelector)
@@ -279,9 +254,9 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">on syntax errors encountered while executing.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public List<IDictionary<string, string>> Query(IList<Expr> goals, StackMap bindings)
+        public List<IDictionary<string, string>> Query(IList<Expr> goals)
         {
-            return engine.Query(this, goals, bindings);
+            return engine.Query(this, goals);
         }
 
         /// <summary>Executes a query with the specified goals against the database.</summary>
@@ -301,20 +276,19 @@ namespace Sharplog
         /// <exception cref="Sharplog.DatalogException"/>
         public IEnumerable<IDictionary<string, string>> Query(params Expr[] goals)
         {
-            return Query(goals.ToList(), null);
+            return Query(goals.ToList());
         }
 
         /// <summary>Validates all the rules and facts in the database.</summary>
         /// <exception cref="DatalogException">If any rules or facts are invalid. The message contains the reason.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public void Validate()
+        public void ValidateTest()
         {
-            foreach (Sharplog.Rule rule in idb)
+            foreach (Rule rule in idb.SelectMany(x => x.Value))
             {
                 rule.Validate();
             }
-            // Search for negated loops:
-            Sharplog.Engine.Engine.ComputeStratification(idb);
+
             // Different EdbProvider implementations may have different ideas about how
             // to iterate through the EDB in the most efficient manner. so in the future
             // it may be better to have the edbProvider validate the facts itself.
@@ -340,7 +314,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">if the rule is invalid.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public Sharplog.Jatalog Rule(Expr head, params Expr[] body)
+        public Sharplog.Universe Rule(Expr head, params Expr[] body)
         {
             Sharplog.Rule newRule = new Sharplog.Rule(head, body);
             return Rule(newRule);
@@ -359,10 +333,20 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">if the rule is invalid.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public Sharplog.Jatalog Rule(Sharplog.Rule newRule)
+        public Sharplog.Universe Rule(Sharplog.Rule newRule)
         {
+            this.engine.TransformNewRule(newRule);
             newRule.Validate();
-            idb.Add(newRule);
+
+            if (!idb.TryGetValue(newRule.Head.PredicateWithArity, out HashSet<Rule> rules))
+            {
+                // TODO: it's possible to add multiple copies of same rule
+                rules = new HashSet<Rule>();
+                idb.Add(newRule.Head.PredicateWithArity, rules);
+            }
+
+            rules.Add(newRule);
+
             return this;
         }
 
@@ -386,7 +370,7 @@ namespace Sharplog
         /// <see cref="Expr.IsNegated()">negated</see>
         /// </exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public Sharplog.Jatalog Fact(string predicate, params string[] terms)
+        public Sharplog.Universe Fact(string predicate, params string[] terms)
         {
             return Fact(new Expr(predicate, terms));
         }
@@ -410,7 +394,7 @@ namespace Sharplog
         /// <see cref="Expr.IsNegated()">negated</see>
         /// </exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public Jatalog Fact(Expr newFact)
+        public Universe Fact(Expr newFact)
         {
             if (!newFact.IsGround())
             {
@@ -420,6 +404,7 @@ namespace Sharplog
             {
                 throw new DatalogException("Facts cannot be negated: " + newFact);
             }
+
             // You can also match the arity of the fact against existing facts in the EDB,
             // but it's more of a principle than a technical problem; see Jatalog#validate()
             edbProvider.Add(newFact);
@@ -433,7 +418,7 @@ namespace Sharplog
         /// <exception cref="Sharplog.DatalogException"/>
         public bool Delete(params Expr[] goals)
         {
-            return Delete(goals.ToList(), null);
+            return Delete(goals.ToList());
         }
 
         /// <summary>Deletes all the facts in the database that matches a specific query</summary>
@@ -442,9 +427,9 @@ namespace Sharplog
         /// <returns>true if any facts were deleted.</returns>
         /// <exception cref="DatalogException">on errors encountered during evaluation.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public bool Delete(List<Expr> goals, StackMap bindings)
+        public bool Delete(List<Expr> goals)
         {
-            List<IDictionary<string, string>> answers = Query(goals, bindings);
+            List<IDictionary<string, string>> answers = Query(goals);
             List<Expr> facts = new List<Expr>(answers.Count * goals.Count);
             foreach (IDictionary<string, string> answer in answers)
             {
@@ -479,17 +464,17 @@ namespace Sharplog
             this.edbProvider = edbProvider;
         }
 
-        public IEnumerable<Sharplog.Rule> GetIdb()
+        public bool TryGetFromIdb(string predicate, out HashSet<Rule> rules)
         {
-            return idb;
+            return this.idb.TryGetValue(predicate, out rules);
         }
 
         /* Specific tokenizer for our syntax */
 
         /// <exception cref="System.IO.IOException"/>
-        private static StreamTokenizer GetTokenizer(System.IO.StreamReader reader)
+        private static StreamTokenizer GetTokenizer(MemoryStream stream)
         {
-            StreamTokenizer scan = new StreamTokenizer(reader);
+            StreamTokenizer scan = new StreamTokenizer(stream);
             scan.OrdinaryChar('.');
             // '.' looks like a number to StreamTokenizer by default
             scan.CommentChar('%');
@@ -504,16 +489,17 @@ namespace Sharplog
         /* Internal method for executing one and only one statement */
 
         /// <exception cref="Sharplog.DatalogException"/>
-        private List<(Statement.Statement, IDictionary<string, string>)> ExecuteSingleStatement(StreamTokenizer scan, System.IO.StreamReader reader, QueryOutput output)
+        private List<(Statement.Statement, IDictionary<string, string>)> ExecuteSingleStatement(StreamTokenizer scan, QueryOutput output)
         {
-            Sharplog.Statement.Statement statement = Parser.ParseStmt(scan);
+            Statement.Statement statement = Parser.ParseStmt(scan);
             try
             {
-                IEnumerable<IDictionary<string, string>> answers = statement.Execute(this, null);
+                IEnumerable<IDictionary<string, string>> answers = statement.Execute(this);
                 if (answers != null && output != null)
                 {
                     output.WriteResult(statement, answers);
                 }
+
                 return answers?.Select(x => (statement, x)).ToList();
             }
             catch (DatalogException e)

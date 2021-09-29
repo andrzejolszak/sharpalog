@@ -27,9 +27,12 @@ namespace Sharplog
     public sealed class Expr
     {
         internal bool negated = false;
-        private string predicate;
+        public string predicate;
 
         private readonly string[] terms;
+
+        public string PredicateWithArity { get; }
+
         private int? _hashCode;
 
         /// <summary>Constructor for the fluent API that allows a variable number of terms.</summary>
@@ -53,6 +56,7 @@ namespace Sharplog
 #endif
 
             this.terms = terms;
+            this.PredicateWithArity = this.predicate + "/" + this.terms.Length;
         }
 
         /// <summary>Helper method for creating a new expression.</summary>
@@ -185,7 +189,7 @@ namespace Sharplog
         {
             foreach (string term in terms)
             {
-                if (Jatalog.IsVariable(term))
+                if (Universe.IsVariable(term))
                 {
                     return false;
                 }
@@ -243,19 +247,18 @@ namespace Sharplog
             {
                 throw new InvalidOperationException();
             }
-#endif
 
-            // PERF
             if (this.predicate != that.predicate || this.Arity != that.Arity)
             {
-                return false;
+                throw new InvalidOperationException();
             }
+#endif
 
             for (int i = 0; i < this.Arity; i++)
             {
                 string term1 = this.terms[i];
                 string term2 = that.terms[i];
-                if (Jatalog.IsVariable(term2))
+                if (Universe.IsVariable(term2))
                 {
                     string term2Val = term1;
                     if (!bindings.TryGetValue(term2, out term2Val))
@@ -281,22 +284,33 @@ namespace Sharplog
         /// <returns>A new expression with the variables replaced with the values in bindings.</returns>
         public Expr Substitute(IDictionary<string, string> bindings, string[] array = null)
         {
-            string[] newTerms = array ?? new string[this.terms.Length];
-            Array.Copy(this.terms, newTerms, newTerms.Length);
-            bool anyChange = false;
-            for (int i = 0; i < newTerms.Length; i++)
+            if (bindings.Count == 0)
             {
-                string term = newTerms[i];
-                if (Jatalog.IsVariable(term) && bindings.TryGetValue(term, out string value))
+                return this;
+            }
+
+            string[] newTerms = null;
+            bool anyChange = false;
+            for (int i = 0; i < this.terms.Length; i++)
+            {
+                string term = this.terms[i];
+                if (Universe.IsVariable(term) && bindings.TryGetValue(term, out string value))
                 {
-                    anyChange = true;
+                    if (!anyChange)
+                    {
+                        anyChange = true;
+                        newTerms = array ?? new string[this.terms.Length];
+                        Array.Copy(this.terms, newTerms, newTerms.Length);
+                    }
+
                     newTerms[i] = value;
                 }
             }
 
             if (!anyChange)
             {
-                throw new InvalidOperationException();
+//              throw new InvalidOperationException();
+                return this;
             }
 
             Expr that = new Expr(this.predicate, newTerms)
@@ -317,13 +331,13 @@ namespace Sharplog
             // methods such as Rule#validate().
             // The RuntimeException is a requirement of using the Streams API.
             string term1 = terms[0];
-            if (Jatalog.IsVariable(term1) && bindings.TryGetValue(term1, out string term1v))
+            if (Universe.IsVariable(term1) && bindings.TryGetValue(term1, out string term1v))
             {
                 term1 = term1v;
             }
 
             string term2 = terms[1];
-            if (Jatalog.IsVariable(term2) && bindings.TryGetValue(term2, out string term2v))
+            if (Universe.IsVariable(term2) && bindings.TryGetValue(term2, out string term2v))
             {
                 term2 = term2v;
             }
@@ -331,10 +345,10 @@ namespace Sharplog
             if (predicate.Equals("="))
             {
                 // '=' is special
-                if (Jatalog.IsVariable(term1))
+                if (Universe.IsVariable(term1))
                 {
 #if DEBUG
-                    if (Jatalog.IsVariable(term2))
+                    if (Universe.IsVariable(term2))
                     {
                         // Rule#validate() was supposed to catch this condition
                         throw new DatalogException("Both operands of '=' are unbound (" + term1 + ", " + term2 + ") in evaluation of " + this);
@@ -344,7 +358,7 @@ namespace Sharplog
                     bindings.Add(term1, term2);
                     return true;
                 }
-                else if (Jatalog.IsVariable(term2))
+                else if (Universe.IsVariable(term2))
                 {
                     bindings.Add(term2, term1);
                     return true;
@@ -364,7 +378,7 @@ namespace Sharplog
             {
 #if DEBUG
                 // These errors can be detected in the validate method:
-                if (Jatalog.IsVariable(term1) || Jatalog.IsVariable(term2))
+                if (Universe.IsVariable(term1) || Universe.IsVariable(term2))
                 {
                     // Rule#validate() was supposed to catch this condition
                     throw new DatalogException("Unbound variable in evaluation of " + this);
@@ -422,11 +436,6 @@ namespace Sharplog
             }
 
             throw new DatalogException("Unimplemented built-in predicate " + predicate);
-        }
-
-        public string GetPredicate()
-        {
-            return predicate;
         }
 
         public string[] GetTerms()
@@ -509,7 +518,7 @@ namespace Sharplog
 
         public int Index()
         {
-            return predicate.GetHashCode();
+            return this.PredicateWithArity.GetHashCode();
         }
 
         /// <summary>Validates a fact in the IDB.</summary>

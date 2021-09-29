@@ -12,7 +12,7 @@ namespace ConsoleApp1
     {
         public static void Main(string[] args)
         {
-            Jatalog target = new Jatalog();
+            Universe target = new Universe();
             string src = File.ReadAllText("../../../examples/tum.de.dl");
             var res = target.ExecuteAll(src);
         }

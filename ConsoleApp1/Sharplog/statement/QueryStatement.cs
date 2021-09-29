@@ -4,7 +4,7 @@ using Sharplog.Engine;
 
 namespace Sharplog.Statement
 {
-    internal class QueryStatement : Sharplog.Statement.Statement
+    internal class QueryStatement : Statement
     {
         private IList<Expr> goals;
 
@@ -14,9 +14,9 @@ namespace Sharplog.Statement
         }
 
         /// <exception cref="Sharplog.DatalogException"/>
-        public IEnumerable<IDictionary<string, string>> Execute(Sharplog.Jatalog datalog, StackMap bindings)
+        public IEnumerable<IDictionary<string, string>> Execute(Universe datalog)
         {
-            return datalog.Query(goals, bindings);
+            return datalog.Query(goals);
         }
 
         public override string ToString()

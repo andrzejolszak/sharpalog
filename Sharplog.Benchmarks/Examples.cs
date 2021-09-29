@@ -36,7 +36,7 @@
         public int RunExample()
         {
             string data = this._exampleSources[this.DataSource];
-            Jatalog target = new Jatalog();
+            Universe target = new Universe();
             target.ExecuteAll(data);
             return target.GetType().GetHashCode();
         }

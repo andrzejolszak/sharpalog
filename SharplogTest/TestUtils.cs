@@ -9,9 +9,9 @@ namespace Sharplog
     public class TestUtils
     {
         /// <exception cref="Sharplog.DatalogException"/>
-        public static Sharplog.Jatalog CreateDatabase()
+        public static Sharplog.Universe CreateDatabase()
         {
-            Sharplog.Jatalog jatalog = new Sharplog.Jatalog();
+            Sharplog.Universe jatalog = new Sharplog.Universe();
             jatalog
                 .Fact("parent", "a", "aa")
                 .Fact("parent", "a", "ab")

@@ -13,8 +13,8 @@ namespace Sharplog
         public void TestApp()
         {
             //This is how you would use the fluent API:
-            Sharplog.Jatalog jatalog = TestUtils.CreateDatabase();
-            jatalog.Validate();
+            Sharplog.Universe jatalog = TestUtils.CreateDatabase();
+            jatalog.ValidateTest();
             IEnumerable<IDictionary<string, string>> answers;
             // Run a query "who are siblings?"; print the answers
             answers = jatalog.Query(Expr.CreateExpr("sibling", "A", "B"));
@@ -56,8 +56,8 @@ namespace Sharplog
         public void TestMultiGoals()
         {
             // You can have multiple goals in queries.
-            Sharplog.Jatalog jatalog = TestUtils.CreateDatabase();
-            jatalog.Validate();
+            Sharplog.Universe jatalog = TestUtils.CreateDatabase();
+            jatalog.ValidateTest();
             // Run a query "who are siblings A, and A is not `aaa`?"
             var answers = jatalog.ExecuteAll("sibling(A, B), A <> aaa?");
             Assert.IsTrue(answers != null);
@@ -73,7 +73,7 @@ namespace Sharplog
         public void TestExecute()
         {
             // The Jatalog.executeAll(String) method runs queries directly.
-            Sharplog.Jatalog jatalog = new Sharplog.Jatalog();
+            Sharplog.Universe jatalog = new Sharplog.Universe();
             // Insert some facts
             jatalog.ExecuteAll("foo(bar). foo(baz).");
             // Run a query:
@@ -89,7 +89,7 @@ namespace Sharplog
         public void TestDemo()
         {
             // This is how you would use the fluent API:
-            Sharplog.Jatalog jatalog = new Sharplog.Jatalog();
+            Sharplog.Universe jatalog = new Sharplog.Universe();
             jatalog.Fact("parent", "alice", "bob").Fact("parent", "bob", "carol");
             jatalog.Rule(Expr.CreateExpr("ancestor", "X", "Y"), Expr.CreateExpr("parent", "X", "Z"), Expr.CreateExpr("ancestor", "Z", "Y")).Rule(Expr.CreateExpr("ancestor", "X", "Y"), Expr.CreateExpr("parent", "X", "Y"));
             IEnumerable<IDictionary<string, string>> answers;

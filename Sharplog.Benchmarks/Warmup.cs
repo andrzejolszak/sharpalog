@@ -10,14 +10,14 @@
         [Benchmark(OperationsPerInvoke = Iterations)]
         public int JustCreate()
         {
-            Jatalog target = new Jatalog();
+            Universe target = new Universe();
             return target.GetType().GetHashCode();
         }
 
         [Benchmark(OperationsPerInvoke = Iterations)]
         public int CreateAndWarmup()
         {
-            Jatalog target = new Jatalog();
+            Universe target = new Universe();
             target.ExecuteAll("foo(bar).");
             return target.GetType().GetHashCode();
         }

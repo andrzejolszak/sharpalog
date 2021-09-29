@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27703.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31129.286
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sharplog", "ConsoleApp1\Sharplog.csproj", "{4BBDDC9A-5B2C-4C82-867F-DE67EC5915EF}"
 EndProject
@@ -19,6 +19,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		examples\numbers.dl = examples\numbers.dl
 		examples\paths.dl = examples\paths.dl
 		examples\stratified.dl = examples\stratified.dl
+		examples\stratified2.dl = examples\stratified2.dl
+		examples\topDown.dl = examples\topDown.dl
 	EndProjectSection
 EndProject
 Global

@@ -1,0 +1,12 @@
+﻿linked(A,B) :- link(A,B).
+linked(A,B) :- link(B,A).
+connected(A,B) :- linked(A,B).
+connected(A,B) :- connected(A,C),linked(C,B).
+cutpoint(X,A,B) :- connected(A,B),station(X), not circumvent(X,A,B).
+circumvent(X,A,B) :- linked(A,B),X <> A,station(X),X <> B.
+circumvent(X,A,B) :- circumvent(X,A,C),circumvent(X,C,B).
+has_icut_point(A,B) :- cutpoint(X,A,B),X <> A,X <> B.
+safely_connected(A,B) :- connected(A,B), not has_icut_point(A,B).
+station(X) :- linked(X,Y).
+
+safely_connected(X, Y)?

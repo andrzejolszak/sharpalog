@@ -34,9 +34,9 @@ namespace Sharplog
             return edb.RemoveAll(facts);
         }
 
-        public IEnumerable<Expr> GetFacts(string predicate)
+        public IEnumerable<Expr> GetFacts(Expr predicate)
         {
-            return edb.GetIndexed(predicate.GetHashCode());
+            return edb.GetIndexed(predicate);
         }
     }
 }

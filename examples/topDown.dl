@@ -1,0 +1,18 @@
+parent(alice, bob).
+parent(alice, bart).
+parent(alice, betty).
+
+sibling(X, Y) :- parent(A, X), parent(A, Y), X <> Y.
+
+sibling(A,B)?
+sibling(bob,B)?
+
+foo(X, Y) :- bar(X), car(Y).
+bar(Y) :- parent(alice, Y).
+car(Y) :- parent(Y, betty).
+
+foo(Y,X)?
+foo(alice, X)?
+foo(bob, X)?
+foo(Y, X), not foo(bob, X)?
+foo(Y, X), not foo(bob, Y)?

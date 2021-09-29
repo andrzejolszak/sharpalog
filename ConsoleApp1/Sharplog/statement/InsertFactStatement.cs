@@ -3,7 +3,7 @@ using Sharplog.Engine;
 
 namespace Sharplog.Statement
 {
-    internal class InsertFactStatement : Sharplog.Statement.Statement
+    internal class InsertFactStatement : Statement
     {
         private readonly Expr fact;
 
@@ -13,17 +13,9 @@ namespace Sharplog.Statement
         }
 
         /// <exception cref="Sharplog.DatalogException"/>
-        public IEnumerable<IDictionary<string, string>> Execute(Sharplog.Jatalog datalog, StackMap bindings)
+        public IEnumerable<IDictionary<string, string>> Execute(Universe datalog)
         {
-            Expr newFact;
-            if (bindings != null)
-            {
-                newFact = fact.Substitute(bindings.DictionaryObject());
-            }
-            else
-            {
-                newFact = fact;
-            }
+            Expr newFact = fact;
             datalog.Fact(newFact);
             return null;
         }

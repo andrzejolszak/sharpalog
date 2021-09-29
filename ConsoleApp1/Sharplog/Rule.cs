@@ -1,4 +1,5 @@
 using Sharplog.Engine;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,9 +16,9 @@ namespace Sharplog
     /// <seealso cref="Expr"/>
     public class Rule
     {
-        private Expr head;
+        public Expr Head { get; }
 
-        private IList<Expr> body;
+        public IList<Expr> Body { get; private set; }
 
         /// <summary>Constructor that takes an expression as the head of the rule and a list of expressions as the body.</summary>
         /// <remarks>
@@ -28,20 +29,8 @@ namespace Sharplog
         /// <param name="body">The list of expressions that make up the body of the rule (right hand side)</param>
         public Rule(Expr head, IList<Expr> body)
         {
-            this.head = head;
-            this.body = Engine.Engine.ReorderQuery(body);
-        }
-
-        /// <summary>Constructor for the fluent API that allows a variable number of expressions in the body.</summary>
-        /// <remarks>
-        /// Constructor for the fluent API that allows a variable number of expressions in the body.
-        /// The expressions in the body may be reordered to be able to evaluate rules correctly.
-        /// </remarks>
-        /// <param name="head">The head of the rule (left hand side)</param>
-        /// <param name="body">The list of expressions that make up the body of the rule (right hand side)</param>
-        public Rule(Expr head, params Expr[] body)
-            : this(head, body.ToList())
-        {
+            this.Head = head;
+            this.Body = body;
         }
 
         /// <summary>Checks whether a rule is valid.</summary>
@@ -66,60 +55,66 @@ namespace Sharplog
             // You won't be able to tell if the variables have been bound to _numeric_ values until you actually evaluate the
             // expression, though.
             HashSet<string> bodyVariables = new HashSet<string>();
-            foreach (Expr clause in GetBody())
+            foreach (Expr clause in Body)
             {
                 if (clause.IsBuiltIn())
                 {
                     if (clause.GetTerms().Length != 2)
                     {
-                        throw new DatalogException("Operator " + clause.GetPredicate() + " must have only two operands");
+                        throw new DatalogException("Operator " + clause.PredicateWithArity + " must have only two operands");
                     }
                     string a = clause.GetTerms()[0];
                     string b = clause.GetTerms()[1];
-                    if (clause.GetPredicate().Equals("="))
+                    if (clause.predicate.Equals("="))
                     {
-                        if (Sharplog.Jatalog.IsVariable(a) && Sharplog.Jatalog.IsVariable(b) && !bodyVariables.Contains(a) && !bodyVariables.Contains(b))
+                        if (Sharplog.Universe.IsVariable(a) && Sharplog.Universe.IsVariable(b) && !bodyVariables.Contains(a) && !bodyVariables.Contains(b))
                         {
                             throw new DatalogException("Both variables of '=' are unbound in clause " + a + " = " + b);
                         }
                     }
                     else
                     {
-                        if (Sharplog.Jatalog.IsVariable(a) && !bodyVariables.Contains(a))
+                        if (Sharplog.Universe.IsVariable(a) && !bodyVariables.Contains(a))
                         {
                             throw new DatalogException("Unbound variable " + a + " in " + clause);
                         }
-                        if (Sharplog.Jatalog.IsVariable(b) && !bodyVariables.Contains(b))
+                        if (Sharplog.Universe.IsVariable(b) && !bodyVariables.Contains(b))
                         {
                             throw new DatalogException("Unbound variable " + b + " in " + clause);
                         }
                     }
                 }
-                if (clause.IsNegated())
+
+                if (!clause.IsNegated())
                 {
                     foreach (string term in clause.GetTerms())
                     {
-                        if (Sharplog.Jatalog.IsVariable(term) && !bodyVariables.Contains(term))
-                        {
-                            throw new DatalogException("Variable " + term + " of rule " + ToString() + " must appear in at least one positive expression");
-                        }
-                    }
-                }
-                else
-                {
-                    foreach (string term in clause.GetTerms())
-                    {
-                        if (Sharplog.Jatalog.IsVariable(term))
+                        if (Universe.IsVariable(term))
                         {
                             bodyVariables.Add(term);
                         }
                     }
                 }
             }
-            // Enforce the rule that variables in the head must appear in the body
-            foreach (string term in GetHead().GetTerms())
+
+            foreach (Expr clause in Body)
             {
-                if (!Sharplog.Jatalog.IsVariable(term))
+                if (clause.IsNegated())
+                {
+                    foreach (string term in clause.GetTerms())
+                    {
+                        if (Universe.IsVariable(term) && !bodyVariables.Contains(term))
+                        {
+                            throw new DatalogException("Variable " + term + " of rule " + ToString() + " must appear in at least one positive expression");
+                        }
+                    }
+                }
+            }
+
+            // Enforce the rule that variables in the head must appear in the body
+            foreach (string term in Head.GetTerms())
+            {
+                if (!Sharplog.Universe.IsVariable(term))
                 {
                     throw new DatalogException("Constant " + term + " in head of rule " + ToString());
                 }
@@ -133,12 +128,12 @@ namespace Sharplog
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append(GetHead());
+            sb.Append(Head);
             sb.Append(" :- ");
-            for (int i = 0; i < GetBody().Count; i++)
+            for (int i = 0; i < Body.Count; i++)
             {
-                sb.Append(GetBody()[i]);
-                if (i < GetBody().Count - 1)
+                sb.Append(Body[i]);
+                if (i < Body.Count - 1)
                 {
                     sb.Append(", ");
                 }
@@ -159,22 +154,17 @@ namespace Sharplog
         public Rule Substitute(StackMap bindings)
         {
             IList<Expr> subsBody = new List<Expr>();
-            foreach (Expr e in GetBody())
+            foreach (Expr e in Body)
             {
                 subsBody.Add(e.Substitute(bindings.DictionaryObject()));
             }
 
-            return new Rule(this.GetHead().Substitute(bindings.DictionaryObject()), subsBody);
+            return new Rule(this.Head.Substitute(bindings.DictionaryObject()), subsBody);
         }
 
-        public Expr GetHead()
+        internal void SetBody(IList<Expr> exprs)
         {
-            return head;
-        }
-
-        public IList<Expr> GetBody()
-        {
-            return body;
+            this.Body = exprs;
         }
     }
 }

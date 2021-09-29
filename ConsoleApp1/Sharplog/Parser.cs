@@ -24,6 +24,11 @@ namespace Sharplog
             List<Expr> goals = new List<Expr>();
             try
             {
+                if (TryParseUniverseDeclaration(scan))
+                {
+
+                }
+
                 Expr head = ParseExpr(scan);
                 if (scan.NextToken() == ':')
                 {
@@ -87,11 +92,42 @@ namespace Sharplog
                 throw new DatalogException(e);
             }
         }
+        
+        private static bool TryParseUniverseDeclaration(StreamTokenizer scan)
+        {
+            var stateBefore = scan.CurrentState;
 
-        /* parses an expression */
+            scan.NextToken();
+            if (scan.ttype == StreamTokenizer.TT_WORD && scan.StringValue.Equals("universe", System.StringComparison.OrdinalIgnoreCase))
+            {
+                scan.NextToken();
+            }
+
+            if (scan.ttype == StreamTokenizer.TT_WORD)
+            {
+                // Dealing with a universe
+                string universeName = scan.StringValue;
+
+                scan.NextToken();
+
+                if (scan.ttype == StreamTokenizer.TT_WORD && scan.StringValue.Equals("extends", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    // Universe extends list
+                }
+
+                if (scan.ttype == '{')
+                {
+
+                }
+            }
+
+            scan.RewindToState(stateBefore);
+
+            return false;
+        }
 
         /// <exception cref="Sharplog.DatalogException"/>
-        internal static Expr ParseExpr(StreamTokenizer scan)
+        private static Expr ParseExpr(StreamTokenizer scan)
         {
             try
             {

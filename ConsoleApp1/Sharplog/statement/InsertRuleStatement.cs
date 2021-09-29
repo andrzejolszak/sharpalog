@@ -3,7 +3,7 @@ using Sharplog.Engine;
 
 namespace Sharplog.Statement
 {
-    internal class InsertRuleStatement : Sharplog.Statement.Statement
+    internal class InsertRuleStatement : Statement
     {
         private readonly Rule rule;
 
@@ -13,17 +13,9 @@ namespace Sharplog.Statement
         }
 
         /// <exception cref="Sharplog.DatalogException"/>
-        public IEnumerable<IDictionary<string, string>> Execute(Sharplog.Jatalog datalog, StackMap bindings)
+        public IEnumerable<IDictionary<string, string>> Execute(Universe datalog)
         {
-            Rule newRule;
-            if (bindings != null)
-            {
-                newRule = rule.Substitute(bindings);
-            }
-            else
-            {
-                newRule = rule;
-            }
+            Rule newRule = rule;
             datalog.Rule(newRule);
             return null;
         }

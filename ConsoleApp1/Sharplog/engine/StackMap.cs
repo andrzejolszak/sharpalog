@@ -99,7 +99,7 @@ namespace Sharplog.Engine
         public void Add(string key, string value)
         {
 #if DEBUG 
-            if (value == null || !Jatalog.IsVariable(key) || Jatalog.IsVariable(value))
+            if (value == null || !Universe.IsVariable(key) || Universe.IsVariable(value))
             {
                 throw new InvalidOperationException();
             }

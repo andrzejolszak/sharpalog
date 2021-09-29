@@ -9,7 +9,7 @@ namespace Sharplog.Output
 	/// Interface that is used to output the result of a Jatalog statement execution.
 	/// <p>
 	/// If you're executing a file that may contain multiple queries, you can pass
-	/// <see cref="Sharplog.Jatalog.ExecuteAll(System.IO.StreamReader, QueryOutput)"/>
+	/// <see cref="Sharplog.Universe.ExecuteAll(System.IO.StreamReader, QueryOutput)"/>
 	/// a
 	/// <see cref="QueryOutput"/>
 	/// object that will be used to display
@@ -17,7 +17,7 @@ namespace Sharplog.Output
 	/// Otherwise, if you set the QueryOutput parameter to
 	/// <see langword="null"/>
 	/// ,
-	/// <see cref="Sharplog.Jatalog.ExecuteAll(System.IO.StreamReader, QueryOutput)"/>
+	/// <see cref="Sharplog.Universe.ExecuteAll(System.IO.StreamReader, QueryOutput)"/>
 	/// will just return the answers from the last query.
 	/// </p>
 	/// </remarks>

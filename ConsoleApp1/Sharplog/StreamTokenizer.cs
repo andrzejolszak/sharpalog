@@ -11,7 +11,6 @@ namespace Sharpen
         public const int TT_EOL = '\n';
         public const int TT_NUMBER = -2;
         public const int TT_WORD = -3;
-        public int ttype = TT_NOTHING;
         private const int NEED_CHAR = Int32.MaxValue;
         private const int SKIP_LF = Int32.MaxValue - 1;
         private const byte CT_WHITESPACE = 1;
@@ -20,7 +19,7 @@ namespace Sharpen
         private const byte CT_QUOTE = 8;
         private const byte CT_COMMENT = 16;
         private const int TT_NOTHING = -4;
-        private StreamReader reader = null;
+        private MemoryStream stream;
 
         /**
          * The next character to be considered by the nextToken method.  May also
@@ -29,23 +28,24 @@ namespace Sharpen
          * character, it should be discarded and a second new character should be
          * Read.
          */
-        private int peekc = NEED_CHAR;
-        private bool pushedBack;
+        public int ttype = TT_NOTHING;
+        public int peekc = NEED_CHAR;
+        public bool pushedBack;
         /** The line number of the last token Read */
 
-        private bool eolIsSignificantP = false;
-        private bool slashSlashCommentsP = false;
-        private bool slashStarCommentsP = false;
+        private const bool eolIsSignificantP = false;
+        private const bool slashSlashCommentsP = false;
+        private const bool slashStarCommentsP = false;
 
         private byte[] characterType = new byte[256];
 
-        public StreamTokenizer(StreamReader r) : this()
+        public StreamTokenizer(MemoryStream r) : this()
         {
             if (r == null)
             {
                 throw new ArgumentNullException();
             }
-            reader = r;
+            stream = r;
         }
 
         private StreamTokenizer()
@@ -690,11 +690,24 @@ namespace Sharpen
             return "Token[" + ret + "], line " + LineNumber;
         }
 
+        public (long, bool, int, int, int, string, double) CurrentState => (stream.Position, pushedBack, peekc, ttype, LineNumber, StringValue, NumberValue);
+
+        public void RewindToState((long position, bool pushedBack, int peekc, int ttype, int line, string stringVal, double numberVal) state)
+        {
+            stream.Position = state.position;
+            this.pushedBack = state.pushedBack;
+            this.peekc = state.peekc;
+            this.ttype = state.ttype;
+            this.LineNumber = state.line;
+            this.StringValue = state.stringVal;
+            this.NumberValue = state.numberVal;
+        }
+
         private int Read()
         {
-            if (reader != null)
+            if (stream != null)
             {
-                return reader.Read();
+                return stream.ReadByte();
             }
             else
             {
