@@ -71,6 +71,7 @@ public class IndexedSet
                 elements.Add(element);
                 return true;
             }
+
             return false;
         }
 
@@ -84,6 +85,7 @@ public class IndexedSet
                     result = true;
                 }
             }
+
             return result;
         }
 

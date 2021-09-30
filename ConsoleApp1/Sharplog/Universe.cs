@@ -97,6 +97,10 @@ namespace Sharplog
 
         private IEngine engine;
 
+        private IndexedSet _currentExpansionCacheFacts = new IndexedSet();
+
+        private HashSet<Expr> _currentExpansionCacheGoals = new HashSet<Expr>();
+
         /// <summary>Default constructor.</summary>
         /// <remarks>
         /// Default constructor.
@@ -256,7 +260,24 @@ namespace Sharplog
         /// <exception cref="Sharplog.DatalogException"/>
         public List<IDictionary<string, string>> Query(IList<Expr> goals)
         {
-            return engine.Query(this, goals);
+            if (goals.Count == 0)
+            {
+                return new List<IDictionary<string, string>>(0);
+            }
+
+            IList<Expr> nonCachedGoals = goals.Where(x => !this._currentExpansionCacheGoals.Contains(x)).ToList();
+            if (nonCachedGoals.Count > 0)
+            {
+                IList<Expr> orderedNonCacheGoals = engine.ReorderQuery(nonCachedGoals);
+                IndexedSet factsForDownstreamPredicates = engine.ExpandDatabase(this, orderedNonCacheGoals);
+
+                this._currentExpansionCacheFacts.AddAll(factsForDownstreamPredicates.All);
+                this._currentExpansionCacheGoals.UnionWith(nonCachedGoals);
+            }
+
+            // Now match the expanded database to the goals
+            IList<Expr> orderedGoals = engine.ReorderQuery(goals);
+            return engine.MatchGoals(orderedGoals, 0, this._currentExpansionCacheFacts, new StackMap());
         }
 
         /// <summary>Executes a query with the specified goals against the database.</summary>
@@ -346,6 +367,8 @@ namespace Sharplog
             }
 
             rules.Add(newRule);
+            
+            InvalidateCache();
 
             return this;
         }
@@ -408,7 +431,16 @@ namespace Sharplog
             // You can also match the arity of the fact against existing facts in the EDB,
             // but it's more of a principle than a technical problem; see Jatalog#validate()
             edbProvider.Add(newFact);
+
+            InvalidateCache();
+
             return this;
+        }
+
+        private void InvalidateCache()
+        {
+            this._currentExpansionCacheGoals.Clear();
+            this._currentExpansionCacheFacts.ClearTest();
         }
 
         /// <summary>Deletes all the facts in the database that matches a specific query</summary>
@@ -440,6 +472,8 @@ namespace Sharplog
                 }
             }
 
+            InvalidateCache();
+
             // and substitute the answer on each goal
             return edbProvider.RemoveAll(facts);
         }
@@ -452,16 +486,6 @@ namespace Sharplog
         public EdbProvider GetEdbProvider()
         {
             return edbProvider;
-        }
-
-        /// <summary>Sets the EdbProvider that manages the database.</summary>
-        /// <param name="edbProvider">
-        /// the
-        /// <see cref="EdbProvider"/>
-        /// </param>
-        public void SetEdbProvider(EdbProvider edbProvider)
-        {
-            this.edbProvider = edbProvider;
         }
 
         public bool TryGetFromIdb(string predicate, out HashSet<Rule> rules)

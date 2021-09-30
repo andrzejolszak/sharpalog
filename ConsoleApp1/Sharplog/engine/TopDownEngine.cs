@@ -263,5 +263,20 @@ namespace Sharplog.Engine
             }
             return ordered;
         }
+
+        public List<IDictionary<string, string>> MatchGoals(IList<Expr> goals, int index, IndexedSet facts, StackMap bindings)
+        {
+            throw new NotImplementedException();
+        }
+
+        IList<Expr> IEngine.ReorderQuery(IList<Expr> query)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IndexedSet ExpandDatabase(Universe jatalog, IList<Expr> goals)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

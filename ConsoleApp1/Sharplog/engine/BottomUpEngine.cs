@@ -26,14 +26,20 @@ namespace Sharplog.Engine
         /// <exception cref="Sharplog.DatalogException"/>
         public List<IDictionary<string, string>> Query(Universe jatalog, IList<Expr> goals)
         {
-            if ((goals.Count == 0))
+            if (goals.Count == 0)
             {
                 return new List<IDictionary<string, string>>(0);
             }
 
-            // Reorganize the goals so that negated literals are at the end.
-            IList<Expr> orderedGoals = ReorderQuery(goals);
+            IList<Expr> orderedGoals = this.ReorderQuery(goals);
+            IndexedSet factsForDownstreamPredicates = ExpandDatabase(jatalog, orderedGoals);
 
+            // Now match the expanded database to the goals
+            return MatchGoals(orderedGoals, 0, factsForDownstreamPredicates, new StackMap());
+        }
+
+        public IndexedSet ExpandDatabase(Universe jatalog, IList<Expr> goals)
+        {
             // Compute all downstream predicate names for the goals by following the rules, their goals, their rules, and so on...
             (HashSet<Expr> downstreamPredicates, HashSet<Rule> rulesForDownstreamPredicates) = GetAllDownstreamPredicates(jatalog, goals);
             IndexedSet factsForDownstreamPredicates = new IndexedSet();
@@ -52,8 +58,7 @@ namespace Sharplog.Engine
                 }
             }
 
-            // Now match the expanded database to the goals
-            return MatchGoals(orderedGoals, 0, factsForDownstreamPredicates, new StackMap());
+            return factsForDownstreamPredicates;
         }
 
         public void TransformNewRule(Rule newRule)
@@ -61,7 +66,7 @@ namespace Sharplog.Engine
             newRule.SetBody(ReorderQuery(newRule.Body));
         }
 
-        private IList<Expr> ReorderQuery(IList<Expr> query)
+        public IList<Expr> ReorderQuery(IList<Expr> query)
         {
             IList<Expr> ordered = new List<Expr>(query.Count);
             foreach (Expr e in query)
@@ -172,7 +177,7 @@ namespace Sharplog.Engine
             return map;
         }
 
-        private List<IDictionary<string, string>> MatchGoals(IList<Expr> goals, int index, IndexedSet facts, StackMap bindings)
+        public List<IDictionary<string, string>> MatchGoals(IList<Expr> goals, int index, IndexedSet facts, StackMap bindings)
         {
             // PERF this flow allocs a lot of StackMaps with their Dictionaries
             Expr goal = goals[index];
