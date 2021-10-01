@@ -102,6 +102,11 @@ namespace Sharplog
             {
                 scan.NextToken();
             }
+            else
+            {
+                scan.RewindToState(stateBefore);
+                return false;
+            }
 
             if (scan.ttype == StreamTokenizer.TT_WORD)
             {

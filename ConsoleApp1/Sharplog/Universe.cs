@@ -196,7 +196,7 @@ namespace Sharplog
         /// <exception cref="DatalogException">on syntax and I/O errors encountered while executing.</exception>
         /// <seealso cref="Sharplog.Output.QueryOutput"/>
         /// <exception cref="Sharplog.DatalogException"/>
-        public List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll(MemoryStream stream, QueryOutput output)
+        public List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll(MemoryStream stream, QueryOutput output, bool parseOnly = false)
         {
             try
             {
@@ -207,14 +207,23 @@ namespace Sharplog
                 while (scan.ttype != StreamTokenizer.TT_EOF)
                 {
                     scan.PushBack();
-                    var res = ExecuteSingleStatement(scan, output);
-                    if (res != null)
+
+                    if (parseOnly)
                     {
-                        answers.AddRange(res);
+                        Statement.Statement statement = Parser.ParseStmt(scan);
+                    }
+                    else
+                    {
+                        var res = ExecuteSingleStatement(scan, output);
+                        if (res != null)
+                        {
+                            answers.AddRange(res);
+                        }
                     }
 
                     scan.NextToken();
                 }
+
                 return answers;
             }
             catch (IOException e)
@@ -233,12 +242,12 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">on syntax errors encountered while executing.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public Dictionary<Statement.Statement, List<(Statement.Statement, IDictionary<string, string>)>> ExecuteAll(string statements)
+        public Dictionary<Statement.Statement, List<(Statement.Statement, IDictionary<string, string>)>> ExecuteAll(string statements, bool parseOnly = false)
         {
             // It would've been fun to wrap the results in a java.sql.ResultSet, but damn,
             // those are a lot of methods to implement:
             // https://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html
-            return GroupByAsDictionary(ExecuteAll(ToStream(statements), null), x => x.Item1);
+            return GroupByAsDictionary(ExecuteAll(ToStream(statements), null, parseOnly), x => x.Item1);
         }
 
         public Dictionary<TKey, List<TSource>> GroupByAsDictionary<TSource, TKey>(IEnumerable<TSource> that, Func<TSource, TKey> groupKeySelector)

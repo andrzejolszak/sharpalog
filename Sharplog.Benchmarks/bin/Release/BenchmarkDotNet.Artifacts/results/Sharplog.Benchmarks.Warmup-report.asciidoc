@@ -8,6 +8,6 @@ Intel Core i5-7300HQ CPU 2.50GHz (Kaby Lake), 1 CPU, 4 logical and 4 physical co
 [options="header"]
 |===
 |           Method|  DataSource|     Median|        P90|  Allocated
-|       JustCreate|           ?|  0.2600 ns|  0.3930 ns|        0 B
-|  CreateAndWarmup|           ?|  1.3100 ns|  1.7600 ns|        2 B
+|       JustCreate|           ?|  0.2500 ns|  0.2900 ns|        0 B
+|  CreateAndWarmup|           ?|  1.1350 ns|  1.4170 ns|        2 B
 |===

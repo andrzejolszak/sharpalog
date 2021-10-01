@@ -23,6 +23,17 @@
         }
 
         [Test]
+        [TestCase(true)]
+        [TestCase(false)]
+        public void Noun(bool bottomUp)
+        {
+            Universe target = new Universe(bottomUp);
+            string src = File.ReadAllText(ExamplesDir + "noun.dl");
+            var res = target.ExecuteAll(src);
+            Assert.AreEqual(src.Count(x => x == '?'), res.Count);
+        }
+
+        [Test]
         [TestCase("parent(A,B)?", 3)]
         [TestCase("parent(A,bob)?", 1)]
         [TestCase("sibling(A,B)?", 6)]
