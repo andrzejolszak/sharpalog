@@ -347,13 +347,10 @@ namespace Sharplog
                 // '=' is special
                 if (Universe.IsVariable(term1))
                 {
-#if DEBUG
                     if (Universe.IsVariable(term2))
                     {
-                        // Rule#validate() was supposed to catch this condition
                         throw new DatalogException("Both operands of '=' are unbound (" + term1 + ", " + term2 + ") in evaluation of " + this);
                     }
-#endif
 
                     bindings.Add(term1, term2);
                     return true;

@@ -267,17 +267,19 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">on syntax errors encountered while executing.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public List<IDictionary<string, string>> Query(IList<Expr> goals)
+        public List<IDictionary<string, string>> Query(List<Expr> goals)
         {
             if (goals.Count == 0)
             {
                 return new List<IDictionary<string, string>>(0);
             }
 
-            IList<Expr> nonCachedGoals = goals.Where(x => !this._currentExpansionCacheGoals.Contains(x)).ToList();
+            // TODO: need to treat foo(A, B) and foo(X, Y) as the same goal!
+            // TODO: Could do a lookup in existing expanded fact cache first, e.g. for query foo(banan, X) that was maybe not seen as a goal, but is an expanded fact
+            List<Expr> nonCachedGoals = goals.Where(x => !this._currentExpansionCacheGoals.Contains(x)).ToList();
             if (nonCachedGoals.Count > 0)
             {
-                IList<Expr> orderedNonCacheGoals = engine.ReorderQuery(nonCachedGoals);
+                List<Expr> orderedNonCacheGoals = engine.ReorderQuery(nonCachedGoals);
                 IndexedSet factsForDownstreamPredicates = engine.ExpandDatabase(this, orderedNonCacheGoals);
 
                 this._currentExpansionCacheFacts.AddAll(factsForDownstreamPredicates.All);
@@ -285,7 +287,7 @@ namespace Sharplog
             }
 
             // Now match the expanded database to the goals
-            IList<Expr> orderedGoals = engine.ReorderQuery(goals);
+            List<Expr> orderedGoals = engine.ReorderQuery(goals);
             return engine.MatchGoals(orderedGoals, 0, this._currentExpansionCacheFacts, new StackMap());
         }
 
@@ -346,7 +348,7 @@ namespace Sharplog
         /// <exception cref="Sharplog.DatalogException"/>
         public Sharplog.Universe Rule(Expr head, params Expr[] body)
         {
-            Sharplog.Rule newRule = new Sharplog.Rule(head, body);
+            Sharplog.Rule newRule = new Sharplog.Rule(head, body.ToList());
             return Rule(newRule);
         }
 

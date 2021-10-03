@@ -217,7 +217,7 @@ namespace Sharplog.Engine
         }
 
         /// <exception cref="Sharplog.DatalogException"/>
-        public List<IDictionary<string, string>> Query(Universe jatalog, IList<Expr> goals)
+        public List<IDictionary<string, string>> Query(Universe jatalog, List<Expr> goals)
         {
             if ((goals.Count == 0))
             {
@@ -240,7 +240,7 @@ namespace Sharplog.Engine
             newRule.SetBody(ReorderQuery(newRule.Body));
         }
 
-        private List<Expr> ReorderQuery(IList<Expr> query)
+        private List<Expr> ReorderQuery(List<Expr> query)
         {
             List<Expr> ordered = new List<Expr>(query.Count);
             foreach (Expr e in query)
@@ -269,12 +269,12 @@ namespace Sharplog.Engine
             throw new NotImplementedException();
         }
 
-        IList<Expr> IEngine.ReorderQuery(IList<Expr> query)
+        List<Expr> IEngine.ReorderQuery(List<Expr> query)
         {
             throw new NotImplementedException();
         }
 
-        public IndexedSet ExpandDatabase(Universe jatalog, IList<Expr> goals)
+        public IndexedSet ExpandDatabase(Universe jatalog, List<Expr> goals)
         {
             throw new NotImplementedException();
         }

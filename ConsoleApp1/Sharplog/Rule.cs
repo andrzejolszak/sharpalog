@@ -18,7 +18,7 @@ namespace Sharplog
     {
         public Expr Head { get; }
 
-        public IList<Expr> Body { get; private set; }
+        public List<Expr> Body { get; private set; }
 
         /// <summary>Constructor that takes an expression as the head of the rule and a list of expressions as the body.</summary>
         /// <remarks>
@@ -27,7 +27,7 @@ namespace Sharplog
         /// </remarks>
         /// <param name="head">The head of the rule (left hand side)</param>
         /// <param name="body">The list of expressions that make up the body of the rule (right hand side)</param>
-        public Rule(Expr head, IList<Expr> body)
+        public Rule(Expr head, List<Expr> body)
         {
             this.Head = head;
             this.Body = body;
@@ -67,10 +67,12 @@ namespace Sharplog
                     string b = clause.GetTerms()[1];
                     if (clause.predicate.Equals("="))
                     {
+                        /*
+                        Var-Var unification
                         if (Sharplog.Universe.IsVariable(a) && Sharplog.Universe.IsVariable(b) && !bodyVariables.Contains(a) && !bodyVariables.Contains(b))
                         {
                             throw new DatalogException("Both variables of '=' are unbound in clause " + a + " = " + b);
-                        }
+                        }*/
                     }
                     else
                     {
@@ -153,7 +155,7 @@ namespace Sharplog
         /// <returns>the Rule with the substituted bindings.</returns>
         public Rule Substitute(StackMap bindings)
         {
-            IList<Expr> subsBody = new List<Expr>();
+            List<Expr> subsBody = new List<Expr>();
             foreach (Expr e in Body)
             {
                 subsBody.Add(e.Substitute(bindings.DictionaryObject()));
@@ -162,7 +164,7 @@ namespace Sharplog
             return new Rule(this.Head.Substitute(bindings.DictionaryObject()), subsBody);
         }
 
-        internal void SetBody(IList<Expr> exprs)
+        internal void SetBody(List<Expr> exprs)
         {
             this.Body = exprs;
         }

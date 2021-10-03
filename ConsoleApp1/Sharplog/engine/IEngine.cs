@@ -4,11 +4,11 @@ namespace Sharplog.Engine
 {
     public interface IEngine
     {
-        List<IDictionary<string, string>> Query(Universe jatalog, IList<Expr> goals);
+        List<IDictionary<string, string>> Query(Universe jatalog, List<Expr> goals);
 
-        IList<Expr> ReorderQuery(IList<Expr> query);
+        List<Expr> ReorderQuery(List<Expr> query);
 
-        IndexedSet ExpandDatabase(Universe jatalog, IList<Expr> goals);
+        IndexedSet ExpandDatabase(Universe jatalog, List<Expr> goals);
 
         List<IDictionary<string, string>> MatchGoals(IList<Expr> goals, int index, IndexedSet facts, StackMap bindings);
 

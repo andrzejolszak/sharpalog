@@ -24,21 +24,21 @@ namespace Sharplog.Engine
         * If the goal is a built-in predicate, it is also evaluated here. */
 
         /// <exception cref="Sharplog.DatalogException"/>
-        public List<IDictionary<string, string>> Query(Universe jatalog, IList<Expr> goals)
+        public List<IDictionary<string, string>> Query(Universe jatalog, List<Expr> goals)
         {
             if (goals.Count == 0)
             {
                 return new List<IDictionary<string, string>>(0);
             }
 
-            IList<Expr> orderedGoals = this.ReorderQuery(goals);
+            List<Expr> orderedGoals = this.ReorderQuery(goals);
             IndexedSet factsForDownstreamPredicates = ExpandDatabase(jatalog, orderedGoals);
 
             // Now match the expanded database to the goals
             return MatchGoals(orderedGoals, 0, factsForDownstreamPredicates, new StackMap());
         }
 
-        public IndexedSet ExpandDatabase(Universe jatalog, IList<Expr> goals)
+        public IndexedSet ExpandDatabase(Universe jatalog, List<Expr> goals)
         {
             // Compute all downstream predicate names for the goals by following the rules, their goals, their rules, and so on...
             (HashSet<Expr> downstreamPredicates, HashSet<Rule> rulesForDownstreamPredicates) = GetAllDownstreamPredicates(jatalog, goals);
@@ -66,27 +66,68 @@ namespace Sharplog.Engine
             newRule.SetBody(ReorderQuery(newRule.Body));
         }
 
-        public IList<Expr> ReorderQuery(IList<Expr> query)
+        /* Reorganize the goals in a query so that negated literals are at the end.
+        A rule such as `a(X) :- not b(X), c(X)` won't work if the `not b(X)` is evaluated first, since X will not
+        be bound to anything yet, meaning there are an infinite number of values for X that satisfy `not b(X)`.
+        Reorganising the goals will solve the problem: every variable in the negative literals will have a binding
+        by the time they are evaluated if the rule is /safe/, which we assume they are - see Rule#validate()
+        Also, the built-in predicates (except `=`) should only be evaluated after their variables have been bound
+        for the same reason; see [ceri] for more information. */
+        public List<Expr> ReorderQuery(List<Expr> query)
         {
-            IList<Expr> ordered = new List<Expr>(query.Count);
+            // TODO: PERF this should be done more efficiently
+            List<Expr> ordered = new List<Expr>(query.Count);
+            HashSet<Expr> added = new HashSet<Expr>();
+
+            // Var-val unifications to go first to constrain the search space early
             foreach (Expr e in query)
             {
-                if (!e.IsNegated() && !(e.IsBuiltIn() && !e.predicate.Equals("=")))
+                if (!e.IsNegated() && e.predicate.Equals("=") && (Universe.IsVariable(e.GetTerms()[0]) != Universe.IsVariable(e.GetTerms()[1])))
                 {
                     ordered.Add(e);
+                    added.Add(e);
                 }
             }
-            // Note that a rule like s(A, B) :- r(A, B), X = Y, q(Y), A > X. will cause an error relating to both sides
+
+            foreach (Expr e in query)
+            {
+                if (!e.IsNegated() && !e.IsBuiltIn() && !added.Contains(e))
+                {
+                    ordered.Add(e);
+                    added.Add(e);
+                }
+            }
+
+            // This is to allow Var-Var unification at arbitrary positions:
+            foreach (Expr e in query)
+            {
+                if (!e.IsNegated() && e.predicate.Equals("=") && !added.Contains(e))
+                {
+                    ordered.Add(e);
+                    added.Add(e);
+                }
+            }
+
+            // TODO: VAR-VAR unification old note: Note that a rule like s(A, B) :- r(A, B), X = Y, q(Y), A > X. will cause an error relating to both sides
             // of the '=' being unbound, and it can be fixed by moving the '=' operators to here, but I've decided against
             // it, because the '=' should be evaluated ASAP, and it is difficult to determine programatically when that is.
             // The onus is thus on the user to structure '=' operators properly.
             foreach (Expr e in query)
             {
-                if (e.IsNegated() || (e.IsBuiltIn() && !e.predicate.Equals("=")))
+                // Negated, built-in non '='
+                if (!added.Contains(e))
                 {
                     ordered.Add(e);
                 }
             }
+
+#if DEBUG
+            if(query.Count != ordered.Count)
+            {
+                throw new InvalidOperationException();
+            }
+#endif
+
             return ordered;
         }
 
@@ -116,13 +157,6 @@ namespace Sharplog.Engine
             return strata;
         }
 
-        /* Reorganize the goals in a query so that negated literals are at the end.
-        A rule such as `a(X) :- not b(X), c(X)` won't work if the `not b(X)` is evaluated first, since X will not
-        be bound to anything yet, meaning there are an infinite number of values for X that satisfy `not b(X)`.
-        Reorganising the goals will solve the problem: every variable in the negative literals will have a binding
-        by the time they are evaluated if the rule is /safe/, which we assume they are - see Rule#validate()
-        Also, the built-in predicates (except `=`) should only be evaluated after their variables have been bound
-        for the same reason; see [ceri] for more information. */
         /* Computes the stratification of the rules in the IDB by doing a depth-first search.
         * It throws a DatalogException if there are negative loops in the rules, in which case the
         * rules aren't stratified and cannot be computed. */

@@ -6,9 +6,9 @@ namespace Sharplog.Statement
 {
     internal class QueryStatement : Statement
     {
-        private IList<Expr> goals;
+        private List<Expr> goals;
 
-        internal QueryStatement(IList<Expr> goals)
+        internal QueryStatement(List<Expr> goals)
         {
             this.goals = goals;
         }

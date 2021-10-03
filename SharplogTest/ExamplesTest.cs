@@ -23,6 +23,57 @@
         }
 
         [Test]
+        public void VarVarUnification()
+        {
+            Universe target = new Universe();
+            string src = @"
+fooo(X, Y) :- barr(X), barr(Y), X = Y.
+fooo2(X, Y) :- X = Y, barr(X), barr(Y).
+barr(1).
+barr(2).
+fooo(X, Y)?
+fooo2(X, Y)?";
+
+            var res = target.ExecuteAll(src);
+            Assert.AreEqual(2, res.Count);
+            Assert.IsTrue(res.Values.All(x => x.Count == 2));
+        }
+
+        [Test]
+        public void VarVarNegUnification()
+        {
+            Universe target = new Universe();
+            string src = @"
+fooo(X, Y) :- barr(X), barr(Y), not X = Y.
+fooo2(X, Y) :- not X = Y, barr(X), barr(Y).
+barr(1).
+barr(2).
+fooo(X, Y)?
+fooo2(X, Y)?";
+
+            var res = target.ExecuteAll(src);
+            Assert.AreEqual(2, res.Count);
+            Assert.IsTrue(res.Values.All(x => x.Count == 2));
+        }
+
+        [Test]
+        public void VarVarNotUnification()
+        {
+            Universe target = new Universe();
+            string src = @"
+fooo(X, Y) :- barr(X), barr(Y), X <> Y.
+fooo2(X, Y) :- X <> Y, barr(X), barr(Y).
+barr(1).
+barr(2).
+fooo(X, Y)?
+fooo2(X, Y)?";
+
+            var res = target.ExecuteAll(src);
+            Assert.AreEqual(2, res.Count);
+            Assert.IsTrue(res.Values.All(x => x.Count == 2));
+        }
+
+        [Test]
         [TestCase(true)]
         [TestCase(false)]
         public void Noun(bool bottomUp)

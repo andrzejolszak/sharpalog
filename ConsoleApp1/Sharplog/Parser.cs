@@ -37,7 +37,7 @@ namespace Sharplog
                     {
                         throw new DatalogException("[line " + scan.LineNumber + "] Expected ':-'");
                     }
-                    IList<Expr> body = new List<Expr>();
+                    List<Expr> body = new List<Expr>();
                     do
                     {
                         Expr arg = ParseExpr(scan);

@@ -1,20 +1,20 @@
 ....
-BenchmarkDotNet=v0.11.1, OS=Windows 10.0.19041
+BenchmarkDotNet=v0.11.1, OS=Windows 10.0.19043
 Intel Core i5-7300HQ CPU 2.50GHz (Kaby Lake), 1 CPU, 4 logical and 4 physical cores
-  [Host] : .NET Framework 4.7.2 (CLR 4.0.30319.42000), 64bit RyuJIT-v4.8.4220.0
-  Dry    : .NET Framework 4.7.2 (CLR 4.0.30319.42000), 64bit RyuJIT-v4.8.4220.0
+  [Host] : .NET Framework 4.7.2 (CLR 4.0.30319.42000), 64bit RyuJIT-v4.8.4400.0
+  Dry    : .NET Framework 4.7.2 (CLR 4.0.30319.42000), 64bit RyuJIT-v4.8.4400.0
 
 ....
 [options="header"]
 |===
-|      Method|     DataSource|          Median|             P90|  Allocated
-|  RunExample|     builtin.dl|      2,215.0 ns|      3,246.5 ns|     1475 B
-|  RunExample|     cerineg.dl|      1,772.0 ns|      2,329.0 ns|     1147 B
-|  RunExample|      family.dl|     91,045.5 ns|     96,936.7 ns|    30310 B
-|  RunExample|        gens.dl|     14,928.0 ns|     17,468.2 ns|    15661 B
-|  RunExample|      negate.dl|      1,023.0 ns|      1,638.0 ns|      655 B
-|  RunExample|     numbers.dl|      3,471.5 ns|      4,637.8 ns|     2212 B
-|  RunExample|       paths.dl|      1,498.5 ns|      2,060.9 ns|      819 B
-|  RunExample|  stratified.dl|        394.0 ns|        630.6 ns|      328 B
-|  RunExample|      tum.de.dl|  4,230,258.0 ns|  4,538,415.1 ns|   241186 B
+|      Method|     DataSource|          Median|             P90|    Gen 0|    Gen 1|  Allocated
+|  RunExample|     builtin.dl|      3,110.0 ns|      4,459.4 ns|        -|        -|     1475 B
+|  RunExample|     cerineg.dl|      2,084.0 ns|      2,880.4 ns|        -|        -|     1147 B
+|  RunExample|      family.dl|    121,450.0 ns|    131,397.1 ns|        -|        -|    30949 B
+|  RunExample|        gens.dl|     21,454.0 ns|     25,234.4 ns|        -|        -|    17069 B
+|  RunExample|      negate.dl|      1,174.5 ns|      1,456.2 ns|        -|        -|      655 B
+|  RunExample|     numbers.dl|      5,100.0 ns|      6,217.2 ns|        -|        -|     2294 B
+|  RunExample|       paths.dl|      1,739.0 ns|      2,316.2 ns|        -|        -|      819 B
+|  RunExample|  stratified.dl|        429.0 ns|        634.9 ns|        -|        -|      246 B
+|  RunExample|      tum.de.dl|  4,535,122.0 ns|  4,669,067.8 ns|  20.0000|  10.0000|   244316 B
 |===
