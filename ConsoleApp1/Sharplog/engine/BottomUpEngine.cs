@@ -99,6 +99,8 @@ namespace Sharplog.Engine
             }
 
             // This is to allow Var-Var unification at arbitrary positions:
+            // TODO: PERF this can be done smarter by dynamically evaluating Var-Vars as soon as they become Var-vals at runtime
+            // TOOD: the above dynamic ordering becomes quite complicated, consider if a rename (via a unification-rename dictionary?) is simpler to do: X=Y -> raname all X and Y to X_Y. Be sure to correctly handle multi-renames: X=Y, Y=Z.
             foreach (Expr e in query)
             {
                 if (!e.IsNegated() && e.predicate.Equals("=") && !added.Contains(e))
