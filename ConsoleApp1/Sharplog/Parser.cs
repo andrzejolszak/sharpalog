@@ -18,17 +18,12 @@ namespace Sharplog
         */
         private static readonly IList<string> validOperators = new List<string> { "=", "!=", "<>", "<", "<=", ">", ">=" };
 
-        /// <exception cref="Sharplog.DatalogException"/>
-        internal static Statement.Statement ParseStmt(StreamTokenizer scan)
+        /// <exception cref="DatalogException"/>
+        internal static Statement.Statement ParseStmt(StreamTokenizer scan, bool isAssertQuery)
         {
             List<Expr> goals = new List<Expr>();
             try
             {
-                if (TryParseUniverseDeclaration(scan))
-                {
-
-                }
-
                 Expr head = ParseExpr(scan);
                 if (scan.NextToken() == ':')
                 {
@@ -49,10 +44,21 @@ namespace Sharplog
                         throw new DatalogException("[line " + scan.LineNumber + "] Expected '.' after rule");
                     }
                     Rule newRule = new Rule(head, body);
+
+                    if (isAssertQuery)
+                    {
+                        throw new DatalogException("[line " + scan.LineNumber + "] Only queries can be use as asserts.");
+                    }
+
                     return new InsertRuleStatement(newRule);
                 }
                 else if (scan.ttype == '.')
                 {
+                    if (isAssertQuery)
+                    {
+                        throw new DatalogException("[line " + scan.LineNumber + "] Only queries can be use as asserts.");
+                    }
+
                     // We're dealing with a fact, or a query
                     // It's a fact
                     return new InsertFactStatement(head);
@@ -75,10 +81,15 @@ namespace Sharplog
                     }
                     if (scan.ttype == '?')
                     {
-                        return new QueryStatement(goals);
+                        return new QueryStatement(goals, isAssertQuery);
                     }
                     else if (scan.ttype == '~')
                     {
+                        if (isAssertQuery)
+                        {
+                            throw new DatalogException("[line " + scan.LineNumber + "] Only queries can be use as asserts.");
+                        }
+
                         return new DeleteStatement(goals);
                     }
                     else
@@ -93,42 +104,73 @@ namespace Sharplog
             }
         }
         
-        private static bool TryParseUniverseDeclaration(StreamTokenizer scan)
+        public static bool TryParseUniverseDeclaration(StreamTokenizer scan, out string universe, out List<string> extends)
         {
+            universe = null;
+            extends = null;
+
             var stateBefore = scan.CurrentState;
 
             scan.NextToken();
-            if (scan.ttype == StreamTokenizer.TT_WORD && scan.StringValue.Equals("universe", System.StringComparison.OrdinalIgnoreCase))
-            {
-                scan.NextToken();
-            }
-            else
+            if (scan.ttype != StreamTokenizer.TT_WORD || scan.StringValue != "universe")
             {
                 scan.RewindToState(stateBefore);
                 return false;
             }
 
-            if (scan.ttype == StreamTokenizer.TT_WORD)
+            scan.NextToken();
+            if (scan.ttype != StreamTokenizer.TT_WORD)
             {
-                // Dealing with a universe
-                string universeName = scan.StringValue;
+                scan.RewindToState(stateBefore);
+                return false;
+            }
 
-                scan.NextToken();
+            // Dealing with a universe
+            universe = scan.StringValue;
+            extends = new List<string>();
 
-                if (scan.ttype == StreamTokenizer.TT_WORD && scan.StringValue.Equals("extends", System.StringComparison.OrdinalIgnoreCase))
+            scan.NextToken();
+            if (scan.ttype == StreamTokenizer.TT_WORD && scan.StringValue == "extends")
+            {
+                // Universe extends list
+                while (true)
                 {
-                    // Universe extends list
+                    scan.NextToken();
+                    if (scan.ttype == StreamTokenizer.TT_EOF)
+                    {
+                        throw new DatalogException("[line " + scan.LineNumber + "] Invalid extend list");
+                    }
+
+                    if (scan.ttype == '{')
+                    {
+                        break;
+                    }
+
+                    if (scan.ttype == ',')
+                    {
+                        continue;
+                    }
+
+                    if (scan.ttype != StreamTokenizer.TT_WORD)
+                    {
+                        throw new DatalogException("[line " + scan.LineNumber + "] Invalid extend " + scan.ttype);
+                    }
+
+                    extends.Add(scan.StringValue);
                 }
 
-                if (scan.ttype == '{')
+                if (extends.Count == 0)
                 {
-
+                    throw new DatalogException("[line " + scan.LineNumber + "] Extends list expected");
                 }
             }
 
-            scan.RewindToState(stateBefore);
+            if (scan.ttype != '{')
+            {
+                throw new DatalogException("[line " + scan.LineNumber + "] Universe definition expected");
+            }
 
-            return false;
+            return true;
         }
 
         /// <exception cref="Sharplog.DatalogException"/>
@@ -143,7 +185,11 @@ namespace Sharplog
                     negated = true;
                     scan.NextToken();
                 }
+
                 string lhs = null;
+                string universe = null;
+                lhs_parse:
+
                 bool builtInExpected = false;
                 if (scan.ttype == StreamTokenizer.TT_WORD)
                 {
@@ -163,6 +209,7 @@ namespace Sharplog
                 {
                     throw new DatalogException("[line " + scan.LineNumber + "] Predicate or start of expression expected");
                 }
+
                 scan.NextToken();
                 if (scan.ttype == StreamTokenizer.TT_WORD || scan.ttype == '=' || scan.ttype == '!' || scan.ttype == '<' || scan.ttype == '>')
                 {
@@ -171,15 +218,31 @@ namespace Sharplog
                     e.negated = negated;
                     return e;
                 }
+
                 if (builtInExpected)
                 {
                     // LHS was a number or a quoted string but we didn't get an operator
                     throw new DatalogException("[line " + scan.LineNumber + "] Built-in predicate expected");
                 }
+                else if (scan.ttype == '.')
+                {
+                    throw new System.Exception("universe.rule syntax is not yet supported!");
+
+                    if (universe != null)
+                    {
+                        throw new DatalogException("[line " + scan.LineNumber + "] Wrong universe reference syntax");
+                    }
+
+                    universe = lhs;
+                    lhs = null;
+                    scan.NextToken();
+                    goto lhs_parse;
+                }
                 else if (scan.ttype != '(')
                 {
                     throw new DatalogException("[line " + scan.LineNumber + "] Expected '(' after predicate or an operator");
                 }
+
                 List<string> terms = new List<string>();
                 if (scan.NextToken() != ')')
                 {
@@ -210,6 +273,7 @@ namespace Sharplog
                     }
                 }
                 Expr e_1 = new Expr(lhs, terms.ToArray());
+                e_1.UniverseReference = universe;
                 e_1.negated = negated;
                 return e_1;
             }

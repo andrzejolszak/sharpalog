@@ -8,9 +8,12 @@ namespace Sharplog.Statement
     {
         private List<Expr> goals;
 
-        internal QueryStatement(List<Expr> goals)
+        public bool IsAssert { get; }
+
+        internal QueryStatement(List<Expr> goals, bool isAssert)
         {
             this.goals = goals;
+            this.IsAssert = isAssert;
         }
 
         /// <exception cref="Sharplog.DatalogException"/>

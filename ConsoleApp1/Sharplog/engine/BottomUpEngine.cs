@@ -296,7 +296,7 @@ namespace Sharplog.Engine
             return answers;
         }
 
-        /// <exception cref="Sharplog.DatalogException"/>
+        /// <exception cref="DatalogException"/>
         private int DepthFirstSearch(Expr goal, HashSet<Rule> graph, List<Expr> visited, int level)
         {
             string pred = goal.PredicateWithArity;

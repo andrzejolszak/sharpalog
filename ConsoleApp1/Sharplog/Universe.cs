@@ -5,6 +5,7 @@ using System.Linq;
 using Sharpen;
 using Sharplog.Engine;
 using Sharplog.Output;
+using Sharplog.Statement;
 
 namespace Sharplog
 {
@@ -95,6 +96,14 @@ namespace Sharplog
 
         private Dictionary<string, HashSet<Rule>> idb;
 
+        public List<Universe> Extends { get; }
+
+        public string Name { get; }
+
+        public long Version { get; set; }
+
+        private long _currentExtendedUniversesVersionSum;
+
         private IEngine engine;
 
         private IndexedSet _currentExpansionCacheFacts = new IndexedSet();
@@ -108,12 +117,42 @@ namespace Sharplog
         /// Creates a Jatalog instance with an empty IDB and EDB.
         /// </p>
         /// </remarks>
-        public Universe(bool bottomUpEvaluation = true)
+        public Universe(bool bottomUpEvaluation = true, string name = null)
         {
             // Facts
             // Rules
             this.edbProvider = new BasicEdbProvider();
             this.idb = new Dictionary<string, HashSet<Rule>>();
+            this.Extends = new List<Universe>();
+            this.Name = name;
+
+            /*
+            TODO: Top-down evaluation just an experiment for now
+            if (bottomUpEvaluation)
+            {
+                engine = new BottomUpEngine();
+            }
+            else
+            {
+                engine = new TopDownEngine();
+            }*/
+
+            engine = new BottomUpEngine();
+        }
+
+        public Universe(Universe universe)
+        {
+            // Facts
+            // Rules
+            this.edbProvider = new BasicEdbProvider();
+            this.edbProvider.AllFacts().AddAll(universe.edbProvider.AllFacts().All);
+
+            this.idb = new Dictionary<string, HashSet<Rule>>(universe.idb);
+
+            this.Extends = new List<Universe>();
+            
+            this.Name = universe.Name + "+extends";
+
             /*
             TODO: Top-down evaluation just an experiment for now
             if (bottomUpEvaluation)
@@ -204,17 +243,83 @@ namespace Sharplog
                 // Tracks all query answers
                 List<(Statement.Statement, IDictionary<string, string>)> answers = new List<(Statement.Statement, IDictionary<string, string>)>();
                 scan.NextToken();
+                Dictionary<string, Universe> universes = new Dictionary<string, Universe>();
+                HashSet<string> declaredUniverses = new HashSet<string>();
+                Universe currentUniverse = this;
                 while (scan.ttype != StreamTokenizer.TT_EOF)
                 {
                     scan.PushBack();
 
+                    if (Parser.TryParseUniverseDeclaration(scan, out string universe, out List<string> extends))
+                    {
+                        if (currentUniverse != null && currentUniverse != this)
+                        {
+                            throw new DatalogException("[line " + scan.LineNumber + "] Cannot nest universes");
+                        }
+
+                        List<Universe> extendsUs = new List<Universe>();
+                        foreach (string extend in extends)
+                        {
+                            if (!universes.TryGetValue(extend, out Universe extendUniverse))
+                            {
+                                universes.Add(extend, new Universe(name: extend));
+                            }
+
+                            extendsUs.Add(universes[extend]);
+                        }
+
+                        if (!universes.ContainsKey(universe))
+                        {
+                            universes.Add(universe, new Universe(name: universe));
+                        }
+
+                        if (!declaredUniverses.Add(universe))
+                        {
+                            throw new DatalogException("[line " + scan.LineNumber + "] Duplicated universe declaration");
+                        }
+
+                        Universe u = universes[universe];
+                        if (u.Extends.Count == 0)
+                        {
+                            u.Extends.Add(this);
+                            u.Extends.AddRange(extendsUs);
+                        }
+
+                        currentUniverse = u;
+                        scan.NextToken();
+                        continue;
+                    }
+
+                    if (scan.ttype == '}')
+                    {
+                        currentUniverse = this;
+                        scan.NextToken();
+                        scan.NextToken();
+                        continue;
+                    }
+
+                    bool isAssert = false;
+                    if (scan.StringValue == "assert")
+                    {
+                        scan.NextToken();
+                        scan.NextToken();
+                        if (scan.ttype == ':')
+                        {
+                            isAssert = true;
+                        }
+                        else
+                        {
+                            scan.PushBack();
+                        }
+                    }
+
                     if (parseOnly)
                     {
-                        Statement.Statement statement = Parser.ParseStmt(scan);
+                        Statement.Statement statement = Parser.ParseStmt(scan, isAssert);
                     }
                     else
                     {
-                        var res = ExecuteSingleStatement(scan, output);
+                        var res = ExecuteSingleStatement(currentUniverse, scan, output, isAssert);
                         if (res != null)
                         {
                             answers.AddRange(res);
@@ -250,7 +355,7 @@ namespace Sharplog
             return GroupByAsDictionary(ExecuteAll(ToStream(statements), null, parseOnly), x => x.Item1);
         }
 
-        public Dictionary<TKey, List<TSource>> GroupByAsDictionary<TSource, TKey>(IEnumerable<TSource> that, Func<TSource, TKey> groupKeySelector)
+        public static Dictionary<TKey, List<TSource>> GroupByAsDictionary<TSource, TKey>(IEnumerable<TSource> that, Func<TSource, TKey> groupKeySelector)
         {
             IEnumerable<IGrouping<TKey, TSource>> groups = that.GroupBy(groupKeySelector);
             return groups.ToDictionary(g => g.Key, g => g.ToList());
@@ -274,21 +379,49 @@ namespace Sharplog
                 return new List<IDictionary<string, string>>(0);
             }
 
+            long extendUniversesSum = this.Extends.Sum(x => x.Version);
+            if (this._currentExtendedUniversesVersionSum != extendUniversesSum)
+            {
+                this.InvalidateCache();
+                this._currentExtendedUniversesVersionSum = extendUniversesSum;
+            }
+
             // TODO: need to treat foo(A, B) and foo(X, Y) as the same goal!
             // TODO: Could do a lookup in existing expanded fact cache first, e.g. for query foo(banan, X) that was maybe not seen as a goal, but is an expanded fact
             List<Expr> nonCachedGoals = goals.Where(x => !this._currentExpansionCacheGoals.Contains(x)).ToList();
+            Universe aggregatedUniverse = this;
+            if (this.Extends.Count > 0)
+            {
+                aggregatedUniverse = new Universe(this);
+                foreach(Universe ext in this.Extends)
+                {
+                    aggregatedUniverse.edbProvider.AllFacts().AddAll(ext.edbProvider.AllFacts().All);
+                    foreach (Rule r in ext.idb.Values.SelectMany(x => x))
+                    {
+                        if (!aggregatedUniverse.idb.TryGetValue(r.Head.PredicateWithArity, out HashSet<Rule> rules))
+                        {
+                            // TODO: it's possible to add multiple copies of same rule
+                            rules = new HashSet<Rule>();
+                            aggregatedUniverse.idb.Add(r.Head.PredicateWithArity, rules);
+                        }
+
+                        rules.Add(r);
+                    }
+                }
+            }
+
             if (nonCachedGoals.Count > 0)
             {
                 List<Expr> orderedNonCacheGoals = engine.ReorderQuery(nonCachedGoals);
-                IndexedSet factsForDownstreamPredicates = engine.ExpandDatabase(this, orderedNonCacheGoals);
+                IndexedSet factsForDownstreamPredicates = engine.ExpandDatabase(aggregatedUniverse, orderedNonCacheGoals);
 
-                this._currentExpansionCacheFacts.AddAll(factsForDownstreamPredicates.All);
-                this._currentExpansionCacheGoals.UnionWith(nonCachedGoals);
+                aggregatedUniverse._currentExpansionCacheFacts.AddAll(factsForDownstreamPredicates.All);
+                aggregatedUniverse._currentExpansionCacheGoals.UnionWith(nonCachedGoals);
             }
 
             // Now match the expanded database to the goals
             List<Expr> orderedGoals = engine.ReorderQuery(goals);
-            return engine.MatchGoals(orderedGoals, 0, this._currentExpansionCacheFacts, new StackMap());
+            return engine.MatchGoals(orderedGoals, 0, aggregatedUniverse._currentExpansionCacheFacts, new StackMap());
         }
 
         /// <summary>Executes a query with the specified goals against the database.</summary>
@@ -365,7 +498,7 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">if the rule is invalid.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public Sharplog.Universe Rule(Sharplog.Rule newRule)
+        public Universe Rule(Sharplog.Rule newRule)
         {
             this.engine.TransformNewRule(newRule);
             newRule.Validate();
@@ -404,7 +537,7 @@ namespace Sharplog
         /// <see cref="Expr.IsNegated()">negated</see>
         /// </exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public Sharplog.Universe Fact(string predicate, params string[] terms)
+        public Universe Fact(string predicate, params string[] terms)
         {
             return Fact(new Expr(predicate, terms));
         }
@@ -450,6 +583,7 @@ namespace Sharplog
 
         private void InvalidateCache()
         {
+            this.Version++;
             this._currentExpansionCacheGoals.Clear();
             this._currentExpansionCacheFacts.ClearTest();
         }
@@ -524,12 +658,23 @@ namespace Sharplog
         /* Internal method for executing one and only one statement */
 
         /// <exception cref="Sharplog.DatalogException"/>
-        private List<(Statement.Statement, IDictionary<string, string>)> ExecuteSingleStatement(StreamTokenizer scan, QueryOutput output)
+        private static List<(Statement.Statement, IDictionary<string, string>)> ExecuteSingleStatement(Universe universe, StreamTokenizer scan, QueryOutput output, bool isAssertQuery)
         {
-            Statement.Statement statement = Parser.ParseStmt(scan);
+            Statement.Statement statement = Parser.ParseStmt(scan, isAssertQuery);
             try
             {
-                IEnumerable<IDictionary<string, string>> answers = statement.Execute(this);
+                if (statement is QueryStatement asQuery && asQuery.IsAssert)
+                {
+                    IEnumerable<IDictionary<string, string>> aaa = statement.Execute(universe);
+                    if (!aaa.Any())
+                    {
+                        throw new DatalogException("Assertion failed");
+                    }
+
+                    return null;
+                }
+
+                IEnumerable<IDictionary<string, string>> answers = statement.Execute(universe);
                 if (answers != null && output != null)
                 {
                     output.WriteResult(statement, answers);
@@ -539,7 +684,7 @@ namespace Sharplog
             }
             catch (DatalogException e)
             {
-                throw new DatalogException("[line " + scan.LineNumber + "] Error executing statement", e);
+                throw new DatalogException("[line " + scan.LineNumber + "] Error executing statement: " + e.Message, e);
             }
         }
     }

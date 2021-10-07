@@ -35,6 +35,8 @@ namespace Sharplog
 
         private int? _hashCode;
 
+        public string UniverseReference { get; set; }
+
         /// <summary>Constructor for the fluent API that allows a variable number of terms.</summary>
         /// <param name="predicate">The predicate of the expression.</param>
         /// <param name="terms">The terms of the expression.</param>
