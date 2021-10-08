@@ -435,6 +435,7 @@ namespace Sharpen
                 double v = 0;
                 int decexp = 0;
                 int seendot = 0;
+                int prev = 0;
                 while (true)
                 {
                     if (c == '.' && seendot == 0)
@@ -446,8 +447,17 @@ namespace Sharpen
                     }
                     else
                         break;
+
+                    prev = c;
                     c = Read();
                 }
+
+                if (prev == '.')
+                {
+                    stream.Position -= 2;
+                    c = Read();
+                }
+
                 peekc = c;
                 if (decexp != 0)
                 {

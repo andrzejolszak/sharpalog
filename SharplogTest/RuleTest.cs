@@ -9,7 +9,7 @@ namespace Sharplog
     {
         private static Rule Rule(Expr head, params Expr[] body)
         {
-            return new Rule(head, body.ToList());
+            return new Rule(head, body.ToList(), null);
         }
 
         /// <exception cref="Sharplog.DatalogException"/>

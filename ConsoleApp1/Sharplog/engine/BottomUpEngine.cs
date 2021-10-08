@@ -435,7 +435,7 @@ namespace Sharplog.Engine
                 }
             }
 
-            // PERF: avoid evaluating same rule on same facts. Fact set is add-only, even though we have a delete statement, in practice we never delete facts.
+            // PERF: avoid evaluating same rule on same facts. NB: Fact and rule sets are not add-only
             MatchGoals(rule.Head, rule.Body, seq, 0, facts, new StackMap(), res, null);
             return res;
         }

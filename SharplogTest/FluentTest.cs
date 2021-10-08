@@ -91,7 +91,7 @@ namespace Sharplog
             // This is how you would use the fluent API:
             Sharplog.Universe jatalog = new Sharplog.Universe();
             jatalog.Fact("parent", "alice", "bob").Fact("parent", "bob", "carol");
-            jatalog.Rule(Expr.CreateExpr("ancestor", "X", "Y"), Expr.CreateExpr("parent", "X", "Z"), Expr.CreateExpr("ancestor", "Z", "Y")).Rule(Expr.CreateExpr("ancestor", "X", "Y"), Expr.CreateExpr("parent", "X", "Y"));
+            jatalog.RuleTest(Expr.CreateExpr("ancestor", "X", "Y"), Expr.CreateExpr("parent", "X", "Z"), Expr.CreateExpr("ancestor", "Z", "Y")).RuleTest(Expr.CreateExpr("ancestor", "X", "Y"), Expr.CreateExpr("parent", "X", "Y"));
             IEnumerable<IDictionary<string, string>> answers;
             answers = jatalog.Query(Expr.CreateExpr("ancestor", "X", "carol"));
             Assert.IsTrue(TestUtils.AnswerContains(answers, "X", "alice"));

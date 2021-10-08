@@ -36,7 +36,7 @@ namespace Sharplog
     /// <p>The methods
     /// <see cref="Rule(Rule)"/>
     /// and
-    /// <see cref="Rule(Expr, Expr[])"/>
+    /// <see cref="RuleTest(Expr, Expr[])"/>
     /// are used to add rules to the database.</p>
     /// </ul>
     /// <h3>The Parser</h3>
@@ -96,6 +96,8 @@ namespace Sharplog
 
         private Dictionary<string, HashSet<Rule>> idb;
 
+        private Dictionary<string, Rule> idbRuleIds;
+
         public List<Universe> Extends { get; }
 
         public string Name { get; }
@@ -123,6 +125,7 @@ namespace Sharplog
             // Rules
             this.edbProvider = new BasicEdbProvider();
             this.idb = new Dictionary<string, HashSet<Rule>>();
+            this.idbRuleIds = new Dictionary<string, Rule>();
             this.Extends = new List<Universe>();
             this.Name = name;
 
@@ -148,6 +151,7 @@ namespace Sharplog
             this.edbProvider.AllFacts().AddAll(universe.edbProvider.AllFacts().All);
 
             this.idb = new Dictionary<string, HashSet<Rule>>(universe.idb);
+            this.idbRuleIds = universe.idb.SelectMany(x => x.Value).Where(x => x.Id != null).ToDictionary(x => x.Id);
 
             this.Extends = new List<Universe>();
             
@@ -248,6 +252,8 @@ namespace Sharplog
                 Universe currentUniverse = this;
                 while (scan.ttype != StreamTokenizer.TT_EOF)
                 {
+                    Statement.Statement statement = null;
+
                     scan.PushBack();
 
                     if (Parser.TryParseUniverseDeclaration(scan, out string universe, out List<string> extends))
@@ -299,7 +305,24 @@ namespace Sharplog
                     }
 
                     bool isAssert = false;
-                    if (scan.StringValue == "assert")
+                    string id = null;
+                    if (scan.ttype == '@')
+                    {
+                        scan.NextToken();
+                        scan.NextToken();
+                        id = scan.StringValue;
+
+                        scan.NextToken();
+                        if (scan.ttype == '~')
+                        {
+                            statement = new DeleteStatement(null, id);
+                        }
+                        else if (scan.ttype != ':')
+                        {
+                            throw new DatalogException("[line " + scan.LineNumber + "] Wrong ID syntax");
+                        }
+                    }
+                    else if (scan.StringValue == "assert")
                     {
                         scan.NextToken();
                         scan.NextToken();
@@ -313,13 +336,11 @@ namespace Sharplog
                         }
                     }
 
-                    if (parseOnly)
+                    statement = statement ?? Parser.ParseStmt(scan, isAssert, id);
+
+                    if (!parseOnly)
                     {
-                        Statement.Statement statement = Parser.ParseStmt(scan, isAssert);
-                    }
-                    else
-                    {
-                        var res = ExecuteSingleStatement(currentUniverse, scan, output, isAssert);
+                        var res = ExecuteSingleStatement(currentUniverse, statement, scan.LineNumber, output);
                         if (res != null)
                         {
                             answers.AddRange(res);
@@ -389,26 +410,7 @@ namespace Sharplog
             // TODO: need to treat foo(A, B) and foo(X, Y) as the same goal!
             // TODO: Could do a lookup in existing expanded fact cache first, e.g. for query foo(banan, X) that was maybe not seen as a goal, but is an expanded fact
             List<Expr> nonCachedGoals = goals.Where(x => !this._currentExpansionCacheGoals.Contains(x)).ToList();
-            Universe aggregatedUniverse = this;
-            if (this.Extends.Count > 0)
-            {
-                aggregatedUniverse = new Universe(this);
-                foreach(Universe ext in this.Extends)
-                {
-                    aggregatedUniverse.edbProvider.AllFacts().AddAll(ext.edbProvider.AllFacts().All);
-                    foreach (Rule r in ext.idb.Values.SelectMany(x => x))
-                    {
-                        if (!aggregatedUniverse.idb.TryGetValue(r.Head.PredicateWithArity, out HashSet<Rule> rules))
-                        {
-                            // TODO: it's possible to add multiple copies of same rule
-                            rules = new HashSet<Rule>();
-                            aggregatedUniverse.idb.Add(r.Head.PredicateWithArity, rules);
-                        }
-
-                        rules.Add(r);
-                    }
-                }
-            }
+            Universe aggregatedUniverse = GetAggregatedUniverse();
 
             if (nonCachedGoals.Count > 0)
             {
@@ -422,6 +424,37 @@ namespace Sharplog
             // Now match the expanded database to the goals
             List<Expr> orderedGoals = engine.ReorderQuery(goals);
             return engine.MatchGoals(orderedGoals, 0, aggregatedUniverse._currentExpansionCacheFacts, new StackMap());
+        }
+
+        private Universe GetAggregatedUniverse()
+        {
+            Universe aggregatedUniverse = this;
+            if (this.Extends.Count > 0)
+            {
+                aggregatedUniverse = new Universe(this);
+                foreach (Universe ext in this.Extends)
+                {
+                    aggregatedUniverse.edbProvider.AllFacts().AddAll(ext.edbProvider.AllFacts().All);
+                    foreach (Rule r in ext.idb.Values.SelectMany(x => x))
+                    {
+                        if (!aggregatedUniverse.idb.TryGetValue(r.Head.PredicateWithArity, out HashSet<Rule> rules))
+                        {
+                            // TODO: it's possible to add multiple copies of same rule
+                            rules = new HashSet<Rule>();
+                            aggregatedUniverse.idb.Add(r.Head.PredicateWithArity, rules);
+
+                            if (r.Id != null)
+                            {
+                                aggregatedUniverse.idbRuleIds.Add(r.Id, r);
+                            }
+                        }
+
+                        rules.Add(r);
+                    }
+                }
+            }
+
+            return aggregatedUniverse;
         }
 
         /// <summary>Executes a query with the specified goals against the database.</summary>
@@ -479,9 +512,9 @@ namespace Sharplog
         /// </returns>
         /// <exception cref="DatalogException">if the rule is invalid.</exception>
         /// <exception cref="Sharplog.DatalogException"/>
-        public Sharplog.Universe Rule(Expr head, params Expr[] body)
+        public Universe RuleTest(Expr head, params Expr[] body)
         {
-            Sharplog.Rule newRule = new Sharplog.Rule(head, body.ToList());
+            Rule newRule = new Rule(head, body.ToList(), null);
             return Rule(newRule);
         }
 
@@ -508,6 +541,11 @@ namespace Sharplog
                 // TODO: it's possible to add multiple copies of same rule
                 rules = new HashSet<Rule>();
                 idb.Add(newRule.Head.PredicateWithArity, rules);
+
+                if (newRule.Id != null)
+                {
+                    idbRuleIds.Add(newRule.Id, newRule);
+                }
             }
 
             rules.Add(newRule);
@@ -658,9 +696,8 @@ namespace Sharplog
         /* Internal method for executing one and only one statement */
 
         /// <exception cref="Sharplog.DatalogException"/>
-        private static List<(Statement.Statement, IDictionary<string, string>)> ExecuteSingleStatement(Universe universe, StreamTokenizer scan, QueryOutput output, bool isAssertQuery)
+        private static List<(Statement.Statement, IDictionary<string, string>)> ExecuteSingleStatement(Universe universe, Statement.Statement statement, int line, QueryOutput output)
         {
-            Statement.Statement statement = Parser.ParseStmt(scan, isAssertQuery);
             try
             {
                 if (statement is QueryStatement asQuery && asQuery.IsAssert)
@@ -684,8 +721,16 @@ namespace Sharplog
             }
             catch (DatalogException e)
             {
-                throw new DatalogException("[line " + scan.LineNumber + "] Error executing statement: " + e.Message, e);
+                throw new DatalogException("[line " + line + "] Error executing statement: " + e.Message, e);
             }
+        }
+
+        internal void Delete(string ruleId)
+        {
+            InvalidateCache();
+            Rule r = idbRuleIds[ruleId];
+            idbRuleIds.Remove(ruleId);
+            idb[r.Head.PredicateWithArity].Remove(r);
         }
     }
 }

@@ -19,7 +19,7 @@ namespace Sharplog
         private static readonly IList<string> validOperators = new List<string> { "=", "!=", "<>", "<", "<=", ">", ">=" };
 
         /// <exception cref="DatalogException"/>
-        internal static Statement.Statement ParseStmt(StreamTokenizer scan, bool isAssertQuery)
+        internal static Statement.Statement ParseStmt(StreamTokenizer scan, bool isAssertQuery, string id)
         {
             List<Expr> goals = new List<Expr>();
             try
@@ -32,6 +32,7 @@ namespace Sharplog
                     {
                         throw new DatalogException("[line " + scan.LineNumber + "] Expected ':-'");
                     }
+
                     List<Expr> body = new List<Expr>();
                     do
                     {
@@ -39,11 +40,13 @@ namespace Sharplog
                         body.Add(arg);
                     }
                     while (scan.NextToken() == ',');
+
                     if (scan.ttype != '.')
                     {
                         throw new DatalogException("[line " + scan.LineNumber + "] Expected '.' after rule");
                     }
-                    Rule newRule = new Rule(head, body);
+
+                    Rule newRule = new Rule(head, body, id);
 
                     if (isAssertQuery)
                     {
@@ -59,6 +62,11 @@ namespace Sharplog
                         throw new DatalogException("[line " + scan.LineNumber + "] Only queries can be use as asserts.");
                     }
 
+                    if (id != null)
+                    {
+                        throw new DatalogException("[line " + scan.LineNumber + "] Only rules can have IDs.");
+                    }
+
                     // We're dealing with a fact, or a query
                     // It's a fact
                     return new InsertFactStatement(head);
@@ -68,12 +76,13 @@ namespace Sharplog
                     // It's a query
                     goals.Clear();
                     goals.Add(head);
-                    if (scan.ttype != '.' && scan.ttype != '?' && scan.ttype != ',')
+                    if (scan.ttype != '.' && scan.ttype != '?' && scan.ttype != ',' && scan.ttype != '~')
                     {
                         /* You _can_ write facts like `a = 5 .` but I recommend against it; if you do then you *must* have the space between the
                         5 and the '.' otherwise the parser sees it as 5.0 and the error message can be a bit confusing. */
                         throw new DatalogException("[line " + scan.LineNumber + "] Expected one of '.', ',' or '?' after fact/query expression");
                     }
+
                     while (scan.ttype == ',')
                     {
                         goals.Add(ParseExpr(scan));
@@ -81,6 +90,11 @@ namespace Sharplog
                     }
                     if (scan.ttype == '?')
                     {
+                        if (id != null)
+                        {
+                            throw new DatalogException("[line " + scan.LineNumber + "] Only rules can have IDs.");
+                        }
+
                         return new QueryStatement(goals, isAssertQuery);
                     }
                     else if (scan.ttype == '~')
@@ -90,7 +104,12 @@ namespace Sharplog
                             throw new DatalogException("[line " + scan.LineNumber + "] Only queries can be use as asserts.");
                         }
 
-                        return new DeleteStatement(goals);
+                        if (id != null)
+                        {
+                            throw new DatalogException("[line " + scan.LineNumber + "] Only rules can have IDs.");
+                        }
+
+                        return new DeleteStatement(goals, null);
                     }
                     else
                     {

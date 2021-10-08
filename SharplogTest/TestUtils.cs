@@ -20,10 +20,10 @@ namespace Sharplog
                 .Fact("parent", "aaa", "aaaa")
                 .Fact("parent", "c", "ca");
             jatalog
-                .Rule(Expr.CreateExpr("ancestor", "X", "Y"), Expr.CreateExpr("parent", "X", "Z"), Expr.CreateExpr("ancestor", "Z", "Y"))
-                .Rule(Expr.CreateExpr("ancestor", "X", "Y"), Expr.CreateExpr("parent", "X", "Y"))
-                .Rule(Expr.CreateExpr("sibling", "X", "Y"), Expr.CreateExpr("parent", "Z", "X"), Expr.CreateExpr("parent", "Z", "Y"), Expr.Ne("X", "Y"))
-                .Rule(Expr.CreateExpr("related", "X", "Y"), Expr.CreateExpr("ancestor", "Z", "X"), Expr.CreateExpr("ancestor", "Z", "Y"));
+                .RuleTest(Expr.CreateExpr("ancestor", "X", "Y"), Expr.CreateExpr("parent", "X", "Z"), Expr.CreateExpr("ancestor", "Z", "Y"))
+                .RuleTest(Expr.CreateExpr("ancestor", "X", "Y"), Expr.CreateExpr("parent", "X", "Y"))
+                .RuleTest(Expr.CreateExpr("sibling", "X", "Y"), Expr.CreateExpr("parent", "Z", "X"), Expr.CreateExpr("parent", "Z", "Y"), Expr.Ne("X", "Y"))
+                .RuleTest(Expr.CreateExpr("related", "X", "Y"), Expr.CreateExpr("ancestor", "Z", "X"), Expr.CreateExpr("ancestor", "Z", "Y"));
             return jatalog;
         }
 
