@@ -33,9 +33,11 @@ foo(X)?";
             string src = @"
 universe foo_base1 {foo(a1).}
 universe foo_base2 {foo(a2).}
-universe bar extends foo_base1, foo_base2
+universe bar
 {
+    import foo_base1.
     fooR(X) :- X = a.
+    import foo_base2.
 
     fooR(X)?
     foo(Y)?
@@ -154,7 +156,7 @@ assert: not bar(a)?
         }
 
         [Test]
-        public void RemoveFromExtendedUniverse()
+        public void RemoveImported()
         {
             Universe target = new Universe();
             string src = @"
@@ -164,8 +166,10 @@ universe foo_base
     barR1(X) :- X = a.
     @id1: barR2(X) :- X = 2.
 }
-universe foo extends foo_base
+universe foo
 {
+    import foo_base.
+
     assert: barF(X)?
     assert: barR1(a)?
     assert: barR2(2)?

@@ -123,10 +123,9 @@ namespace Sharplog
             }
         }
         
-        public static bool TryParseUniverseDeclaration(StreamTokenizer scan, out string universe, out List<string> extends)
+        public static bool TryParseUniverseDeclaration(StreamTokenizer scan, out string universe)
         {
             universe = null;
-            extends = null;
 
             var stateBefore = scan.CurrentState;
 
@@ -146,44 +145,8 @@ namespace Sharplog
 
             // Dealing with a universe
             universe = scan.StringValue;
-            extends = new List<string>();
-
+            
             scan.NextToken();
-            if (scan.ttype == StreamTokenizer.TT_WORD && scan.StringValue == "extends")
-            {
-                // Universe extends list
-                while (true)
-                {
-                    scan.NextToken();
-                    if (scan.ttype == StreamTokenizer.TT_EOF)
-                    {
-                        throw new DatalogException("[line " + scan.LineNumber + "] Invalid extend list");
-                    }
-
-                    if (scan.ttype == '{')
-                    {
-                        break;
-                    }
-
-                    if (scan.ttype == ',')
-                    {
-                        continue;
-                    }
-
-                    if (scan.ttype != StreamTokenizer.TT_WORD)
-                    {
-                        throw new DatalogException("[line " + scan.LineNumber + "] Invalid extend " + scan.ttype);
-                    }
-
-                    extends.Add(scan.StringValue);
-                }
-
-                if (extends.Count == 0)
-                {
-                    throw new DatalogException("[line " + scan.LineNumber + "] Extends list expected");
-                }
-            }
-
             if (scan.ttype != '{')
             {
                 throw new DatalogException("[line " + scan.LineNumber + "] Universe definition expected");
@@ -192,7 +155,7 @@ namespace Sharplog
             return true;
         }
 
-        /// <exception cref="Sharplog.DatalogException"/>
+        /// <exception cref="DatalogException"/>
         private static Expr ParseExpr(StreamTokenizer scan)
         {
             try

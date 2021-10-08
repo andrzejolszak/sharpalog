@@ -98,13 +98,9 @@ namespace Sharplog
 
         private Dictionary<string, Rule> idbRuleIds;
 
-        public List<Universe> Extends { get; }
-
         public string Name { get; }
 
         public long Version { get; set; }
-
-        private long _currentExtendedUniversesVersionSum;
 
         private IEngine engine;
 
@@ -126,7 +122,6 @@ namespace Sharplog
             this.edbProvider = new BasicEdbProvider();
             this.idb = new Dictionary<string, HashSet<Rule>>();
             this.idbRuleIds = new Dictionary<string, Rule>();
-            this.Extends = new List<Universe>();
             this.Name = name;
 
             /*
@@ -152,8 +147,6 @@ namespace Sharplog
 
             this.idb = new Dictionary<string, HashSet<Rule>>(universe.idb);
             this.idbRuleIds = universe.idb.SelectMany(x => x.Value).Where(x => x.Id != null).ToDictionary(x => x.Id);
-
-            this.Extends = new List<Universe>();
             
             this.Name = universe.Name + "+extends";
 
@@ -248,7 +241,6 @@ namespace Sharplog
                 List<(Statement.Statement, IDictionary<string, string>)> answers = new List<(Statement.Statement, IDictionary<string, string>)>();
                 scan.NextToken();
                 Dictionary<string, Universe> universes = new Dictionary<string, Universe>();
-                HashSet<string> declaredUniverses = new HashSet<string>();
                 Universe currentUniverse = this;
                 while (scan.ttype != StreamTokenizer.TT_EOF)
                 {
@@ -256,42 +248,15 @@ namespace Sharplog
 
                     scan.PushBack();
 
-                    if (Parser.TryParseUniverseDeclaration(scan, out string universe, out List<string> extends))
+                    if (Parser.TryParseUniverseDeclaration(scan, out string universe))
                     {
                         if (currentUniverse != null && currentUniverse != this)
                         {
                             throw new DatalogException("[line " + scan.LineNumber + "] Cannot nest universes");
                         }
 
-                        List<Universe> extendsUs = new List<Universe>();
-                        foreach (string extend in extends)
-                        {
-                            if (!universes.TryGetValue(extend, out Universe extendUniverse))
-                            {
-                                universes.Add(extend, new Universe(name: extend));
-                            }
-
-                            extendsUs.Add(universes[extend]);
-                        }
-
-                        if (!universes.ContainsKey(universe))
-                        {
-                            universes.Add(universe, new Universe(name: universe));
-                        }
-
-                        if (!declaredUniverses.Add(universe))
-                        {
-                            throw new DatalogException("[line " + scan.LineNumber + "] Duplicated universe declaration");
-                        }
-
-                        Universe u = universes[universe];
-                        if (u.Extends.Count == 0)
-                        {
-                            u.Extends.Add(this);
-                            u.Extends.AddRange(extendsUs);
-                        }
-
-                        currentUniverse = u;
+                        currentUniverse = new Universe(name: universe);
+                        universes.Add(universe, currentUniverse);
                         scan.NextToken();
                         continue;
                     }
@@ -306,6 +271,7 @@ namespace Sharplog
 
                     bool isAssert = false;
                     string id = null;
+                    var stateBefore = scan.CurrentState;
                     if (scan.ttype == '@')
                     {
                         scan.NextToken();
@@ -332,7 +298,38 @@ namespace Sharplog
                         }
                         else
                         {
-                            scan.PushBack();
+                            scan.RewindToState(stateBefore);
+                        }
+                    }
+                    else if (scan.StringValue == "import")
+                    {
+                        scan.NextToken();
+                        scan.NextToken();
+                        if (scan.ttype == '(')
+                        {
+                            scan.RewindToState(stateBefore);
+                        }
+                        else
+                        {
+                            if (!universes.TryGetValue(scan.StringValue, out Universe imported))
+                            {
+                                throw new DatalogException("[line " + scan.LineNumber + "] Undefined universe");
+                            }
+
+                            currentUniverse.edbProvider.AllFacts().AddAll(imported.edbProvider.AllFacts().All);
+                            foreach (var r in imported.idb.SelectMany(x => x.Value))
+                            {
+                                currentUniverse.Rule(r);
+                            }
+
+                            scan.NextToken();
+                            if (scan.ttype != '.')
+                            {
+                                throw new DatalogException("[line " + scan.LineNumber + "] Wrong syntax");
+                            }
+
+                            scan.NextToken();
+                            continue;
                         }
                     }
 
@@ -400,61 +397,22 @@ namespace Sharplog
                 return new List<IDictionary<string, string>>(0);
             }
 
-            long extendUniversesSum = this.Extends.Sum(x => x.Version);
-            if (this._currentExtendedUniversesVersionSum != extendUniversesSum)
-            {
-                this.InvalidateCache();
-                this._currentExtendedUniversesVersionSum = extendUniversesSum;
-            }
-
             // TODO: need to treat foo(A, B) and foo(X, Y) as the same goal!
             // TODO: Could do a lookup in existing expanded fact cache first, e.g. for query foo(banan, X) that was maybe not seen as a goal, but is an expanded fact
             List<Expr> nonCachedGoals = goals.Where(x => !this._currentExpansionCacheGoals.Contains(x)).ToList();
-            Universe aggregatedUniverse = GetAggregatedUniverse();
 
             if (nonCachedGoals.Count > 0)
             {
                 List<Expr> orderedNonCacheGoals = engine.ReorderQuery(nonCachedGoals);
-                IndexedSet factsForDownstreamPredicates = engine.ExpandDatabase(aggregatedUniverse, orderedNonCacheGoals);
+                IndexedSet factsForDownstreamPredicates = engine.ExpandDatabase(this, orderedNonCacheGoals);
 
-                aggregatedUniverse._currentExpansionCacheFacts.AddAll(factsForDownstreamPredicates.All);
-                aggregatedUniverse._currentExpansionCacheGoals.UnionWith(nonCachedGoals);
+                this._currentExpansionCacheFacts.AddAll(factsForDownstreamPredicates.All);
+                this._currentExpansionCacheGoals.UnionWith(nonCachedGoals);
             }
 
             // Now match the expanded database to the goals
             List<Expr> orderedGoals = engine.ReorderQuery(goals);
-            return engine.MatchGoals(orderedGoals, 0, aggregatedUniverse._currentExpansionCacheFacts, new StackMap());
-        }
-
-        private Universe GetAggregatedUniverse()
-        {
-            Universe aggregatedUniverse = this;
-            if (this.Extends.Count > 0)
-            {
-                aggregatedUniverse = new Universe(this);
-                foreach (Universe ext in this.Extends)
-                {
-                    aggregatedUniverse.edbProvider.AllFacts().AddAll(ext.edbProvider.AllFacts().All);
-                    foreach (Rule r in ext.idb.Values.SelectMany(x => x))
-                    {
-                        if (!aggregatedUniverse.idb.TryGetValue(r.Head.PredicateWithArity, out HashSet<Rule> rules))
-                        {
-                            // TODO: it's possible to add multiple copies of same rule
-                            rules = new HashSet<Rule>();
-                            aggregatedUniverse.idb.Add(r.Head.PredicateWithArity, rules);
-
-                            if (r.Id != null)
-                            {
-                                aggregatedUniverse.idbRuleIds.Add(r.Id, r);
-                            }
-                        }
-
-                        rules.Add(r);
-                    }
-                }
-            }
-
-            return aggregatedUniverse;
+            return engine.MatchGoals(orderedGoals, 0, this._currentExpansionCacheFacts, new StackMap());
         }
 
         /// <summary>Executes a query with the specified goals against the database.</summary>
