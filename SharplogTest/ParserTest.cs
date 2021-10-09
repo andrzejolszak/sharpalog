@@ -192,8 +192,8 @@ universe foo
         {
             Universe target = new Universe();
             string src = @"
-bar(c, X) :- X=t.
-car(X) :- X=1, bar(_, _).
+bar(c, X) :- X=t, _ = a, _ = b.
+car(X) :- _ = X, X=1, bar(_, _), _ = t.
 
 assert: bar(X, _)?
 assert: bar(_, _)?

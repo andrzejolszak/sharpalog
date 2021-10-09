@@ -105,6 +105,11 @@ namespace Sharplog.Engine
             }
 #endif
 
+            if (key == "_")
+            {
+                return;
+            }
+
             self.Add(key, value);
             Stack.Add(key);
         }

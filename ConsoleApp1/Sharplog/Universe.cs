@@ -183,7 +183,8 @@ namespace Sharplog
         /// <returns>true if the term is a variable</returns>
         public static bool IsVariable(string term)
         {
-            return System.Char.IsUpper(term[0]);
+            char c = term[0];
+            return char.IsUpper(c) || c == '_';
         }
 
         /// <summary>

@@ -185,8 +185,8 @@ fooo2(X, Y)?";
             Universe target = new Universe(bottomUp);
             string src = File.ReadAllText(ExamplesDir + "tum.de.dl");
             var res = target.ExecuteAll(src);
-            Assert.AreEqual(src.Count(x => x == '?') - 1, res.Count);
-            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.AreEqual(src.Count(x => x == '?'), res.Count);
+            Assert.IsTrue(res.Values.Count(x => x.All(y => y.Item2.Count > 0)) == 3);
         }
 
         [Test]
