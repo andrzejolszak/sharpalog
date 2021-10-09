@@ -46,6 +46,19 @@ namespace Sharplog
                         throw new DatalogException("[line " + scan.LineNumber + "] Expected '.' after rule");
                     }
 
+                    // Get rid of atoms in head: foo(a):-... -> foo(A_$):-V$_a=a,...
+                    string[] args = head.GetTerms();
+                    for(int i = 0; i < args.Length; i++)
+                    {
+                        string arg = args[i];
+                        if (!Universe.IsVariable(arg))
+                        {
+                            string newArg = "V$_" + arg.Replace("'", string.Empty);
+                            args[i] = newArg;
+                            body.Insert(0, new Expr("=", newArg, arg));
+                        }
+                    }
+
                     Rule newRule = new Rule(head, body, id);
 
                     if (isAssertQuery)

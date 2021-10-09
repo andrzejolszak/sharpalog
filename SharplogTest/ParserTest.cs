@@ -160,6 +160,8 @@ assert: not bar(a)?
         {
             Universe target = new Universe();
             string src = @"
+root(g).
+
 universe foo_base
 {
     barF(a1).
@@ -173,6 +175,7 @@ universe foo
     assert: barF(X)?
     assert: barR1(a)?
     assert: barR2(2)?
+    assert: not root(S)?
 
     barF(a1)~
     assert: not barF(X)?
@@ -181,7 +184,36 @@ universe foo
     assert: not barR2(2)?
 }
 ";
-            var res = target.ExecuteAll(src);
+            _ = target.ExecuteAll(src);
+        }
+
+        [Test]
+        public void Underscore()
+        {
+            Universe target = new Universe();
+            string src = @"
+bar(c, X) :- X=t.
+car(X) :- X=1, bar(_, _).
+
+assert: bar(X, _)?
+assert: bar(_, _)?
+assert: car(Y)?
+";
+            _ = target.ExecuteAll(src);
+        }
+
+        [Test]
+        public void AtomArgs()
+        {
+            Universe target = new Universe();
+            string src = @"
+foo(a,b) :- a=b.
+bar(c, X) :- X=t.
+
+assert: not foo(X, Y)?
+assert: bar(X, Y)?
+";
+            _ = target.ExecuteAll(src);
         }
     }
 }

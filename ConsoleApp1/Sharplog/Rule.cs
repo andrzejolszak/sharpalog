@@ -119,10 +119,11 @@ namespace Sharplog
             // Enforce the rule that variables in the head must appear in the body
             foreach (string term in Head.GetTerms())
             {
-                if (!Sharplog.Universe.IsVariable(term))
+                if (!Universe.IsVariable(term))
                 {
                     throw new DatalogException("Constant " + term + " in head of rule " + ToString());
                 }
+
                 if (!bodyVariables.Contains(term))
                 {
                     throw new DatalogException("Variables " + term + " from the head of rule " + ToString() + " must appear in the body");
