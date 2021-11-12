@@ -164,6 +164,8 @@ namespace Sharplog
             engine = new BottomUpEngine();
         }
 
+        public long CurrentFactExpansionCacheSize => this._currentExpansionCacheFacts.Count;
+
         public static MemoryStream ToStream(string str)
         {
             MemoryStream stream = new MemoryStream();

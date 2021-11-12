@@ -16,10 +16,13 @@
         public void BuiltinExample(bool bottomUp)
         {
             Universe target = new Universe(bottomUp);
+            Assert.AreEqual(0, target.CurrentFactExpansionCacheSize);
+
             string src = File.ReadAllText(ExamplesDir + "builtin.dl");
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?'), res.Count);
             Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.AreEqual(3, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]
@@ -54,6 +57,7 @@ fooo2(X, Y)?";
             var res = target.ExecuteAll(src);
             Assert.AreEqual(2, res.Count);
             Assert.IsTrue(res.Values.All(x => x.Count == 2));
+            Assert.AreEqual(6, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]
@@ -82,6 +86,7 @@ fooo2(X, Y)?";
             string src = File.ReadAllText(ExamplesDir + "noun.dl");
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?'), res.Count);
+            Assert.AreEqual(123105, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]
@@ -115,6 +120,7 @@ fooo2(X, Y)?";
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?'), res.Count);
             Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.AreEqual(12, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]
@@ -127,6 +133,7 @@ fooo2(X, Y)?";
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?') - 1, res.Count);
             Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0 || y.Item1.ToString().All(c => !char.IsUpper(c)))));
+            Assert.AreEqual(655, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]
@@ -139,6 +146,7 @@ fooo2(X, Y)?";
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?'), res.Count);
             Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.AreEqual(1520, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]
@@ -151,6 +159,7 @@ fooo2(X, Y)?";
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?'), res.Count);
             Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.AreEqual(18, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]
@@ -163,6 +172,7 @@ fooo2(X, Y)?";
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?') - 1, res.Count);
             Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.AreEqual(6, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]
@@ -175,6 +185,7 @@ fooo2(X, Y)?";
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?') - 1, res.Count);
             Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0 || y.Item1.ToString().All(c => !char.IsUpper(c)))));
+            Assert.AreEqual(16, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]
@@ -187,6 +198,7 @@ fooo2(X, Y)?";
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?'), res.Count);
             Assert.IsTrue(res.Values.Count(x => x.All(y => y.Item2.Count > 0)) == 3);
+            Assert.AreEqual(12082, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]
@@ -199,6 +211,7 @@ fooo2(X, Y)?";
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?') - 1, res.Count);
             Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.AreEqual(0, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]
@@ -218,6 +231,7 @@ fooo2(X, Y)?";
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?') - 1, res.Count);
             Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.AreEqual(0, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]

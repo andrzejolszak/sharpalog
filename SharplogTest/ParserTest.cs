@@ -15,15 +15,18 @@ foo().
 foo ( ) .
 foo (a).
  foo (a).
-foo(X) :- X = a.
-foo(X):- X = a.
-foo(X): - X = a.
-foo(X) : - X = a.
+foo(X) :- X = b.
+foo(X):- X = c.
+foo(X): - X = d.
+foo(X) : - X = e.
+foo(X) : - bar(X).
+bar(X) :- X = 2, foo(a).
 
 foo(X)?";
             var res = target.ExecuteAll(src);
             Assert.AreEqual(src.Count(x => x == '?'), res.Count);
             Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            Assert.AreEqual(7, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]
@@ -39,18 +42,24 @@ universe bar
     fooR(X) :- X = a.
     import foo_base2.
 
-    fooR(X)?
-    foo(Y)?
+    assert: fooR(X)?
+    assert: foo(Y)?
 }
 
 % implicit default module that does not extend anything
 foo (a, b).
 
-foo (a, Y)?
+assert: foo(X, Y)?
+assert: not foo(X)?
+
+import bar.
+assert: fooR(X)?
+assert: foo(X)?
+assert: foo(X, _), fooR(X)?
+assert: foo(X), not foo(X, Y)?
 ";
-            var res = target.ExecuteAll(src);
-            Assert.AreEqual(src.Count(x => x == '?'), res.Count);
-            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
+            _ = target.ExecuteAll(src);
+            Assert.AreEqual(4, target.CurrentFactExpansionCacheSize);
         }
 
         [Test]
