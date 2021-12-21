@@ -92,21 +92,22 @@ namespace Sharplog
     /// </remarks>
     public class Universe
     {
-        private EdbProvider edbProvider;
+        private readonly EdbProvider edbProvider;
 
-        private Dictionary<string, HashSet<Rule>> idb;
+        private readonly Dictionary<string, HashSet<Rule>> idb;
+        public IDictionary<string, HashSet<Rule>> Idb { get{ return this.idb; } }
 
-        private Dictionary<string, Rule> idbRuleIds;
+        private readonly Dictionary<string, Rule> idbRuleIds;
 
         public string Name { get; }
 
         public long Version { get; set; }
 
-        private IEngine engine;
+        private readonly IEngine engine;
 
-        private IndexedSet _currentExpansionCacheFacts = new IndexedSet();
+        private readonly IndexedSet _currentExpansionCacheFacts = new IndexedSet();
 
-        private HashSet<Expr> _currentExpansionCacheGoals = new HashSet<Expr>();
+        private readonly HashSet<Expr> _currentExpansionCacheGoals = new HashSet<Expr>();
 
         /// <summary>Default constructor.</summary>
         /// <remarks>
