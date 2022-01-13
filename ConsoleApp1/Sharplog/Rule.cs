@@ -20,8 +20,6 @@ namespace Sharplog
 
         public List<Expr> Body { get; private set; }
 
-        public string Id { get; }
-
         /// <summary>Constructor that takes an expression as the head of the rule and a list of expressions as the body.</summary>
         /// <remarks>
         /// Constructor that takes an expression as the head of the rule and a list of expressions as the body.
@@ -29,11 +27,10 @@ namespace Sharplog
         /// </remarks>
         /// <param name="head">The head of the rule (left hand side)</param>
         /// <param name="body">The list of expressions that make up the body of the rule (right hand side)</param>
-        public Rule(Expr head, List<Expr> body, string id)
+        public Rule(Expr head, List<Expr> body)
         {
             this.Head = head;
             this.Body = body;
-            this.Id = id;
         }
 
         /// <summary>Checks whether a rule is valid.</summary>
@@ -165,7 +162,7 @@ namespace Sharplog
                 subsBody.Add(e.Substitute(bindings.DictionaryObject()));
             }
 
-            return new Rule(this.Head.Substitute(bindings.DictionaryObject()), subsBody, this.Id);
+            return new Rule(this.Head.Substitute(bindings.DictionaryObject()), subsBody);
         }
 
         internal void SetBody(List<Expr> exprs)

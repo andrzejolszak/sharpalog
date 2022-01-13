@@ -19,7 +19,7 @@ namespace Sharplog
         private static readonly IList<string> validOperators = new List<string> { "=", "!=", "<>", "<", "<=", ">", ">=" };
 
         /// <exception cref="DatalogException"/>
-        internal static Statement.Statement ParseStmt(StreamTokenizer scan, bool isAssertQuery, string id)
+        internal static Statement.Statement ParseStmt(StreamTokenizer scan, bool isAssertQuery)
         {
             List<Expr> goals = new List<Expr>();
             try
@@ -59,7 +59,7 @@ namespace Sharplog
                         }
                     }
 
-                    Rule newRule = new Rule(head, body, id);
+                    Rule newRule = new Rule(head, body);
 
                     if (isAssertQuery)
                     {
@@ -73,11 +73,6 @@ namespace Sharplog
                     if (isAssertQuery)
                     {
                         throw new DatalogException("[line " + scan.LineNumber + "] Only queries can be use as asserts.");
-                    }
-
-                    if (id != null)
-                    {
-                        throw new DatalogException("[line " + scan.LineNumber + "] Only rules can have IDs.");
                     }
 
                     // We're dealing with a fact, or a query
@@ -103,11 +98,6 @@ namespace Sharplog
                     }
                     if (scan.ttype == '?')
                     {
-                        if (id != null)
-                        {
-                            throw new DatalogException("[line " + scan.LineNumber + "] Only rules can have IDs.");
-                        }
-
                         return new QueryStatement(goals, isAssertQuery);
                     }
                     else if (scan.ttype == '~')
@@ -115,11 +105,6 @@ namespace Sharplog
                         if (isAssertQuery)
                         {
                             throw new DatalogException("[line " + scan.LineNumber + "] Only queries can be use as asserts.");
-                        }
-
-                        if (id != null)
-                        {
-                            throw new DatalogException("[line " + scan.LineNumber + "] Only rules can have IDs.");
                         }
 
                         return new DeleteStatement(goals, null);

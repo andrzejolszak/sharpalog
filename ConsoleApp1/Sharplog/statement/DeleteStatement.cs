@@ -22,11 +22,6 @@ namespace Sharplog.Statement
                 datalog.Delete(goals);
             }
 
-            if (_ruleId != null)
-            {
-                datalog.Delete(_ruleId);
-            }
-
             return null;
         }
     }

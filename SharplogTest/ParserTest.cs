@@ -123,31 +123,13 @@ assert: foo(a,b), not foo(a, X)?
         }
 
         [Test]
-        public void Ids()
-        {
-            Universe target = new Universe();
-            string src = @"
-foo (a, b).
-@id123: foo(X) :- X = a.
-@Aas_1:
-    foo(X, B) :- X = a, B = b.
-
-foo(X, Y) :- X = a, Y = c.
-
-foo(X)?";
-            var res = target.ExecuteAll(src);
-            Assert.AreEqual(src.Count(x => x == '?'), res.Count);
-            Assert.IsTrue(res.Values.All(x => x.All(y => y.Item2.Count > 0)));
-        }
-
-        [Test]
         public void Remove()
         {
             Universe target = new Universe();
             string src = @"
 foo (a, b).
 foo (c, d).
-@id123: bar(X) :- X = a.
+bar(X) :- X = a.
 
 assert: foo(X, Y)?
 assert: bar(a)?
@@ -157,9 +139,6 @@ assert: not foo(a,b)?
 
 foo(X, Y)~
 assert: not foo(c, d)?
-
-@id123~
-assert: not bar(a)?
 ";
             target.ExecuteAll(src);
         }
@@ -175,7 +154,7 @@ universe foo_base
 {
     barF(a1).
     barR1(X) :- X = a.
-    @id1: barR2(X) :- X = 2.
+    barR2(X) :- X = 2.
 }
 universe foo
 {
@@ -188,9 +167,6 @@ universe foo
 
     barF(a1)~
     assert: not barF(X)?
-
-    @id1~
-    assert: not barR2(2)?
 }
 ";
             _ = target.ExecuteAll(src);

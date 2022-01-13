@@ -97,8 +97,6 @@ namespace Sharplog
         private readonly Dictionary<string, HashSet<Rule>> idb;
         public IDictionary<string, HashSet<Rule>> Idb { get{ return this.idb; } }
 
-        private readonly Dictionary<string, Rule> idbRuleIds;
-
         public string Name { get; }
 
         public long Version { get; set; }
@@ -122,7 +120,6 @@ namespace Sharplog
             // Rules
             this.edbProvider = new BasicEdbProvider();
             this.idb = new Dictionary<string, HashSet<Rule>>();
-            this.idbRuleIds = new Dictionary<string, Rule>();
             this.Name = name;
 
             /*
@@ -147,7 +144,6 @@ namespace Sharplog
             this.edbProvider.AllFacts().AddAll(universe.edbProvider.AllFacts().All);
 
             this.idb = new Dictionary<string, HashSet<Rule>>(universe.idb);
-            this.idbRuleIds = universe.idb.SelectMany(x => x.Value).Where(x => x.Id != null).ToDictionary(x => x.Id);
             
             this.Name = universe.Name + "+extends";
 
@@ -274,25 +270,8 @@ namespace Sharplog
                     }
 
                     bool isAssert = false;
-                    string id = null;
                     var stateBefore = scan.CurrentState;
-                    if (scan.ttype == '@')
-                    {
-                        scan.NextToken();
-                        scan.NextToken();
-                        id = scan.StringValue;
-
-                        scan.NextToken();
-                        if (scan.ttype == '~')
-                        {
-                            statement = new DeleteStatement(null, id);
-                        }
-                        else if (scan.ttype != ':')
-                        {
-                            throw new DatalogException("[line " + scan.LineNumber + "] Wrong ID syntax");
-                        }
-                    }
-                    else if (scan.StringValue == "assert")
+                    if (scan.StringValue == "assert")
                     {
                         scan.NextToken();
                         scan.NextToken();
@@ -337,7 +316,7 @@ namespace Sharplog
                         }
                     }
 
-                    statement = statement ?? Parser.ParseStmt(scan, isAssert, id);
+                    statement = statement ?? Parser.ParseStmt(scan, isAssert);
 
                     if (!parseOnly)
                     {
@@ -476,7 +455,7 @@ namespace Sharplog
         /// <exception cref="Sharplog.DatalogException"/>
         public Universe RuleTest(Expr head, params Expr[] body)
         {
-            Rule newRule = new Rule(head, body.ToList(), null);
+            Rule newRule = new Rule(head, body.ToList());
             return Rule(newRule);
         }
 
@@ -503,11 +482,6 @@ namespace Sharplog
                 // TODO: it's possible to add multiple copies of same rule
                 rules = new HashSet<Rule>();
                 idb.Add(newRule.Head.PredicateWithArity, rules);
-
-                if (newRule.Id != null)
-                {
-                    idbRuleIds.Add(newRule.Id, newRule);
-                }
             }
 
             rules.Add(newRule);
@@ -685,14 +659,6 @@ namespace Sharplog
             {
                 throw new DatalogException("[line " + line + "] Error executing statement: " + e.Message, e);
             }
-        }
-
-        internal void Delete(string ruleId)
-        {
-            InvalidateCache();
-            Rule r = idbRuleIds[ruleId];
-            idbRuleIds.Remove(ruleId);
-            idb[r.Head.PredicateWithArity].Remove(r);
         }
     }
 }
