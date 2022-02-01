@@ -1,11 +1,74 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
-using Sharpen;
 using Sharplog.Statement;
+using Stringes;
 
 namespace Sharplog
 {
+    public static class TokenListExtensions
+    {
+        internal static bool EatCurrent(this List<Token<Token>> self, ref int index, Token tokenToEat)
+        {
+            if (self.Count > index && self[index].ID == tokenToEat)
+            {
+                index++;
+                return true;
+            }
+
+            return false;
+        }
+
+        internal static bool EatCurrentVal(this List<Token<Token>> self, ref int index, string value)
+        {
+            if (self.Count > index && self[index].Value == value)
+            {
+                index++;
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    internal enum Token
+    {
+        Arrow,
+        Dot,
+        Minus,
+        Plus,
+        GreaterThan,
+        LessThan,
+        Comma,
+        Tilde,
+        Semicolon,
+        Colon,
+        Bar,
+        At,
+        String,
+        Slash,
+        Backslash,
+        ParenOpen,
+        ParenClose,
+        BracketOpen,
+        BracketClose,
+        BraceOpen,
+        BraceClose,
+        Question,
+        Bang,
+        Equals,
+        Deconstruct,
+        LineComment,
+        MultiLineComment,
+        Number,
+        Identifier,
+        Whitespace,
+        OpArrow1,
+        OpArrow2,
+        EOF
+    }
+
     /// <summary>Internal class that encapsulates the parser for the Datalog language.</summary>
     internal class Parser
     {
@@ -18,32 +81,154 @@ namespace Sharplog
         */
         private static readonly IList<string> validOperators = new List<string> { "=", "!=", "<>", "<", "<=", ">", ">=" };
 
+        public static readonly Lexer<Token> _lexer = new Lexer<Token>
+            {
+                // Constant rules
+                { "-->", Token.OpArrow1},
+                { "=>", Token.OpArrow2},
+                {":-", Token.Arrow},
+                {".", Token.Dot},
+                {"-", Token.Minus},
+                {"+", Token.Plus},
+                {",", Token.Comma},
+                {"~", Token.Tilde},
+                {";", Token.Semicolon},
+                {":", Token.Colon},
+                {"|", Token.Bar},
+                {"@", Token.At},
+                {">", Token.GreaterThan},
+                {"<", Token.LessThan},
+                {"/", Token.Slash},
+                {"\\", Token.Backslash},
+                {"(", Token.ParenOpen},
+                {")", Token.ParenClose},
+                {"[", Token.BracketOpen},
+                {"]", Token.BracketClose},
+                {"{", Token.BraceOpen},
+                {"}", Token.BraceClose},
+                {"?", Token.Question},
+                {"!", Token.Bang},
+                {"=", Token.Equals},
+                {"=..", Token.Deconstruct},
+
+                // Function rule
+                {
+                    reader =>
+                    {
+                        return reader.EatWhile(Char.IsDigit);
+                    },
+                    Token.Number
+                },
+
+                {
+                    reader =>
+                    {
+                        // TODO current position in reader, current list of tokens
+                        // TODO: return from this method
+                        char c = (char)reader.PeekChar();
+                        if (char.IsLetter(c) || c == '_')
+                        {
+                            return reader.EatWhile(x => Char.IsLetterOrDigit(x) || x == '_');
+                        }
+
+                        return false;
+                    },
+                    Token.Identifier
+                },
+
+                {
+                    reader =>
+                    {
+                        Chare c = reader.PeekChare();
+                        if (c == '%')
+                        {
+                            return reader.EatWhile(x => c.Line == x.Line);
+                        }
+
+                        return false;
+                    },
+                    Token.LineComment
+                },
+
+                {
+                    reader =>
+                    {
+                        bool isMultiComment = reader.Eat("/*");
+                        if (isMultiComment)
+                        {
+                            while (!reader.Eat("*/"))
+                            {
+                                reader.ReadChare();
+                            }
+
+                            return true;
+                        }
+
+                        return false;
+                    },
+                    Token.MultiLineComment
+                },
+
+                {
+                    reader =>
+                    {
+                        bool isString = reader.Eat("\"");
+                        if (isString)
+                        {
+                            reader.ReadUntil('"');
+                            return true;
+                        }
+
+                        return false;
+                    },
+                    Token.String
+                },
+
+                {
+                    reader =>
+                    {
+                        /*bool isString = reader.Eat("\'");
+                        if (isString)
+                        {
+                            reader.ReadUntil('\'');
+                            return true;
+                        }*/
+
+                        return false;
+                    },
+                    Token.String
+                },
+
+                // Regex rule
+                {new Regex(@"\s"), Token.Whitespace}
+            }
+            .Ignore(Token.Whitespace)
+            .Ignore(Token.LineComment)
+            .Ignore(Token.MultiLineComment)
+            .AddEndToken(Token.EOF);
+
         /// <exception cref="DatalogException"/>
-        internal static Statement.Statement ParseStmt(StreamTokenizer scan, bool isAssertQuery)
+        internal static Statement.Statement ParseStmt(List<Token<Token>> tokens, ref int currentIndex, bool isAssertQuery)
         {
             List<Expr> goals = new List<Expr>();
             try
             {
-                Expr head = ParseExpr(scan);
-                if (scan.NextToken() == ':')
-                {
-                    // We're dealing with a rule
-                    if (scan.NextToken() != '-')
-                    {
-                        throw new DatalogException("[line " + scan.LineNumber + "] Expected ':-'");
-                    }
+                Expr head = ParseExpr(tokens, ref currentIndex);
 
+                if (tokens[currentIndex].ID == Token.Arrow)
+                {
                     List<Expr> body = new List<Expr>();
                     do
                     {
-                        Expr arg = ParseExpr(scan);
+                        currentIndex++;
+                        Expr arg = ParseExpr(tokens, ref currentIndex);
                         body.Add(arg);
                     }
-                    while (scan.NextToken() == ',');
+                    while (tokens[currentIndex].ID == Token.Comma);
 
-                    if (scan.ttype != '.')
+                    if (tokens[currentIndex].ID != Token.Dot)
                     {
-                        throw new DatalogException("[line " + scan.LineNumber + "] Expected '.' after rule");
+                        throw new DatalogException("[line " + tokens[currentIndex].Line + "] Expected '.' after rule");
                     }
 
                     // Get rid of atoms in head: foo(a):-... -> foo(A_$):-V$_a=a,...
@@ -63,16 +248,16 @@ namespace Sharplog
 
                     if (isAssertQuery)
                     {
-                        throw new DatalogException("[line " + scan.LineNumber + "] Only queries can be use as asserts.");
+                        throw new DatalogException("[line " + tokens[currentIndex].Line + "] Only queries can be use as asserts.");
                     }
 
                     return new InsertRuleStatement(newRule);
                 }
-                else if (scan.ttype == '.')
+                else if (tokens[currentIndex].ID == Token.Dot)
                 {
                     if (isAssertQuery)
                     {
-                        throw new DatalogException("[line " + scan.LineNumber + "] Only queries can be use as asserts.");
+                        throw new DatalogException("[line " + tokens[currentIndex].Line + "] Only queries can be use as asserts.");
                     }
 
                     // We're dealing with a fact, or a query
@@ -84,34 +269,36 @@ namespace Sharplog
                     // It's a query
                     goals.Clear();
                     goals.Add(head);
-                    if (scan.ttype != '.' && scan.ttype != '?' && scan.ttype != ',' && scan.ttype != '~')
+
+                    if (tokens[currentIndex].ID != Token.Dot && tokens[currentIndex].ID != Token.Question && tokens[currentIndex].ID != Token.Comma && tokens[currentIndex].ID != Token.Tilde)
                     {
                         /* You _can_ write facts like `a = 5 .` but I recommend against it; if you do then you *must* have the space between the
                         5 and the '.' otherwise the parser sees it as 5.0 and the error message can be a bit confusing. */
-                        throw new DatalogException("[line " + scan.LineNumber + "] Expected one of '.', ',' or '?' after fact/query expression");
+                        throw new DatalogException("[line " + tokens[currentIndex].Line + "] Expected one of '.', ',' or '?' after fact/query expression");
                     }
 
-                    while (scan.ttype == ',')
+                    while (tokens[currentIndex].ID == Token.Comma)
                     {
-                        goals.Add(ParseExpr(scan));
-                        scan.NextToken();
+                        currentIndex++;
+                        goals.Add(ParseExpr(tokens, ref currentIndex));
                     }
-                    if (scan.ttype == '?')
+
+                    if (tokens[currentIndex].ID == Token.Question)
                     {
                         return new QueryStatement(goals, isAssertQuery);
                     }
-                    else if (scan.ttype == '~')
+                    else if (tokens[currentIndex].ID == Token.Tilde)
                     {
                         if (isAssertQuery)
                         {
-                            throw new DatalogException("[line " + scan.LineNumber + "] Only queries can be use as asserts.");
+                            throw new DatalogException("[line " + tokens[currentIndex].Line + "] Only queries can be use as asserts.");
                         }
 
                         return new DeleteStatement(goals, null);
                     }
                     else
                     {
-                        throw new DatalogException("[line " + scan.LineNumber + "] Expected '?' or '~' after query");
+                        throw new DatalogException("[line " + tokens[currentIndex].Line + "] Expected '?' or '~' after query");
                     }
                 }
             }
@@ -121,49 +308,44 @@ namespace Sharplog
             }
         }
         
-        public static bool TryParseUniverseDeclaration(StreamTokenizer scan, out string universe)
+        public static bool TryParseUniverseDeclaration(List<Token<Token>> tokens, ref int currentIndex, out string universe)
         {
             universe = null;
 
-            var stateBefore = scan.CurrentState;
-
-            scan.NextToken();
-            if (scan.ttype != StreamTokenizer.TT_WORD || scan.StringValue != "universe")
+            if (tokens[currentIndex].ID != Token.Identifier || tokens[currentIndex].Value != "universe")
             {
-                scan.RewindToState(stateBefore);
                 return false;
             }
 
-            scan.NextToken();
-            if (scan.ttype != StreamTokenizer.TT_WORD)
+            currentIndex++;
+            if (tokens[currentIndex].ID != Token.Identifier)
             {
-                scan.RewindToState(stateBefore);
+                currentIndex-=2;
                 return false;
             }
 
             // Dealing with a universe
-            universe = scan.StringValue;
-            
-            scan.NextToken();
-            if (scan.ttype != '{')
+            universe = tokens[currentIndex].Value;
+
+            currentIndex++;
+            if (tokens[currentIndex].ID != Token.BraceOpen)
             {
-                throw new DatalogException("[line " + scan.LineNumber + "] Universe definition expected");
+                throw new DatalogException("[line " + tokens[currentIndex].Line + "] Universe definition expected");
             }
 
             return true;
         }
 
         /// <exception cref="DatalogException"/>
-        private static Expr ParseExpr(StreamTokenizer scan)
+        private static Expr ParseExpr(List<Token<Token>> tokens, ref int currentIndex)
         {
             try
             {
-                scan.NextToken();
                 bool negated = false;
-                if (scan.ttype == StreamTokenizer.TT_WORD && scan.StringValue.Equals("not", System.StringComparison.OrdinalIgnoreCase))
+                if (tokens[currentIndex].Value == "not")
                 {
                     negated = true;
-                    scan.NextToken();
+                    currentIndex++;
                 }
 
                 string lhs = null;
@@ -171,30 +353,29 @@ namespace Sharplog
                 lhs_parse:
 
                 bool builtInExpected = false;
-                if (scan.ttype == StreamTokenizer.TT_WORD)
+                if (tokens[currentIndex].ID == Token.Identifier)
                 {
-                    lhs = scan.StringValue;
+                    lhs = tokens[currentIndex].Value;
                 }
-                else if (scan.ttype == '"' || scan.ttype == '\'')
+                else if (tokens[currentIndex].ID == Token.String)
                 {
-                    lhs = scan.StringValue;
+                    lhs = tokens[currentIndex].Value;
                     builtInExpected = true;
                 }
-                else if (scan.ttype == StreamTokenizer.TT_NUMBER)
+                else if (tokens[currentIndex].ID == Token.Number)
                 {
-                    lhs = scan.NumberValue.ToString();
+                    lhs = tokens[currentIndex].Value.ToString();
                     builtInExpected = true;
                 }
                 else
                 {
-                    throw new DatalogException("[line " + scan.LineNumber + "] Predicate or start of expression expected");
+                    throw new DatalogException("[line " + tokens[currentIndex].Line + "] Predicate or start of expression expected");
                 }
 
-                scan.NextToken();
-                if (scan.ttype == StreamTokenizer.TT_WORD || scan.ttype == '=' || scan.ttype == '!' || scan.ttype == '<' || scan.ttype == '>')
+                currentIndex++;
+                if (tokens[currentIndex].ID == Token.Identifier || tokens[currentIndex].ID == Token.Equals || tokens[currentIndex].ID == Token.Bang || tokens[currentIndex].ID == Token.LessThan || tokens[currentIndex].ID == Token.GreaterThan)
                 {
-                    scan.PushBack();
-                    Expr e = ParseBuiltInPredicate(lhs, scan);
+                    Expr e = ParseBuiltInPredicate(lhs, tokens, ref currentIndex);
                     e.negated = negated;
                     return e;
                 }
@@ -202,56 +383,67 @@ namespace Sharplog
                 if (builtInExpected)
                 {
                     // LHS was a number or a quoted string but we didn't get an operator
-                    throw new DatalogException("[line " + scan.LineNumber + "] Built-in predicate expected");
+                    throw new DatalogException("[line " + tokens[currentIndex].Line + "] Built-in predicate expected");
                 }
-                else if (scan.ttype == '.')
+                else if (tokens[currentIndex].ID == Token.Dot)
                 {
                     throw new System.Exception("universe.rule syntax is not yet supported!");
 
                     if (universe != null)
                     {
-                        throw new DatalogException("[line " + scan.LineNumber + "] Wrong universe reference syntax");
+                        throw new DatalogException("[line " + tokens[currentIndex].Line + "] Wrong universe reference syntax");
                     }
 
                     universe = lhs;
                     lhs = null;
-                    scan.NextToken();
+                    currentIndex++;
                     goto lhs_parse;
                 }
-                else if (scan.ttype != '(')
+                else if (tokens[currentIndex].ID != Token.ParenOpen)
                 {
-                    throw new DatalogException("[line " + scan.LineNumber + "] Expected '(' after predicate or an operator");
+                    throw new DatalogException("[line " + tokens[currentIndex].Line + "] Expected '(' after predicate or an operator");
                 }
 
                 List<string> terms = new List<string>();
-                if (scan.NextToken() != ')')
+                if (tokens[currentIndex + 1].ID != Token.ParenClose)
                 {
-                    scan.PushBack();
                     do
                     {
-                        if (scan.NextToken() == StreamTokenizer.TT_WORD)
+                        currentIndex++;
+                        if (tokens[currentIndex].ID == Token.Identifier)
                         {
-                            terms.Add(scan.StringValue);
+                            terms.Add(tokens[currentIndex].Value);
                         }
-                        else if (scan.ttype == '"' || scan.ttype == '\'')
+                        else if (tokens[currentIndex].ID == Token.String)
                         {
-                            terms.Add("\"" + scan.StringValue);
+                            terms.Add("\"" + tokens[currentIndex].Value);
                         }
-                        else if (scan.ttype == StreamTokenizer.TT_NUMBER)
+                        else if (tokens[currentIndex].ID == Token.Number)
                         {
-                            terms.Add(scan.NumberValue.ToString());
+                            terms.Add(tokens[currentIndex].Value.ToString());
                         }
                         else
                         {
-                            throw new DatalogException("[line " + scan.LineNumber + "] Expected term in expression");
+                            throw new DatalogException("[line " + tokens[currentIndex].Line + "] Expected term in expression");
                         }
+
+                        currentIndex++;
                     }
-                    while (scan.NextToken() == ',');
-                    if (scan.ttype != ')')
+                    while (tokens[currentIndex].ID == Token.Comma);
+
+                    if (tokens[currentIndex].ID != Token.ParenClose)
                     {
-                        throw new DatalogException("[line " + scan.LineNumber + "] Expected ')'");
+                        throw new DatalogException("[line " + tokens[currentIndex].Line + "] Expected ')'");
                     }
+
+                    currentIndex++;
                 }
+                else
+                {
+                    currentIndex+=2;
+                }
+
+
                 Expr e_1 = new Expr(lhs, terms.ToArray());
                 e_1.UniverseReference = universe;
                 e_1.negated = negated;
@@ -269,52 +461,55 @@ namespace Sharplog
         */
 
         /// <exception cref="Sharplog.DatalogException"/>
-        private static Expr ParseBuiltInPredicate(string lhs, StreamTokenizer scan)
+        private static Expr ParseBuiltInPredicate(string lhs, List<Token<Token>> tokens, ref int currentIndex)
         {
             try
             {
                 string @operator;
-                scan.NextToken();
-                if (scan.ttype == StreamTokenizer.TT_WORD)
+                if (tokens[currentIndex].ID == Token.Identifier)
                 {
                     // At some point I was going to have "eq" and "ne" for string comparisons, but it wasn't a good idea.
-                    @operator = scan.StringValue;
+                    @operator = tokens[currentIndex].Value;
                 }
                 else
                 {
-                    @operator = char.ToString((char)scan.ttype);
-                    scan.NextToken();
-                    if (scan.ttype == '=' || scan.ttype == '>')
+                    @operator = tokens[currentIndex].Value;
+                    currentIndex++;
+                    if (tokens[currentIndex].ID == Token.Equals || tokens[currentIndex].ID == Token.GreaterThan)
                     {
-                        @operator = @operator + char.ToString((char)scan.ttype);
+                        @operator = @operator + tokens[currentIndex].Value;
                     }
                     else
                     {
-                        scan.PushBack();
+                        currentIndex--;
                     }
                 }
                 if (!validOperators.Contains(@operator))
                 {
                     throw new DatalogException("Invalid operator '" + @operator + "'");
                 }
+
                 string rhs = null;
-                scan.NextToken();
-                if (scan.ttype == StreamTokenizer.TT_WORD)
+                currentIndex++;
+                if (tokens[currentIndex].ID == Token.Identifier)
                 {
-                    rhs = scan.StringValue;
+                    rhs = tokens[currentIndex].Value;
                 }
-                else if (scan.ttype == '"' || scan.ttype == '\'')
+                else if (tokens[currentIndex].ID == Token.String)
                 {
-                    rhs = scan.StringValue;
+                    rhs = tokens[currentIndex].Value;
                 }
-                else if (scan.ttype == StreamTokenizer.TT_NUMBER)
+                else if (tokens[currentIndex].ID == Token.Number)
                 {
-                    rhs = scan.NumberValue.ToString();
+                    rhs = tokens[currentIndex].Value;
                 }
                 else
                 {
-                    throw new DatalogException("[line " + scan.LineNumber + "] Right hand side of expression expected");
+                    throw new DatalogException("[line " + tokens[currentIndex].Line + "] Right hand side of expression expected");
                 }
+
+                currentIndex++;
+
                 return new Expr(@operator, lhs, rhs);
             }
             catch (IOException e)

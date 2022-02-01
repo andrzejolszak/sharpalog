@@ -61,12 +61,20 @@
     <Compile Include="Sharplog\output\QueryOutput.cs" />
     <Compile Include="Sharplog\Parser.cs" />
     <Compile Include="Sharplog\Rule.cs" />
-    <Compile Include="Sharplog\StreamTokenizer.cs" />
     <Compile Include="Sharplog\statement\DeleteStatement.cs" />
     <Compile Include="Sharplog\statement\InsertFactStatement.cs" />
     <Compile Include="Sharplog\statement\InsertRuleStatement.cs" />
     <Compile Include="Sharplog\statement\QueryStatement.cs" />
     <Compile Include="Sharplog\statement\Statement.cs" />
+    <Compile Include="Stringes\Chare.cs" />
+    <Compile Include="Stringes\Extensions.cs" />
+    <Compile Include="Stringes\Lexer.cs" />
+    <Compile Include="Stringes\LexerExample.cs" />
+    <Compile Include="Stringes\Stringe.cs" />
+    <Compile Include="Stringes\StringeReader.cs" />
+    <Compile Include="Stringes\Token.cs" />
+    <Compile Include="Stringes\Tuple.cs" />
+    <Compile Include="Stringes\Util.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

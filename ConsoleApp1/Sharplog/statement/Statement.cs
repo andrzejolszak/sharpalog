@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using Sharpen;
-using Sharplog.Engine;
 
 namespace Sharplog.Statement
 {

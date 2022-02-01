@@ -17,9 +17,9 @@ foo (a).
  foo (a).
 foo(X) :- X = b.
 foo(X):- X = c.
-foo(X): - X = d.
-foo(X) : - X = e.
-foo(X) : - bar(X).
+foo(X):- X = d.
+foo(X) :- X = e.
+foo(X) :- bar(X).
 bar(X) :- X = 2, foo(a).
 
 foo(X)?";

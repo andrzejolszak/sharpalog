@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
-using Sharpen;
 using Sharplog.Engine;
 
 namespace Sharplog

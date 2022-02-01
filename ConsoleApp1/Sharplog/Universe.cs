@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Sharpen;
 using Sharplog.Engine;
 using Sharplog.Output;
 using Sharplog.Statement;
+using Stringes;
 
 namespace Sharplog
 {
@@ -232,71 +232,55 @@ namespace Sharplog
         /// <exception cref="DatalogException">on syntax and I/O errors encountered while executing.</exception>
         /// <seealso cref="Sharplog.Output.QueryOutput"/>
         /// <exception cref="Sharplog.DatalogException"/>
-        public List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll(MemoryStream stream, QueryOutput output, bool parseOnly = false)
+        public List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll(string stream, QueryOutput output, bool parseOnly = false)
         {
             try
             {
-                StreamTokenizer scan = GetTokenizer(stream);
                 // Tracks all query answers
                 List<(Statement.Statement, IDictionary<string, string>)> answers = new List<(Statement.Statement, IDictionary<string, string>)>();
-                scan.NextToken();
                 Dictionary<string, Universe> universes = new Dictionary<string, Universe>();
                 Universe currentUniverse = this;
-                while (scan.ttype != StreamTokenizer.TT_EOF)
+
+                List<Token<Token>> tokens = Parser._lexer.Tokenize(stream).Where(x => x.ID != Token.EOF).ToList();
+                for (int i = 0; i < tokens.Count; i++)
                 {
                     Statement.Statement statement = null;
 
-                    scan.PushBack();
-
-                    if (Parser.TryParseUniverseDeclaration(scan, out string universe))
+                    if (Parser.TryParseUniverseDeclaration(tokens, ref i, out string universe))
                     {
                         if (currentUniverse != null && currentUniverse != this)
                         {
-                            throw new DatalogException("[line " + scan.LineNumber + "] Cannot nest universes");
+                            throw new DatalogException("[line " + tokens[i].Line + "] Cannot nest universes");
                         }
 
                         currentUniverse = new Universe(name: universe);
                         universes.Add(universe, currentUniverse);
-                        scan.NextToken();
                         continue;
                     }
 
-                    if (scan.ttype == '}')
+                    if (tokens[i].ID == Token.BraceClose)
                     {
                         currentUniverse = this;
-                        scan.NextToken();
-                        scan.NextToken();
                         continue;
                     }
 
                     bool isAssert = false;
-                    var stateBefore = scan.CurrentState;
-                    if (scan.StringValue == "assert")
+                    if (tokens[i].Value == "assert")
                     {
-                        scan.NextToken();
-                        scan.NextToken();
-                        if (scan.ttype == ':')
+                        if (tokens[i + 1].ID == Token.Colon)
                         {
+                            i+=2;
                             isAssert = true;
                         }
-                        else
-                        {
-                            scan.RewindToState(stateBefore);
-                        }
                     }
-                    else if (scan.StringValue == "import")
+                    else if (tokens[i].Value == "import")
                     {
-                        scan.NextToken();
-                        scan.NextToken();
-                        if (scan.ttype == '(')
+                        if (tokens[i + 1].ID != Token.ParenOpen)
                         {
-                            scan.RewindToState(stateBefore);
-                        }
-                        else
-                        {
-                            if (!universes.TryGetValue(scan.StringValue, out Universe imported))
+                            i++;
+                            if (!universes.TryGetValue(tokens[i].Value, out Universe imported))
                             {
-                                throw new DatalogException("[line " + scan.LineNumber + "] Undefined universe");
+                                throw new DatalogException("[line " + tokens[i].Line + "] Undefined universe");
                             }
 
                             currentUniverse.edbProvider.AllFacts().AddAll(imported.edbProvider.AllFacts().All);
@@ -305,29 +289,30 @@ namespace Sharplog
                                 currentUniverse.Rule(r);
                             }
 
-                            scan.NextToken();
-                            if (scan.ttype != '.')
+                            i++;
+                            if (tokens[i].ID != Token.Dot)
                             {
-                                throw new DatalogException("[line " + scan.LineNumber + "] Wrong syntax");
+                                throw new DatalogException("[line " + tokens[i].Line + "] Wrong syntax");
                             }
 
-                            scan.NextToken();
                             continue;
                         }
                     }
+                    else if (tokens[i].ID == Token.LineComment || tokens[i].ID == Token.MultiLineComment)
+                    {
+                        continue;
+                    }
 
-                    statement = statement ?? Parser.ParseStmt(scan, isAssert);
+                    statement = statement ?? Parser.ParseStmt(tokens, ref i, isAssert);
 
                     if (!parseOnly)
                     {
-                        var res = ExecuteSingleStatement(currentUniverse, statement, scan.LineNumber, output);
+                        var res = ExecuteSingleStatement(currentUniverse, statement, tokens[i].Line, output);
                         if (res != null)
                         {
                             answers.AddRange(res);
                         }
                     }
-
-                    scan.NextToken();
                 }
 
                 return answers;
@@ -353,7 +338,7 @@ namespace Sharplog
             // It would've been fun to wrap the results in a java.sql.ResultSet, but damn,
             // those are a lot of methods to implement:
             // https://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html
-            return GroupByAsDictionary(ExecuteAll(ToStream(statements), null, parseOnly), x => x.Item1);
+            return GroupByAsDictionary(ExecuteAll(statements, null, parseOnly), x => x.Item1);
         }
 
         public static Dictionary<TKey, List<TSource>> GroupByAsDictionary<TSource, TKey>(IEnumerable<TSource> that, Func<TSource, TKey> groupKeySelector)
@@ -610,23 +595,6 @@ namespace Sharplog
         public bool TryGetFromIdb(string predicate, out HashSet<Rule> rules)
         {
             return this.idb.TryGetValue(predicate, out rules);
-        }
-
-        /* Specific tokenizer for our syntax */
-
-        /// <exception cref="System.IO.IOException"/>
-        private static StreamTokenizer GetTokenizer(MemoryStream stream)
-        {
-            StreamTokenizer scan = new StreamTokenizer(stream);
-            scan.OrdinaryChar('.');
-            // '.' looks like a number to StreamTokenizer by default
-            scan.CommentChar('%');
-            // Prolog-style % comments; slashSlashComments and slashStarComments can stay as well.
-            scan.QuoteChar('"');
-            scan.QuoteChar('\'');
-            // WTF? You can't disable parsing of numbers unless you reset the syntax (http://stackoverflow.com/q/8856750/115589)
-            //scan.parseNumbers();
-            return scan;
         }
 
         /* Internal method for executing one and only one statement */

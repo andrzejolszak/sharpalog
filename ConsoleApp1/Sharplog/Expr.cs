@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Sharpen;
 using Sharplog.Engine;
 
 namespace Sharplog
