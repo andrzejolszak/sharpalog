@@ -69,9 +69,9 @@ namespace Sharplog
         /// <param name="predicate">The predicate of the expression.</param>
         /// <param name="terms">The terms of the expression.</param>
         /// <returns>the new expression</returns>
-        public static Sharplog.Expr CreateExpr(string predicate, params string[] terms)
+        public static Expr CreateExpr(string predicate, params string[] terms)
         {
-            return new Sharplog.Expr(predicate, terms);
+            return new Expr(predicate, terms);
         }
 
         /// <summary>Static method for constructing negated expressions in the fluent API.</summary>
@@ -84,9 +84,9 @@ namespace Sharplog
         /// <param name="predicate">The predicate of the expression</param>
         /// <param name="terms">The terms of the expression</param>
         /// <returns>The negated expression</returns>
-        public static Sharplog.Expr Not(string predicate, params string[] terms)
+        public static Expr Not(string predicate, params string[] terms)
         {
-            Sharplog.Expr e = new Sharplog.Expr(predicate, terms);
+            Sharplog.Expr e = new Expr(predicate, terms);
             e.negated = true;
             return e;
         }
@@ -99,9 +99,9 @@ namespace Sharplog
         /// <param name="a">the left hand side of the operator</param>
         /// <param name="b">the right hand side of the operator</param>
         /// <returns>the expression</returns>
-        public static Sharplog.Expr Eq(string a, string b)
+        public static Expr Eq(string a, string b)
         {
-            return new Sharplog.Expr("=", a, b);
+            return new Expr("=", a, b);
         }
 
         /// <summary>
@@ -125,9 +125,9 @@ namespace Sharplog
         /// <param name="a">the left hand side of the operator</param>
         /// <param name="b">the right hand side of the operator</param>
         /// <returns>the expression</returns>
-        public static Sharplog.Expr Lt(string a, string b)
+        public static Expr Lt(string a, string b)
         {
-            return new Sharplog.Expr("<", a, b);
+            return new Expr("<", a, b);
         }
 
         /// <summary>
@@ -138,9 +138,9 @@ namespace Sharplog
         /// <param name="a">the left hand side of the operator</param>
         /// <param name="b">the right hand side of the operator</param>
         /// <returns>the expression</returns>
-        public static Sharplog.Expr Le(string a, string b)
+        public static Expr Le(string a, string b)
         {
-            return new Sharplog.Expr("<=", a, b);
+            return new Expr("<=", a, b);
         }
 
         /// <summary>
@@ -151,9 +151,9 @@ namespace Sharplog
         /// <param name="a">the left hand side of the operator</param>
         /// <param name="b">the right hand side of the operator</param>
         /// <returns>the expression</returns>
-        public static Sharplog.Expr Gt(string a, string b)
+        public static Expr Gt(string a, string b)
         {
-            return new Sharplog.Expr(">", a, b);
+            return new Expr(">", a, b);
         }
 
         /// <summary>
@@ -164,9 +164,9 @@ namespace Sharplog
         /// <param name="a">the left hand side of the operator</param>
         /// <param name="b">the right hand side of the operator</param>
         /// <returns>the expression</returns>
-        public static Sharplog.Expr Ge(string a, string b)
+        public static Expr Ge(string a, string b)
         {
-            return new Sharplog.Expr(">=", a, b);
+            return new Expr(">=", a, b);
         }
 
         /// <summary>The arity of an expression is simply the number of terms.</summary>

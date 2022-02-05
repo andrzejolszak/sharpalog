@@ -241,10 +241,22 @@ namespace Sharplog
                 Dictionary<string, Universe> universes = new Dictionary<string, Universe>();
                 Universe currentUniverse = this;
 
-                List<Token<Token>> tokens = Parser._lexer.Tokenize(stream).Where(x => x.ID != Token.EOF).ToList();
-                for (int i = 0; i < tokens.Count; i++)
+                List<Token<Token>> tokens = Parser._lexer
+                    .Tokenize(stream)
+                    .Where(x => x.ID != Token.EOF)
+                    .Select(x => x.ID == Token.Identifier && x.Value.StartsWith("'") ? new Token<Token>(Token.Identifier, x.Trim('\'')) : x)
+                    .ToList();
+
+                int prevIndex = -1;
+                int i = 0;
+                while (i < tokens.Count)
                 {
-                    Statement.Statement statement = null;
+                    if (i <= prevIndex)
+                    {
+                        throw new InvalidOperationException("Parsing progress stalled at index " + i);
+                    }
+
+                    prevIndex = i;
 
                     if (Parser.TryParseUniverseDeclaration(tokens, ref i, out string universe))
                     {
@@ -258,56 +270,48 @@ namespace Sharplog
                         continue;
                     }
 
-                    if (tokens[i].ID == Token.BraceClose)
+                    if (tokens.TryEat(ref i, Token.BraceClose))
                     {
                         currentUniverse = this;
                         continue;
                     }
 
                     bool isAssert = false;
-                    if (tokens[i].Value == "assert")
+                    if (tokens.TryEatSequence(ref i, "assert", Token.Colon))
                     {
-                        if (tokens[i + 1].ID == Token.Colon)
-                        {
-                            i+=2;
-                            isAssert = true;
-                        }
+                        isAssert = true;
                     }
-                    else if (tokens[i].Value == "import")
+                    else if (tokens.TryEatSequence(ref i, "import", Token.Identifier))
                     {
-                        if (tokens[i + 1].ID != Token.ParenOpen)
+                        if (!universes.TryGetValue(tokens[i-1].Value, out Universe imported))
                         {
-                            i++;
-                            if (!universes.TryGetValue(tokens[i].Value, out Universe imported))
-                            {
-                                throw new DatalogException("[line " + tokens[i].Line + "] Undefined universe");
-                            }
-
-                            currentUniverse.edbProvider.AllFacts().AddAll(imported.edbProvider.AllFacts().All);
-                            foreach (var r in imported.idb.SelectMany(x => x.Value))
-                            {
-                                currentUniverse.Rule(r);
-                            }
-
-                            i++;
-                            if (tokens[i].ID != Token.Dot)
-                            {
-                                throw new DatalogException("[line " + tokens[i].Line + "] Wrong syntax");
-                            }
-
-                            continue;
+                            throw new DatalogException("[line " + tokens[i-1].Line + "] Undefined universe " + tokens[i-1].Value);
                         }
+
+                        currentUniverse.edbProvider.AllFacts().AddAll(imported.edbProvider.AllFacts().All);
+                        foreach (var r in imported.idb.SelectMany(x => x.Value))
+                        {
+                            currentUniverse.Rule(r);
+                        }
+
+                        if (!tokens.TryEat(ref i, Token.Dot))
+                        {
+                            throw new DatalogException("[line " + tokens[i].Line + "] Wrong syntax");
+                        }
+
+                        continue;
                     }
-                    else if (tokens[i].ID == Token.LineComment || tokens[i].ID == Token.MultiLineComment)
+                    else if (tokens.TryEat(ref i, Token.LineComment) || tokens.TryEat(ref i, Token.MultiLineComment))
                     {
                         continue;
                     }
 
-                    statement = statement ?? Parser.ParseStmt(tokens, ref i, isAssert);
+                    int statementLine = i;
+                    Statement.Statement statement = Parser.ParseStmt(tokens, ref i, isAssert);
 
                     if (!parseOnly)
                     {
-                        var res = ExecuteSingleStatement(currentUniverse, statement, tokens[i].Line, output);
+                        var res = ExecuteSingleStatement(currentUniverse, statement, statementLine, output);
                         if (res != null)
                         {
                             answers.AddRange(res);

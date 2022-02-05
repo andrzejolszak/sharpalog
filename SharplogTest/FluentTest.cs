@@ -68,6 +68,23 @@ namespace Sharplog
             Assert.IsTrue(TestUtils.AnswerContains(answers, "A", "aa", "B", "ab"));
         }
 
+        [Test]
+        public void TestMultiGoals2()
+        {
+            // You can have multiple goals in queries.
+            Universe jatalog = TestUtils.CreateDatabase();
+            jatalog.ValidateTest();
+
+            var answers = jatalog.ExecuteAll("aaa <> aaa?");
+            Assert.IsTrue(answers.Count == 0);
+
+            answers = jatalog.ExecuteAll("a <> aaa?");
+            Assert.IsTrue(answers.Count == 1);
+
+            answers = jatalog.ExecuteAll("'a' <> a?");
+            Assert.IsTrue(answers.Count == 0);
+        }
+
         /// <exception cref="System.Exception"/>
         [Test]
         public void TestExecute()
