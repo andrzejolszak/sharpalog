@@ -10,8 +10,6 @@ namespace Stringes
         private readonly Stringe _src;
         private readonly char _character;
         private readonly int _offset;
-        private int _line;
-        private int _column;
 
         /// <summary>
         /// The stringe from which the charactere was taken.
@@ -31,61 +29,20 @@ namespace Stringes
         /// <summary>
         /// The line on which the charactere appears.
         /// </summary>
-        public int Line
-        {
-            get
-            {
-                if (_line == 0) SetLineCol();
-                return _line;
-            }
-        }
+        public int Line { get; }
 
         /// <summary>
         /// The column on which the charactere appears.
         /// </summary>
-        public int Column
-        {
-            get
-            {
-                if (_column == 0) SetLineCol();
-                return _column;
-            }
-        }
+        public int Column { get; }
 
-        private void SetLineCol()
-        {
-            _line = _src.Line;
-            _column = _src.Column;
-            if (_offset <= 0) return;
-            for (int i = 0; i < _offset; i++)
-            {
-                if (_src.ParentString[_offset] == '\n')
-                {
-                    _line++;
-                    _column = 1;
-                }
-                else
-                {
-                    _column++;
-                }
-            }
-        }
-
-        internal Chare(Stringe source, char c, int offset)
+        internal Chare(Stringe source, char c, int offset, (int line, int col) lineCol)
         {
             _src = source;
             _character = c;
             _offset = offset;
-            _line = _column = 0;
-        }
-
-        internal Chare(Stringe source, char c, int offset, int line, int col)
-        {
-            _src = source;
-            _character = c;
-            _offset = offset;
-            _line = line;
-            _column = col;
+            Line = lineCol.line;
+            Column = lineCol.col;
         }
 
         /// <summary>

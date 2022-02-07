@@ -243,38 +243,7 @@ namespace Stringes
             _length = length;
             _substring = null;
 
-            // Calculate line/col
-            _line = parent._line;
-            _column = parent._column;
-
-            // If the offset is to the left, the line/col is already calculated. Fetch it from the Chare cache.
-            if (relativeOffset < 0)
-            {
-                _line = _stref.Chares[_offset].Line;
-                _column = _stref.Chares[_offset].Column;
-                return;
-            }
-
-            if (relativeOffset == 0) return; // Do nothing if the offset is the same
-
-            int aOffset;
-
-            /* TODO: PERF
-            for (int i = 0; i < relativeOffset; i++)
-            {
-                aOffset = parent._offset + i;
-                if (_stref.String[aOffset] == '\n')
-                {
-                    _line++;
-                    _column = 1;
-                }
-                else if (_stref.Bases[i]) // Advance column only for non-combining characters
-                {
-                    _column++;
-                }
-                if (_stref.Chares[aOffset] == null)
-                    _stref.Chares[aOffset] = new Chare(parent, _stref.String[aOffset], aOffset, _line, _column);
-            }*/
+            (this._line, this._column) = this._stref.LinesAndColumns[this._offset];
         }
 
         /// <summary>
@@ -282,7 +251,7 @@ namespace Stringes
         /// </summary>
         /// <param name="index">The index of the charactere to retrieve.</param>
         /// <returns></returns>
-        public Chare this[int index] => _stref.Chares[index] ?? (_stref.Chares[index] = new Chare(this, _stref.String[index], index + _offset));
+        public Chare this[int index] => _stref.Chares[index] ?? (_stref.Chares[index] = new Chare(this, _stref.String[index], index + _offset, _stref.LinesAndColumns[index]));
 
         /// <summary>
         /// Determines whether the current stringe is a substringe of the specified parent stringe.
@@ -760,16 +729,37 @@ namespace Stringes
             public readonly string String;
             public readonly Chare[] Chares;
             public readonly bool[] Bases;
+            public readonly (int, int)[] LinesAndColumns;
 
             public Stref(string str)
             {
                 String = str;
                 Chares = new Chare[str.Length];
                 Bases = new bool[str.Length];
+                LinesAndColumns = new (int, int)[str.Length];
+
                 var elems = StringInfo.GetTextElementEnumerator(str);
                 while (elems.MoveNext())
                 {
                     Bases[elems.ElementIndex] = true;
+                }
+
+                int line = 0;
+                int column = 0;
+
+                for (int i = 0; i < str.Length; i++)
+                {
+                    if (str[i] == '\n')
+                    {
+                        line++;
+                        column = 1;
+                    }
+                    else if (this.Bases[i]) // Advance column only for non-combining characters
+                    {
+                        column++;
+                    }
+
+                    LinesAndColumns[i] = (line, column);
                 }
             }
         }
