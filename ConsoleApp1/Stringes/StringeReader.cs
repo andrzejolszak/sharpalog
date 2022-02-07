@@ -274,7 +274,8 @@ namespace Stringes
 		{
 			if (String.IsNullOrEmpty(value)) return false;
 			return _pos + value.Length <= _stringe.Length
-				&& String.Equals(_stringe.Substringe(_pos, value.Length).Value, value, strcmp);
+				&& value[0] == _stringe[_pos].Character
+				&& (value.Length == 1 || String.Equals(_stringe.Substringe(_pos, value.Length).Value, value, strcmp));
 		}
 
 		/// <summary>

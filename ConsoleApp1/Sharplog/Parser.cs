@@ -185,10 +185,12 @@ namespace Sharplog
                 {
                     reader =>
                     {
-                        Chare c = reader.PeekChare();
+                        char c = (char)reader.PeekChar();
                         if (c == '%')
                         {
-                            return reader.EatWhile(x => c.Line == x.Line);
+                            reader.EatWhile((char x) => x != '\n');
+                            reader.ReadChare();
+                            return true;
                         }
 
                         return false;
@@ -199,6 +201,34 @@ namespace Sharplog
                 {
                     reader =>
                     {
+                        char c = (char)reader.PeekChar();
+                        if (c == '\'')
+                        {
+                            Chare chare = reader.ReadChare();
+                            while ((char)reader.PeekChar() != '\'' || chare.Character == '\\')
+                            {
+                                chare = reader.ReadChare();
+                            }
+
+                            reader.ReadChare();
+
+                            return true;
+                        }
+                       
+                        return false;
+                    },
+                    Token.Identifier
+                },
+
+                {
+                    reader =>
+                    {
+                        char c = (char)reader.PeekChar();
+                        if (c != '/')
+                        {
+                            return false;
+                        }
+
                         bool isMultiComment = reader.Eat("/*");
                         if (isMultiComment)
                         {
@@ -218,24 +248,10 @@ namespace Sharplog
                 {
                     reader =>
                     {
-                       /* bool isQuotedIdentifier = reader.Eat("'");
-                        if (isQuotedIdentifier)
-                        {
-                            while (!reader.Eat("'"))
-                            {
-                                reader.ReadChare();
-                            }
-
-                            return true;
-                        }
-                       */
-                        return false;
+                        return reader.EatAny(' ', '\t', '\n', '\r');
                     },
-                    Token.Identifier
+                    Token.Whitespace
                 },
-
-                // Regex rule
-                {new Regex(@"\s"), Token.Whitespace}
             }
             .Ignore(Token.Whitespace)
             .Ignore(Token.LineComment)

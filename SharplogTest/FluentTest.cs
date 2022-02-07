@@ -83,6 +83,9 @@ namespace Sharplog
 
             answers = jatalog.ExecuteAll("'a' <> a?");
             Assert.IsTrue(answers.Count == 0);
+
+            answers = jatalog.ExecuteAll(@"'b\'s' <> b?");
+            Assert.IsTrue(answers.Count == 1);
         }
 
         /// <exception cref="System.Exception"/>

@@ -259,6 +259,7 @@ namespace Stringes
 
             int aOffset;
 
+            /* TODO: PERF
             for (int i = 0; i < relativeOffset; i++)
             {
                 aOffset = parent._offset + i;
@@ -273,7 +274,7 @@ namespace Stringes
                 }
                 if (_stref.Chares[aOffset] == null)
                     _stref.Chares[aOffset] = new Chare(parent, _stref.String[aOffset], aOffset, _line, _column);
-            }
+            }*/
         }
 
         /// <summary>
