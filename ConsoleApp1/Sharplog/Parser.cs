@@ -163,7 +163,28 @@ namespace Sharplog
                 {
                     reader =>
                     {
-                        return reader.EatWhile(Char.IsDigit);
+                        char c = (char)reader.PeekChar();
+                        if (char.IsDigit(c))
+                        {
+                            reader.EatWhile(Char.IsDigit);
+                            if (((char)reader.PeekChar()) == '.')
+                            {
+                                reader.ReadChare();
+                                if (!char.IsDigit((char)reader.PeekChar()))
+                                {
+                                    reader.Position--;
+                                }
+                                else
+                                {
+                                    reader.EatWhile(Char.IsDigit);
+                                }
+
+                            }
+                            
+                            return true;
+                        }
+
+                        return false;
                     },
                     Token.Number
                 },
@@ -215,6 +236,28 @@ namespace Sharplog
                             return true;
                         }
                        
+                        return false;
+                    },
+                    Token.Identifier
+                },
+
+                {
+                    reader =>
+                    {
+                        char c = (char)reader.PeekChar();
+                        if (c == '"')
+                        {
+                            Chare chare = reader.ReadChare();
+                            while ((char)reader.PeekChar() != '"')
+                            {
+                                reader.ReadChare();
+                            }
+
+                            reader.ReadChare();
+
+                            return true;
+                        }
+
                         return false;
                     },
                     Token.Identifier
