@@ -58,7 +58,6 @@
     <Compile Include="Sharplog\engine\StackMap.cs" />
     <Compile Include="Sharplog\Expr.cs" />
     <Compile Include="Sharplog\Universe.cs" />
-    <Compile Include="Sharplog\output\QueryOutput.cs" />
     <Compile Include="Sharplog\Parser.cs" />
     <Compile Include="Sharplog\Rule.cs" />
     <Compile Include="Sharplog\statement\DeleteStatement.cs" />

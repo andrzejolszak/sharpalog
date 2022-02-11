@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Sharplog.Engine;
-using Sharplog.Output;
 using Sharplog.Statement;
 using Stringes;
 
@@ -232,7 +231,7 @@ namespace Sharplog
         /// <exception cref="DatalogException">on syntax and I/O errors encountered while executing.</exception>
         /// <seealso cref="Sharplog.Output.QueryOutput"/>
         /// <exception cref="Sharplog.DatalogException"/>
-        public List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll(string stream, QueryOutput output, bool parseOnly = false)
+        public List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll2(string stream, bool parseOnly = false)
         {
             try
             {
@@ -311,7 +310,7 @@ namespace Sharplog
 
                     if (!parseOnly)
                     {
-                        var res = ExecuteSingleStatement(currentUniverse, statement, statementLine, output);
+                        var res = ExecuteSingleStatement(currentUniverse, statement, statementLine);
                         if (res != null)
                         {
                             answers.AddRange(res);
@@ -339,10 +338,7 @@ namespace Sharplog
         /// <exception cref="Sharplog.DatalogException"/>
         public Dictionary<Statement.Statement, List<(Statement.Statement, IDictionary<string, string>)>> ExecuteAll(string statements, bool parseOnly = false)
         {
-            // It would've been fun to wrap the results in a java.sql.ResultSet, but damn,
-            // those are a lot of methods to implement:
-            // https://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html
-            return GroupByAsDictionary(ExecuteAll(statements, null, parseOnly), x => x.Item1);
+            return GroupByAsDictionary(ExecuteAll2(statements, parseOnly), x => x.Item1);
         }
 
         public static Dictionary<TKey, List<TSource>> GroupByAsDictionary<TSource, TKey>(IEnumerable<TSource> that, Func<TSource, TKey> groupKeySelector)
@@ -604,7 +600,7 @@ namespace Sharplog
         /* Internal method for executing one and only one statement */
 
         /// <exception cref="Sharplog.DatalogException"/>
-        private static List<(Statement.Statement, IDictionary<string, string>)> ExecuteSingleStatement(Universe universe, Statement.Statement statement, int line, QueryOutput output)
+        private static List<(Statement.Statement, IDictionary<string, string>)> ExecuteSingleStatement(Universe universe, Statement.Statement statement, int line)
         {
             try
             {
@@ -620,11 +616,6 @@ namespace Sharplog
                 }
 
                 IEnumerable<IDictionary<string, string>> answers = statement.Execute(universe);
-                if (answers != null && output != null)
-                {
-                    output.WriteResult(statement, answers);
-                }
-
                 return answers?.Select(x => (statement, x)).ToList();
             }
             catch (DatalogException e)

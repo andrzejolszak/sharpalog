@@ -55,17 +55,13 @@ namespace Sharplog.Benchmarks
             Add(StatisticColumn.P90);
 
             Add(BenchmarkDotNet.Diagnosers.MemoryDiagnoser.Default);
-            Add(BenchmarkDotNet.Diagnosers.MemoryDiagnoser.Default.GetColumnProvider());
 
             Add(Job.Dry
                 .With(Platform.X64)
                 .With(Jit.RyuJit)
-                .With(Runtime.Clr)
                 .WithGcServer(true)
                 .WithWarmupCount(1)
                 .WithLaunchCount(1)
-                .WithTargetCount(100)
-                .WithRemoveOutliers(true)
                 .WithAnalyzeLaunchVariance(true)
                 .WithEvaluateOverhead(true));
 
