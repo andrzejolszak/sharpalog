@@ -33,6 +33,8 @@ namespace Sharplog
             this.Body = body;
         }
 
+        public Rule Clone() => new Rule(this.Head.Clone(), this.Body.Select(e => e.Clone()).ToList());
+
         /// <summary>Checks whether a rule is valid.</summary>
         /// <remarks>
         /// Checks whether a rule is valid.
@@ -65,7 +67,7 @@ namespace Sharplog
                     }
                     string a = clause.GetTerms()[0];
                     string b = clause.GetTerms()[1];
-                    if (clause.predicate.Equals("="))
+                    if (clause.Predicate.Equals("="))
                     {
                         /*
                         Var-Var unification
@@ -87,7 +89,7 @@ namespace Sharplog
                     }
                 }
 
-                if (!clause.IsNegated())
+                if (!clause.Negated)
                 {
                     foreach (string term in clause.GetTerms())
                     {
@@ -101,7 +103,7 @@ namespace Sharplog
 
             foreach (Expr clause in Body)
             {
-                if (clause.IsNegated())
+                if (clause.Negated)
                 {
                     foreach (string term in clause.GetTerms())
                     {

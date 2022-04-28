@@ -45,7 +45,7 @@ namespace Sharplog.Engine
             IndexedSet factsForDownstreamPredicates = new IndexedSet();
             foreach (Expr predicate in downstreamPredicates)
             {
-                factsForDownstreamPredicates.AddAll(jatalog.GetEdbProvider().GetFacts(predicate));
+                factsForDownstreamPredicates.AddAll(jatalog.GetFacts(predicate));
             }
 
             // Build the database. A Set ensures that the facts are unique
@@ -82,7 +82,7 @@ namespace Sharplog.Engine
             // Var-val unifications to go first to constrain the search space early
             foreach (Expr e in query)
             {
-                if (!e.IsNegated() && e.predicate.Equals("=") && (Universe.IsVariable(e.GetTerms()[0]) != Universe.IsVariable(e.GetTerms()[1])))
+                if (!e.Negated && e.Predicate.Equals("=") && (Universe.IsVariable(e.GetTerms()[0]) != Universe.IsVariable(e.GetTerms()[1])))
                 {
                     ordered.Add(e);
                     added.Add(e);
@@ -91,7 +91,7 @@ namespace Sharplog.Engine
 
             foreach (Expr e in query)
             {
-                if (!e.IsNegated() && !e.IsBuiltIn() && !added.Contains(e))
+                if (!e.Negated && !e.IsBuiltIn() && !added.Contains(e))
                 {
                     ordered.Add(e);
                     added.Add(e);
@@ -103,7 +103,7 @@ namespace Sharplog.Engine
             // TOOD: the above dynamic ordering becomes quite complicated, consider if a rename (via a unification-rename dictionary?) is simpler to do: X=Y -> raname all X and Y to X_Y. Be sure to correctly handle multi-renames: X=Y, Y=Z.
             foreach (Expr e in query)
             {
-                if (!e.IsNegated() && e.predicate.Equals("=") && !added.Contains(e))
+                if (!e.Negated && e.Predicate.Equals("=") && !added.Contains(e))
                 {
                     ordered.Add(e);
                     added.Add(e);
@@ -221,7 +221,7 @@ namespace Sharplog.Engine
             if (goal.IsBuiltIn())
             {
                 bool eval = goal.EvalBuiltIn(bindings);
-                if ((eval && !goal.IsNegated()) || (!eval && goal.IsNegated()))
+                if ((eval && !goal.Negated) || (!eval && goal.Negated))
                 {
                     if (lastGoal)
                     {
@@ -237,7 +237,7 @@ namespace Sharplog.Engine
             }
 
             List<IDictionary<string, string>> answers = new List<IDictionary<string, string>>();
-            if (!goal.IsNegated())
+            if (!goal.Negated)
             {
                 // Positive rule: Match each fact to the first goal.
                 // If the fact matches: If it is the last/only goal then we can return the bindings
@@ -301,7 +301,7 @@ namespace Sharplog.Engine
         {
             string pred = goal.PredicateWithArity;
             // Step (1): Guard against negative recursion
-            bool negated = goal.IsNegated();
+            bool negated = goal.Negated;
             // for error reporting
             for (int i = visited.Count - 1; i >= 0; i--)
             {
@@ -314,7 +314,7 @@ namespace Sharplog.Engine
                     }
                     return 0;
                 }
-                if (e.IsNegated())
+                if (e.Negated)
                 {
                     negated = true;
                 }
@@ -331,7 +331,7 @@ namespace Sharplog.Engine
                     foreach (Expr expr in rule.Body)
                     {
                         int x = DepthFirstSearch(expr, graph, visited, level + 1);
-                        if (expr.IsNegated())
+                        if (expr.Negated)
                         {
                             x++;
                         }
@@ -450,7 +450,7 @@ namespace Sharplog.Engine
             if (goal.IsBuiltIn())
             {
                 bool eval = goal.EvalBuiltIn(bindings);
-                if ((eval && !goal.IsNegated()) || (!eval && goal.IsNegated()))
+                if ((eval && !goal.Negated) || (!eval && goal.Negated))
                 {
                     if (lastGoal)
                     {
@@ -465,7 +465,7 @@ namespace Sharplog.Engine
                 return;
             }
 
-            if (!goal.IsNegated())
+            if (!goal.Negated)
             {
                 // Positive rule: Match each fact to the first goal.
                 // If the fact matches: If it is the last/only goal then we can return the bindings

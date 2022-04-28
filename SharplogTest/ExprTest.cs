@@ -11,15 +11,15 @@ namespace Sharplog
         public void TestEquals()
         {
             Expr e1 = new Expr("foo", "a", "b");
-            Assert.IsTrue(e1.predicate.Equals("foo"));
+            Assert.IsTrue(e1.Predicate.Equals("foo"));
             Assert.IsTrue(e1.PredicateWithArity.Equals("foo/2"));
             Assert.IsTrue(e1.Arity == 2);
-            Assert.IsFalse(e1.IsNegated());
+            Assert.IsFalse(e1.Negated);
             Expr e2 = new Expr("foo", "a", "b");
             Assert.IsTrue(e1.Equals(e2));
             Expr e3 = new Expr("bar", "a", "b");
             Assert.IsFalse(e1.Equals(e3));
-            Expr e4 = new Expr("foo", "a", "b", "c");
+            Expr e4 = new Expr("foo", new string[] { "a", "b", "c" });
             Assert.IsTrue(e4.Arity == 3);
             Assert.IsFalse(e1.Equals(e4));
             Assert.IsFalse(e1.Equals(null));
@@ -43,7 +43,7 @@ namespace Sharplog
         public void TestNegation()
         {
             Expr e1 = Expr.Not("foo", "a", "b");
-            Assert.IsTrue(e1.IsNegated());
+            Assert.IsTrue(e1.Negated);
             Expr e2 = new Expr("foo", "a", "b");
             Assert.IsFalse(e1.Equals(e2));
         }
@@ -76,7 +76,7 @@ namespace Sharplog
         {
             StackMap bindings = new StackMap();
             Expr e1 = new Expr("foo", "a", "b");
-            Expr e2 = new Expr("foo", "a", "b", "c");
+            Expr e2 = new Expr("foo", new string[] { "a", "b", "c" });
             //Assert.IsFalse(e1.GroundUnifyWith(e2, bindings));
             //Assert.IsFalse(e2.GroundUnifyWith(e1, bindings));
             Expr e3 = new Expr("bar", "a", "b");
@@ -119,12 +119,12 @@ namespace Sharplog
             Expr e2 = e1.Substitute(bindings.DictionaryObject());
             Assert.IsTrue(e2.GetTerms()[0].Equals("a"));
             Assert.IsTrue(e2.GetTerms()[1].Equals("Y"));
-            Assert.IsFalse(e2.IsNegated());
+            Assert.IsFalse(e2.Negated);
             e1 = Expr.Not("foo", "X", "Y");
             e2 = e1.Substitute(bindings.DictionaryObject());
             Assert.IsTrue(e2.GetTerms()[0].Equals("a"));
             Assert.IsTrue(e2.GetTerms()[1].Equals("Y"));
-            Assert.IsTrue(e2.IsNegated());
+            Assert.IsTrue(e2.Negated);
         }
 
         [Test]
@@ -209,7 +209,7 @@ namespace Sharplog
         {
             StackMap bindings = new StackMap();
             Expr e1 = new Expr("!=", "X", "Y");
-            Assert.IsTrue(e1.predicate.Equals("<>"));
+            Assert.IsTrue(e1.Predicate.Equals("<>"));
             Assert.IsTrue(e1.PredicateWithArity.Equals("<>/2"));
             bindings.Add("X", "hello");
             bindings.Add("Y", "hello");

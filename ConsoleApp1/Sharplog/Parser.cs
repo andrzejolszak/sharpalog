@@ -469,7 +469,7 @@ namespace Sharplog
                         throw new DatalogException("[line " + tokens[currentIndex].Line + "] Right hand side of expression expected for operator " + @operator);
                     }
 
-                    return new Expr(@operator, lhs, rhs) { negated = negated };
+                    return new Expr(@operator, lhs, rhs, negated);
                 }
 
                 if (builtInExpected)
@@ -522,9 +522,8 @@ namespace Sharplog
                     }
                 }
 
-                Expr e_1 = new Expr(lhs, terms.ToArray());
+                Expr e_1 = new Expr(lhs, terms.ToArray(), negated);
                 e_1.UniverseReference = universe;
-                e_1.negated = negated;
                 return e_1;
             }
             catch (IOException e)

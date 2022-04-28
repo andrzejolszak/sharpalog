@@ -91,16 +91,7 @@ namespace Sharplog
     /// </remarks>
     public class Universe
     {
-        private readonly EdbProvider edbProvider;
-
-        private readonly Dictionary<string, HashSet<Rule>> idb;
-        public IDictionary<string, HashSet<Rule>> Idb { get{ return this.idb; } }
-
-        public string Name { get; }
-
-        public long Version { get; set; }
-
-        private readonly IEngine engine;
+        private readonly IEngine _engine;
 
         private readonly IndexedSet _currentExpansionCacheFacts = new IndexedSet();
 
@@ -113,12 +104,10 @@ namespace Sharplog
         /// Creates a Jatalog instance with an empty IDB and EDB.
         /// </p>
         /// </remarks>
-        public Universe(bool bottomUpEvaluation = true, string name = null)
+        public Universe(bool bottomUpEvaluation = true, string name = null, IEngine engineInstance = null, IndexedSet edb = null, IDictionary<string, HashSet<Rule>> idb = null)
         {
-            // Facts
-            // Rules
-            this.edbProvider = new BasicEdbProvider();
-            this.idb = new Dictionary<string, HashSet<Rule>>();
+            this.Edb = edb ?? new IndexedSet();
+            this.Idb = idb ?? new Dictionary<string, HashSet<Rule>>();
             this.Name = name;
 
             /*
@@ -132,45 +121,20 @@ namespace Sharplog
                 engine = new TopDownEngine();
             }*/
 
-            engine = new BottomUpEngine();
+            this._engine = engineInstance ?? new BottomUpEngine();
         }
 
-        public Universe(Universe universe)
-        {
-            // Facts
-            // Rules
-            this.edbProvider = new BasicEdbProvider();
-            this.edbProvider.AllFacts().AddAll(universe.edbProvider.AllFacts().All);
+        public string Name { get; }
 
-            this.idb = new Dictionary<string, HashSet<Rule>>(universe.idb);
-            
-            this.Name = universe.Name + "+extends";
-
-            /*
-            TODO: Top-down evaluation just an experiment for now
-            if (bottomUpEvaluation)
-            {
-                engine = new BottomUpEngine();
-            }
-            else
-            {
-                engine = new TopDownEngine();
-            }*/
-
-            engine = new BottomUpEngine();
-        }
+        public long Version { get; set; }
 
         public long CurrentFactExpansionCacheSize => this._currentExpansionCacheFacts.Count;
 
-        public static MemoryStream ToStream(string str)
-        {
-            MemoryStream stream = new MemoryStream();
-            StreamWriter writer = new StreamWriter(stream);
-            writer.Write(str);
-            writer.Flush();
-            stream.Position = 0;
-            return stream;
-        }
+        public IndexedSet Edb { get; }
+
+        public IDictionary<string, HashSet<Rule>> Idb { get; }
+
+        public IEnumerable<Expr> GetFacts(Expr predicate) => Edb.GetIndexed(predicate);
 
         /// <summary>Checks whether a term represents a variable.</summary>
         /// <remarks>
@@ -181,8 +145,9 @@ namespace Sharplog
         /// <returns>true if the term is a variable</returns>
         public static bool IsVariable(string term)
         {
-            char c = term[0];
-            return char.IsUpper(c) || c == '_';
+            byte c = (byte)term[0];
+            byte upperCaseUnderscoreMask = 0b00100000;
+            return (c & upperCaseUnderscoreMask) == 0;
         }
 
         /// <summary>
@@ -287,8 +252,8 @@ namespace Sharplog
                             throw new DatalogException("[line " + tokens[i-1].Line + "] Undefined universe " + tokens[i-1].Value);
                         }
 
-                        currentUniverse.edbProvider.AllFacts().AddAll(imported.edbProvider.AllFacts().All);
-                        foreach (var r in imported.idb.SelectMany(x => x.Value))
+                        currentUniverse.Edb.AddAll(imported.Edb.All);
+                        foreach (var r in imported.Idb.SelectMany(x => x.Value))
                         {
                             currentUniverse.Rule(r);
                         }
@@ -371,16 +336,16 @@ namespace Sharplog
 
             if (nonCachedGoals.Count > 0)
             {
-                List<Expr> orderedNonCacheGoals = engine.ReorderQuery(nonCachedGoals);
-                IndexedSet factsForDownstreamPredicates = engine.ExpandDatabase(this, orderedNonCacheGoals);
+                List<Expr> orderedNonCacheGoals = _engine.ReorderQuery(nonCachedGoals);
+                IndexedSet factsForDownstreamPredicates = _engine.ExpandDatabase(this, orderedNonCacheGoals);
 
                 this._currentExpansionCacheFacts.AddAll(factsForDownstreamPredicates.All);
                 this._currentExpansionCacheGoals.UnionWith(nonCachedGoals);
             }
 
             // Now match the expanded database to the goals
-            List<Expr> orderedGoals = engine.ReorderQuery(goals);
-            return engine.MatchGoals(orderedGoals, 0, this._currentExpansionCacheFacts, new StackMap());
+            List<Expr> orderedGoals = _engine.ReorderQuery(goals);
+            return _engine.MatchGoals(orderedGoals, 0, this._currentExpansionCacheFacts, new StackMap());
         }
 
         /// <summary>Executes a query with the specified goals against the database.</summary>
@@ -408,7 +373,7 @@ namespace Sharplog
         /// <exception cref="Sharplog.DatalogException"/>
         public void ValidateTest()
         {
-            foreach (Rule rule in idb.SelectMany(x => x.Value))
+            foreach (Rule rule in Idb.SelectMany(x => x.Value))
             {
                 rule.Validate();
             }
@@ -416,7 +381,7 @@ namespace Sharplog
             // Different EdbProvider implementations may have different ideas about how
             // to iterate through the EDB in the most efficient manner. so in the future
             // it may be better to have the edbProvider validate the facts itself.
-            foreach (Expr fact in edbProvider.AllFacts().All)
+            foreach (Expr fact in this.Edb.All)
             {
                 fact.ValidFact();
             }
@@ -455,18 +420,16 @@ namespace Sharplog
         /// <c>this</c>
         /// so that methods can be chained.
         /// </returns>
-        /// <exception cref="DatalogException">if the rule is invalid.</exception>
-        /// <exception cref="Sharplog.DatalogException"/>
-        public Universe Rule(Sharplog.Rule newRule)
+        public Universe Rule(Rule newRule)
         {
-            this.engine.TransformNewRule(newRule);
+            this._engine.TransformNewRule(newRule);
             newRule.Validate();
 
-            if (!idb.TryGetValue(newRule.Head.PredicateWithArity, out HashSet<Rule> rules))
+            if (!Idb.TryGetValue(newRule.Head.PredicateWithArity, out HashSet<Rule> rules))
             {
                 // TODO: it's possible to add multiple copies of same rule
                 rules = new HashSet<Rule>();
-                idb.Add(newRule.Head.PredicateWithArity, rules);
+                Idb.Add(newRule.Head.PredicateWithArity, rules);
             }
 
             rules.Add(newRule);
@@ -526,14 +489,14 @@ namespace Sharplog
             {
                 throw new DatalogException("Facts must be ground: " + newFact);
             }
-            if (newFact.IsNegated())
+            if (newFact.Negated)
             {
                 throw new DatalogException("Facts cannot be negated: " + newFact);
             }
 
             // You can also match the arity of the fact against existing facts in the EDB,
             // but it's more of a principle than a technical problem; see Jatalog#validate()
-            edbProvider.Add(newFact);
+            this.Edb.Add(newFact);
 
             InvalidateCache();
 
@@ -544,7 +507,7 @@ namespace Sharplog
         {
             this.Version++;
             this._currentExpansionCacheGoals.Clear();
-            this._currentExpansionCacheFacts.ClearTest();
+            this._currentExpansionCacheFacts.Clear();
         }
 
         /// <summary>Deletes all the facts in the database that matches a specific query</summary>
@@ -579,22 +542,12 @@ namespace Sharplog
             InvalidateCache();
 
             // and substitute the answer on each goal
-            return edbProvider.RemoveAll(facts);
-        }
-
-        /// <summary>Retrieves the EdbProvider</summary>
-        /// <returns>
-        /// The
-        /// <see cref="EdbProvider"/>
-        /// </returns>
-        public EdbProvider GetEdbProvider()
-        {
-            return edbProvider;
+            return this.Edb.RemoveAll(facts);
         }
 
         public bool TryGetFromIdb(string predicate, out HashSet<Rule> rules)
         {
-            return this.idb.TryGetValue(predicate, out rules);
+            return this.Idb.TryGetValue(predicate, out rules);
         }
 
         /* Internal method for executing one and only one statement */

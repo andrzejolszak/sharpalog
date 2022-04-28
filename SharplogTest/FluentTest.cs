@@ -38,12 +38,12 @@ namespace Sharplog
             Assert.IsTrue(TestUtils.AnswerContains(answers, "A", "aab", "B", "aaa"));
             Assert.IsTrue(TestUtils.AnswerContains(answers, "A", "aaa", "B", "aab"));
             // Test deletion
-            Assert.IsTrue(jatalog.GetEdbProvider().AllFacts().Contains(Expr.CreateExpr("parent", "aa", "aaa")));
-            Assert.IsTrue(jatalog.GetEdbProvider().AllFacts().Contains(Expr.CreateExpr("parent", "aaa", "aaaa")));
+            Assert.IsTrue(jatalog.Edb.Contains(Expr.CreateExpr("parent", "aa", "aaa")));
+            Assert.IsTrue(jatalog.Edb.Contains(Expr.CreateExpr("parent", "aaa", "aaaa")));
             // This query deletes parent(aa,aaa) and parent(aaa,aaaa)
             jatalog.Delete(Expr.CreateExpr("parent", "aa", "X"), Expr.CreateExpr("parent", "X", "aaaa"));
-            Assert.IsFalse(jatalog.GetEdbProvider().AllFacts().Contains(Expr.CreateExpr("parent", "aa", "aaa")));
-            Assert.IsFalse(jatalog.GetEdbProvider().AllFacts().Contains(Expr.CreateExpr("parent", "aaa", "aaaa")));
+            Assert.IsFalse(jatalog.Edb.Contains(Expr.CreateExpr("parent", "aa", "aaa")));
+            Assert.IsFalse(jatalog.Edb.Contains(Expr.CreateExpr("parent", "aaa", "aaaa")));
             // "who are aa's descendants now?"
             answers = jatalog.Query(Expr.CreateExpr("ancestor", "aa", "X"));
             //Assert.IsFalse(answers.Contains(Expr.CreateExpr("parent", "aa", "aaa")));

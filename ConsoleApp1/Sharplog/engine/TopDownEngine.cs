@@ -14,7 +14,7 @@ namespace Sharplog.Engine
             if (goal.IsBuiltIn())
             {
                 bool eval = goal.EvalBuiltIn(bindings);
-                if ((eval && !goal.IsNegated()) || (!eval && goal.IsNegated()))
+                if ((eval && !goal.Negated) || (!eval && goal.Negated))
                 {
                     if (lastGoal)
                     {
@@ -29,7 +29,7 @@ namespace Sharplog.Engine
                 return;
             }
 
-            if (!goal.IsNegated())
+            if (!goal.Negated)
             {
                 foreach (Expr fact in currentFacts.GetIndexed(goal))
                 {
@@ -230,7 +230,7 @@ namespace Sharplog.Engine
             List<IDictionary<string, string>> res = new List<IDictionary<string, string>>();
             StackMap bindings = new StackMap();
             IndexedSet currentFacts = new IndexedSet();
-            currentFacts.AddAll(jatalog.GetEdbProvider().AllFacts().All);
+            currentFacts.AddAll(jatalog.Edb.All);
             TopDown(orderedGoals, 0, currentFacts, jatalog, bindings, res);
             return res;
         }
@@ -245,7 +245,7 @@ namespace Sharplog.Engine
             List<Expr> ordered = new List<Expr>(query.Count);
             foreach (Expr e in query)
             {
-                if (!e.IsNegated() && !(e.IsBuiltIn() && !e.predicate.Equals("=")))
+                if (!e.Negated && !(e.IsBuiltIn() && !e.Predicate.Equals("=")))
                 {
                     ordered.Add(e);
                 }
@@ -256,7 +256,7 @@ namespace Sharplog.Engine
             // The onus is thus on the user to structure '=' operators properly.
             foreach (Expr e in query)
             {
-                if (e.IsNegated() || (e.IsBuiltIn() && !e.predicate.Equals("=")))
+                if (e.Negated || (e.IsBuiltIn() && !e.Predicate.Equals("=")))
                 {
                     ordered.Add(e);
                 }

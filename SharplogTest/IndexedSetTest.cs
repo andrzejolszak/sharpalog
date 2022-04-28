@@ -43,7 +43,7 @@ namespace Sharplog
             Assert.IsFalse(indexedSet.Contains(Expr.CreateExpr("foo", "a")));
             Assert.IsFalse(indexedSet.Contains(Expr.CreateExpr("bar", "b")));
             Assert.IsFalse(indexedSet.RemoveAll(toRemove));
-            indexedSet.ClearTest();
+            indexedSet.Clear();
             Assert.IsTrue(indexedSet.Count == 0);
             Assert.IsTrue((indexedSet.Count == 0));
             Assert.IsTrue(indexedSet.GetIndexes().Count() == 0);

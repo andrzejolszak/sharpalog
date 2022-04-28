@@ -23,19 +23,13 @@ public class IndexedSet
         private IDictionary<int, HashSet<Expr>> index;
 
         /// <summary>Default constructor.</summary>
-        public IndexedSet()
+        public IndexedSet(int count = 0)
         {
-            index = new Dictionary<int, HashSet<Expr>>();
+            index = new Dictionary<int, HashSet<Expr>>(count);
             contents = new HashSet<Expr>();
         }
 
-        public int Count
-        {
-            get
-            {
-                return contents.Count;
-            }
-        }
+        public int Count => contents.Count;
 
         /// <summary>
         /// Retrieves the subset of the elements in the set with the
@@ -90,7 +84,7 @@ public class IndexedSet
 
         public HashSet<Expr> All => this.contents;
 
-        public void ClearTest()
+        public void Clear()
         {
             contents.Clear();
             index.Clear();

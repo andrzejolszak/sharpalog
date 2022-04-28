@@ -25,28 +25,27 @@ namespace Sharplog
     /// </remarks>
     public sealed class Expr
     {
-        internal bool negated = false;
-        public string predicate;
-
-        private readonly string[] terms;
-
         public string PredicateWithArity { get; }
 
         private int? _hashCode;
 
         public string UniverseReference { get; set; }
 
+        public Expr(string predicate, string t1) : this(predicate, new string[] { t1 }) { }
+
+        public Expr(string predicate, string t1, string t2, bool negated = false) : this(predicate, new string[] { t1, t2 }, negated) { }
+
         /// <summary>Constructor for the fluent API that allows a variable number of terms.</summary>
         /// <param name="predicate">The predicate of the expression.</param>
         /// <param name="terms">The terms of the expression.</param>
-        public Expr(string predicate, params string[] terms)
+        public Expr(string predicate, string[] terms, bool negated = false)
         {
-            this.predicate = predicate;
+            this.Predicate = predicate;
             // I've seen both versions of the symbol for not equals being used, so I allow
             // both, but we convert to "<>" internally to simplify matters later.
-            if (this.predicate == "!=")
+            if (this.Predicate == "!=")
             {
-                this.predicate = "<>";
+                this.Predicate = "<>";
             }
 
 #if DEBUG
@@ -56,9 +55,18 @@ namespace Sharplog
             }
 #endif
 
-            this.terms = terms;
-            this.PredicateWithArity = this.predicate + "/" + this.terms.Length;
+            this.Terms = terms;
+            this.PredicateWithArity = this.Predicate + "/" + this.Terms.Length;
+            this.Negated = negated;
         }
+
+        public string Predicate { get; }
+
+        public string[] Terms { get; }
+
+        public bool Negated { get; }
+
+        public Expr Clone() => new Expr(this.Predicate, this.Terms.ToArray(), this.Negated);
 
         /// <summary>Helper method for creating a new expression.</summary>
         /// <remarks>
@@ -86,8 +94,7 @@ namespace Sharplog
         /// <returns>The negated expression</returns>
         public static Expr Not(string predicate, params string[] terms)
         {
-            Sharplog.Expr e = new Expr(predicate, terms);
-            e.negated = true;
+            Expr e = new Expr(predicate, terms, true);
             return e;
         }
 
@@ -182,13 +189,13 @@ namespace Sharplog
         /// does not enforce it (expressions with the same predicates but different arities wont unify).
         /// </remarks>
         /// <returns>the arity</returns>
-        public int Arity => terms.Length;
+        public int Arity => Terms.Length;
 
         /// <summary>An expression is said to be ground if none of its terms are variables.</summary>
         /// <returns>true if the expression is ground</returns>
         public bool IsGround()
         {
-            foreach (string term in terms)
+            foreach (string term in Terms)
             {
                 if (Universe.IsVariable(term))
                 {
@@ -197,17 +204,6 @@ namespace Sharplog
             }
 
             return true;
-        }
-
-        /// <summary>Checks whether the expression is negated, eg.</summary>
-        /// <remarks>
-        /// Checks whether the expression is negated, eg.
-        /// <c>not foo(bar, baz)</c>
-        /// </remarks>
-        /// <returns>true if the expression is negated</returns>
-        public bool IsNegated()
-        {
-            return negated;
         }
 
         /// <summary>Checks whether an expression represents one of the supported built-in predicates.</summary>
@@ -228,7 +224,7 @@ namespace Sharplog
         /// <returns>true if the expression is a built-in predicate.</returns>
         public bool IsBuiltIn()
         {
-            char op = predicate[0];
+            char op = Predicate[0];
             return !char.IsLetterOrDigit(op) && op != '\"';
         }
 
@@ -249,7 +245,7 @@ namespace Sharplog
                 throw new InvalidOperationException();
             }
 
-            if (this.predicate != that.predicate || this.Arity != that.Arity)
+            if (this.Predicate != that.Predicate || this.Arity != that.Arity)
             {
                 throw new InvalidOperationException();
             }
@@ -257,8 +253,8 @@ namespace Sharplog
 
             for (int i = 0; i < this.Arity; i++)
             {
-                string term1 = this.terms[i];
-                string term2 = that.terms[i];
+                string term1 = this.Terms[i];
+                string term2 = that.Terms[i];
                 if (Universe.IsVariable(term2))
                 {
                     string term2Val = term1;
@@ -292,16 +288,16 @@ namespace Sharplog
 
             string[] newTerms = null;
             bool anyChange = false;
-            for (int i = 0; i < this.terms.Length; i++)
+            for (int i = 0; i < this.Terms.Length; i++)
             {
-                string term = this.terms[i];
+                string term = this.Terms[i];
                 if (Universe.IsVariable(term) && bindings.TryGetValue(term, out string value))
                 {
                     if (!anyChange)
                     {
                         anyChange = true;
-                        newTerms = array ?? new string[this.terms.Length];
-                        Array.Copy(this.terms, newTerms, newTerms.Length);
+                        newTerms = array ?? new string[this.Terms.Length];
+                        Array.Copy(this.Terms, newTerms, newTerms.Length);
                     }
 
                     newTerms[i] = value;
@@ -314,10 +310,7 @@ namespace Sharplog
                 return this;
             }
 
-            Expr that = new Expr(this.predicate, newTerms)
-            {
-                negated = negated
-            };
+            Expr that = new Expr(this.Predicate, newTerms, Negated);
 
             return that;
         }
@@ -331,19 +324,19 @@ namespace Sharplog
             // these conditions are supposed to have been caught earlier in the chain by
             // methods such as Rule#validate().
             // The RuntimeException is a requirement of using the Streams API.
-            string term1 = terms[0];
+            string term1 = Terms[0];
             if (Universe.IsVariable(term1) && bindings.TryGetValue(term1, out string term1v))
             {
                 term1 = term1v;
             }
 
-            string term2 = terms[1];
+            string term2 = Terms[1];
             if (Universe.IsVariable(term2) && bindings.TryGetValue(term2, out string term2v))
             {
                 term2 = term2v;
             }
 
-            if (predicate.Equals("="))
+            if (Predicate.Equals("="))
             {
                 // '=' is special
                 if (Universe.IsVariable(term1))
@@ -383,7 +376,7 @@ namespace Sharplog
                 }
 #endif
 
-                if (predicate.Equals("<>"))
+                if (Predicate.Equals("<>"))
                 {
                     // '<>' is also a bit special
                     if (double.TryParse(term1, out double d1) && double.TryParse(term2, out double d2))
@@ -404,7 +397,7 @@ namespace Sharplog
                     double.TryParse(term1, out double d1);
                     double.TryParse(term2, out double d2);
 
-                    switch (predicate)
+                    switch (Predicate)
                     {
                         case "<":
                             {
@@ -433,12 +426,12 @@ namespace Sharplog
                 }
             }
 
-            throw new DatalogException("Unimplemented built-in predicate " + predicate);
+            throw new DatalogException("Unimplemented built-in predicate " + Predicate);
         }
 
         public string[] GetTerms()
         {
-            return terms;
+            return Terms;
         }
 
         public override bool Equals(object other)
@@ -448,17 +441,17 @@ namespace Sharplog
                 return false;
             }
 
-            if (!this.predicate.Equals(that.predicate))
+            if (!this.Predicate.Equals(that.Predicate))
             {
                 return false;
             }
-            if (this.Arity != that.Arity || negated != that.negated)
+            if (this.Arity != that.Arity || Negated != that.Negated)
             {
                 return false;
             }
-            for (int i = 0; i < terms.Length; i++)
+            for (int i = 0; i < Terms.Length; i++)
             {
-                if (!terms[i].Equals(that.terms[i]))
+                if (!Terms[i].Equals(that.Terms[i]))
                 {
                     return false;
                 }
@@ -470,8 +463,8 @@ namespace Sharplog
         {
             if(this._hashCode is null)
             {
-                this._hashCode = predicate.GetHashCode();
-                foreach (string term in terms)
+                this._hashCode = Predicate.GetHashCode();
+                foreach (string term in Terms)
                 {
                     this._hashCode += term.GetHashCode();
                 }
@@ -483,24 +476,24 @@ namespace Sharplog
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
-            if (IsNegated())
+            if (Negated)
             {
                 sb.Append("not ");
             }
             if (IsBuiltIn())
             {
-                TermToString(sb, terms[0]);
-                sb.Append(" ").Append(predicate).Append(" ");
-                TermToString(sb, terms[1]);
+                TermToString(sb, Terms[0]);
+                sb.Append(" ").Append(Predicate).Append(" ");
+                TermToString(sb, Terms[1]);
             }
             else
             {
-                sb.Append(predicate).Append('(');
-                for (int i = 0; i < terms.Length; i++)
+                sb.Append(Predicate).Append('(');
+                for (int i = 0; i < Terms.Length; i++)
                 {
-                    string term = terms[i];
+                    string term = Terms[i];
                     TermToString(sb, term);
-                    if (i < terms.Length - 1)
+                    if (i < Terms.Length - 1)
                     {
                         sb.Append(", ");
                     }
@@ -533,7 +526,7 @@ namespace Sharplog
                 throw new DatalogException("Fact " + this + " is not ground");
             }
 
-            else if (IsNegated())
+            else if (Negated)
             {
                 throw new DatalogException("Fact " + this + " is negated");
             }
