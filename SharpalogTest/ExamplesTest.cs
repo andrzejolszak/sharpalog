@@ -8,7 +8,7 @@
 
     public class ExamplesTest
     {
-        public static string ExamplesDir = Assembly.GetAssembly(typeof(ExamplesTest)).Location.Replace("SharplogTest.dll", "../../../examples/");
+        public static string ExamplesDir = Assembly.GetAssembly(typeof(ExamplesTest)).Location.Replace("SharpalogTest.dll", "./examples/");
 
         [Test]
         [TestCase(true)]

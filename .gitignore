@@ -15,3 +15,9 @@
 /ConsoleApp1/bin/Release
 /Sharplog.Benchmarks/bin/Release
 /SharplogTest/bin/Release
+/Sharpalog/bin/Debug/net6.0
+/Sharpalog/obj
+/SharpalogBenchmarks/obj
+/SharpalogBenchmarks/bin/Debug/net6.0
+/SharpalogTest/bin/Debug/net6.0
+/SharpalogTest/obj

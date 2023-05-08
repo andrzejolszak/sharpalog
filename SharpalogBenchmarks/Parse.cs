@@ -7,7 +7,6 @@
     [Config(typeof(DefaultConfig))]
     public class Parse
     {
-        private const string ExamplesDir = "./../../../examples/";
         private const int Iterations = 100;
 
         private Dictionary<string, string> _exampleSources = new Dictionary<string, string>();
@@ -20,10 +19,10 @@
         {
             if (_exampleSources.Count == 0)
             {
-                _exampleSources["family.dl"] = File.ReadAllText(ExamplesDir + "family.dl");
-                _exampleSources["gens.dl"] = File.ReadAllText(ExamplesDir + "gens.dl");
-                _exampleSources["tum.de.dl"] = File.ReadAllText(ExamplesDir + "tum.de.dl");
-                _exampleSources["noun.dl"] = File.ReadAllText(ExamplesDir + "noun.dl");
+                _exampleSources["family.dl"] = File.ReadAllText(Examples.ExamplesDir + "family.dl");
+                _exampleSources["gens.dl"] = File.ReadAllText(Examples.ExamplesDir + "gens.dl");
+                _exampleSources["tum.de.dl"] = File.ReadAllText(Examples.ExamplesDir + "tum.de.dl");
+                _exampleSources["noun.dl"] = File.ReadAllText(Examples.ExamplesDir + "noun.dl");
             }
         }
 

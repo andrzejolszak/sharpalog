@@ -7,7 +7,7 @@
     [Config(typeof(DefaultConfig))]
     public class Examples
     {
-        private const string ExamplesDir = "./../../../examples/";
+        public const string ExamplesDir = "./examples/";
         private const int Iterations = 100;
 
         private Dictionary<string, string> _exampleSources = new Dictionary<string, string>();

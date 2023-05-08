@@ -1,29 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31129.286
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33424.131
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sharplog", "ConsoleApp1\Sharplog.csproj", "{4BBDDC9A-5B2C-4C82-867F-DE67EC5915EF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sharpalog", "Sharpalog\Sharpalog.csproj", "{AF34A63E-4545-4509-8A2D-48C21F33C15D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharplogTest", "SharplogTest\SharplogTest.csproj", "{97999DCF-DAAA-4FC5-8722-3B525B4485C8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpalogTest", "SharpalogTest\SharpalogTest.csproj", "{EB719CDC-DB4F-41B0-ADB1-C01254EFF194}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sharplog.Benchmarks", "Sharplog.Benchmarks\Sharplog.Benchmarks.csproj", "{BD321738-A3CF-4372-B80E-667D38C953EE}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D9A1B56A-1D4C-4E07-84E6-61B2C5EECD91}"
-	ProjectSection(SolutionItems) = preProject
-		examples\builtin.dl = examples\builtin.dl
-		examples\cerineg.dl = examples\cerineg.dl
-		examples\family.dl = examples\family.dl
-		examples\gens.dl = examples\gens.dl
-		examples\negate.dl = examples\negate.dl
-		examples\noun.dl = examples\noun.dl
-		examples\numbers.dl = examples\numbers.dl
-		examples\paths.dl = examples\paths.dl
-		examples\stratified.dl = examples\stratified.dl
-		examples\stratified2.dl = examples\stratified2.dl
-		examples\topDown.dl = examples\topDown.dl
-		examples\tum.de.dl = examples\tum.de.dl
-	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpalogBenchmarks", "SharpalogBenchmarks\SharpalogBenchmarks.csproj", "{D9E6A096-40F0-4061-BAB0-3E749D7B2CDB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,18 +15,18 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{4BBDDC9A-5B2C-4C82-867F-DE67EC5915EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4BBDDC9A-5B2C-4C82-867F-DE67EC5915EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4BBDDC9A-5B2C-4C82-867F-DE67EC5915EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4BBDDC9A-5B2C-4C82-867F-DE67EC5915EF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{97999DCF-DAAA-4FC5-8722-3B525B4485C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{97999DCF-DAAA-4FC5-8722-3B525B4485C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{97999DCF-DAAA-4FC5-8722-3B525B4485C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{97999DCF-DAAA-4FC5-8722-3B525B4485C8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{BD321738-A3CF-4372-B80E-667D38C953EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BD321738-A3CF-4372-B80E-667D38C953EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BD321738-A3CF-4372-B80E-667D38C953EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BD321738-A3CF-4372-B80E-667D38C953EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF34A63E-4545-4509-8A2D-48C21F33C15D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF34A63E-4545-4509-8A2D-48C21F33C15D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF34A63E-4545-4509-8A2D-48C21F33C15D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF34A63E-4545-4509-8A2D-48C21F33C15D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB719CDC-DB4F-41B0-ADB1-C01254EFF194}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB719CDC-DB4F-41B0-ADB1-C01254EFF194}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB719CDC-DB4F-41B0-ADB1-C01254EFF194}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB719CDC-DB4F-41B0-ADB1-C01254EFF194}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9E6A096-40F0-4061-BAB0-3E749D7B2CDB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9E6A096-40F0-4061-BAB0-3E749D7B2CDB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9E6A096-40F0-4061-BAB0-3E749D7B2CDB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9E6A096-40F0-4061-BAB0-3E749D7B2CDB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
