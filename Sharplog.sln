@@ -3,11 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33424.131
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sharpalog", "Sharpalog\Sharpalog.csproj", "{AF34A63E-4545-4509-8A2D-48C21F33C15D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sharpalog", "Sharpalog\Sharpalog.csproj", "{AF34A63E-4545-4509-8A2D-48C21F33C15D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpalogTest", "SharpalogTest\SharpalogTest.csproj", "{EB719CDC-DB4F-41B0-ADB1-C01254EFF194}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpalogTest", "SharpalogTest\SharpalogTest.csproj", "{EB719CDC-DB4F-41B0-ADB1-C01254EFF194}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpalogBenchmarks", "SharpalogBenchmarks\SharpalogBenchmarks.csproj", "{D9E6A096-40F0-4061-BAB0-3E749D7B2CDB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpalogBenchmarks", "SharpalogBenchmarks\SharpalogBenchmarks.csproj", "{D9E6A096-40F0-4061-BAB0-3E749D7B2CDB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpalogKME", "SharpalogKME\SharpalogKME.csproj", "{277A70AA-57E1-43CE-A871-C717369D58E3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{D9E6A096-40F0-4061-BAB0-3E749D7B2CDB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D9E6A096-40F0-4061-BAB0-3E749D7B2CDB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D9E6A096-40F0-4061-BAB0-3E749D7B2CDB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{277A70AA-57E1-43CE-A871-C717369D58E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{277A70AA-57E1-43CE-A871-C717369D58E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{277A70AA-57E1-43CE-A871-C717369D58E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{277A70AA-57E1-43CE-A871-C717369D58E3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
