@@ -1,16 +1,11 @@
-﻿using Avalonia;
-using Avalonia.Markup.Parsers;
-using Avalonia.Media.Imaging;
+﻿using Avalonia.Media.Imaging;
 using AvaloniaEdit.CodeCompletion;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
 using AvaloniaEdit.Rendering;
-using Microsoft.Win32;
-using NXUI.Extensions;
+using RoslynPad.Editor;
 using System.ComponentModel;
-using System.Resources;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography.X509Certificates;
 
 namespace AvaloniaEdit.Demo
 {
@@ -18,6 +13,13 @@ namespace AvaloniaEdit.Demo
     {
         private static CompletionWindow _completionWindow;
         private static OverloadInsightWindow _insightWindow;
+        private static MarkerMargin _errorMargin;
+        private static MarkerMargin _bulbMargin;
+        private static ContextActionsBulbContextMenu _contextMenu;
+        private static Bitmap Foo = new Bitmap("res/foo.png");
+        private static Bitmap Bulb = new Bitmap("res/bulb.png");
+        private static TextEditor _editor;
+        private static DispatcherTimer _delayMoveTimer;
 
         public static int Main(string[] args)
         {
@@ -40,21 +42,20 @@ namespace AvaloniaEdit.Demo
                     VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Visible,
                     FontWeight = FontWeight.Light,
                     FontSize = 14,
-                    Background = Brushes.Red,
-                    Height = 300
+                    Height = 400
                 };
 
                 textEditor.ShowLineNumbers = true;
                 textEditor.ContextMenu = new ContextMenu
                 {
                     ItemsSource = new List<MenuItem>
-                {
-                    new MenuItem { Header = "Copy", InputGesture = new KeyGesture(Key.C, KeyModifiers.Control) },
-                    new MenuItem { Header = "Paste", InputGesture = new KeyGesture(Key.V, KeyModifiers.Control) },
-                    new MenuItem { Header = "Cut", InputGesture = new KeyGesture(Key.X, KeyModifiers.Control) }
-                }
+                    {
+                        new MenuItem { Header = "Copy", InputGesture = new KeyGesture(Key.C, KeyModifiers.Control) },
+                        new MenuItem { Header = "Paste", InputGesture = new KeyGesture(Key.V, KeyModifiers.Control) },
+                        new MenuItem { Header = "Cut", InputGesture = new KeyGesture(Key.X, KeyModifiers.Control) }
+                    }
                 };
-                
+
                 textEditor.TextArea.TextEntered += textEditor_TextArea_TextEntered;
                 textEditor.TextArea.TextEntering += textEditor_TextArea_TextEntering;
                 textEditor.Options.ShowBoxForControlCharacters = true;
@@ -68,11 +69,33 @@ namespace AvaloniaEdit.Demo
     "// AvaloniaEdit supports displaying underline and strikethrough");
                 textEditor.TextArea.TextView.LineTransformers.Add(new UnderlineAndStrikeThroughTransformer());
 
+                _errorMargin = new MarkerMargin { Width = 16, MarkerImage = Foo };
+                textEditor.TextArea.LeftMargins.Insert(0, _errorMargin);
+                _errorMargin.IsVisible = true;
+                _errorMargin.LineNumber = 2;
+                _errorMargin.Message = "Foo";
+
+                _delayMoveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+                _delayMoveTimer.Stop();
+                _delayMoveTimer.Tick += TimerMoveTick;
+
+                textEditor.KeyDown += ContextActionsRenderer_KeyDown;
+
+                textEditor.TextArea.Caret.PositionChanged += CaretPositionChanged;
+
+                _contextMenu = new ContextActionsBulbContextMenu();
+                _bulbMargin = new MarkerMargin { Width = 16, Margin = new Thickness(0, 0, 5, 0) };
+                _bulbMargin.MarkerPointerDown += (o, e) => OpenContextMenu();
+                _bulbMargin.MarkerImage = Bulb;
+                var index = textEditor.TextArea.LeftMargins.Count > 0 ? textEditor.TextArea.LeftMargins.Count - 1 : 0;
+                textEditor.TextArea.LeftMargins.Insert(index, _bulbMargin);
+                _editor = textEditor;
+
                 return Window(out var window)
                     .Styles(
                         new StyleInclude((Uri?)null) { Source = new Uri("avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml") },
                         completionStyle)
-                    .Title("NXUI").Width(400).Height(300)
+                    .Title("NXUI").Width(800).Height(600)
                     .Content(
                       StackPanel()
                         .Children(
@@ -114,6 +137,69 @@ namespace AvaloniaEdit.Demo
             // We still want to insert the character that was typed.
         }
 
+        private static async void ContextActionsRenderer_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (!(e.Key == Key.OemPeriod && e.KeyModifiers.HasFlag(KeyModifiers.Control))) return;
+            
+            Cancel();
+            // !ANY actions?
+            // {
+            //     HideBulb();
+            //     return;
+            // }
+
+            // _contextMenu.SetItems(_actions!);
+            _contextMenu.ItemsSource = new List<MenuItem>
+                {
+                    new MenuItem { Header = "Foo" },
+                    new MenuItem { Header = "Bar" },
+                };
+
+            _bulbMargin.LineNumber = _editor.TextArea.Caret.Line;
+            OpenContextMenu();
+        }
+
+        private static void HideBulb() => _bulbMargin.LineNumber = null;
+
+        private static void CaretPositionChanged(object? sender, EventArgs e) => StartTimer();
+
+        private static void StartTimer()
+        {
+            _delayMoveTimer.Start();
+        }
+
+        private static void Cancel()
+        {
+            _delayMoveTimer.Stop();
+        }
+
+        private static async void TimerMoveTick(object? sender, EventArgs e)
+        {
+            if (!_delayMoveTimer.IsEnabled)
+                return;
+
+            Cancel();
+
+            // !ANY actions?
+            // {
+            //     HideBulb();
+            //     return;
+            // }
+
+            _contextMenu.ItemsSource = new List<MenuItem>
+                {
+                    new MenuItem { Header = "Hide", Command = MiniCommand.Create(() => { _bulbMargin.LineNumber = null; }) },
+                    new MenuItem { Header = "BarClick" },
+                };
+
+            _bulbMargin.LineNumber = _editor.TextArea.Caret.Line;
+        }
+
+        private static void OpenContextMenu()
+        {
+            _contextMenu.Open(_bulbMargin.Marker);
+        }
+
         private static void textEditor_TextArea_TextEntered(object sender, TextInputEventArgs e)
         {
             if (e.Text == ".")
@@ -121,6 +207,15 @@ namespace AvaloniaEdit.Demo
 
                 _completionWindow = new CompletionWindow(e.Source as TextArea);
                 _completionWindow.Closed += (o, args) => _completionWindow = null;
+
+                _completionWindow.HorizontalScrollBarVisibilityVisible();
+                _completionWindow.CompletionList.ListBox.ItemTemplate = new FuncDataTemplate<MyCompletionData>((data, _) =>
+                    StackPanel()
+                      .OrientationHorizontal().Height(18).VerticalAlignmentCenter()
+                      .Children(
+                        Image().Width(15).Height(15).Source(data.Image),
+                        TextBlock().VerticalAlignmentCenter().Margin(10, 0, 0, 0).FontSize(15).Text(data.Text))
+                    , true);
 
                 var data = _completionWindow.CompletionList.CompletionData;
                 data.Add(new MyCompletionData("Item1"));
@@ -163,7 +258,7 @@ namespace AvaloniaEdit.Demo
                 Text = text;
             }
 
-            public IBitmap Image => null;
+            public IBitmap Image => Foo;
 
             public string Text { get; }
 
@@ -274,5 +369,65 @@ namespace AvaloniaEdit.Demo
                 }
             }
         }
+    }
+
+    public sealed class MiniCommand<T> : MiniCommand, ICommand
+    {
+        private readonly Action<T> _cb;
+        private bool _busy;
+        private Func<T, Task> _acb;
+
+        public MiniCommand(Action<T> cb)
+        {
+            _cb = cb;
+        }
+
+        public MiniCommand(Func<T, Task> cb)
+        {
+            _acb = cb;
+        }
+
+        private bool Busy
+        {
+            get => _busy;
+            set
+            {
+                _busy = value;
+                CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+
+        public override event EventHandler CanExecuteChanged;
+        public override bool CanExecute(object parameter) => !_busy;
+
+        public override async void Execute(object parameter)
+        {
+            if (Busy)
+                return;
+            try
+            {
+                Busy = true;
+                if (_cb != null)
+                    _cb((T)parameter);
+                else
+                    await _acb((T)parameter);
+            }
+            finally
+            {
+                Busy = false;
+            }
+        }
+    }
+
+    public abstract class MiniCommand : ICommand
+    {
+        public static MiniCommand Create(Action cb) => new MiniCommand<object>(_ => cb());
+        public static MiniCommand Create<TArg>(Action<TArg> cb) => new MiniCommand<TArg>(cb);
+        public static MiniCommand CreateFromTask(Func<Task> cb) => new MiniCommand<object>(_ => cb());
+
+        public abstract bool CanExecute(object parameter);
+        public abstract void Execute(object parameter);
+        public abstract event EventHandler CanExecuteChanged;
     }
 }
