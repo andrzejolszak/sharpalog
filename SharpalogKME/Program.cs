@@ -1,4 +1,5 @@
 ﻿using Avalonia.Media.Imaging;
+using Avalonia.Rendering;
 using AvaloniaEdit.CodeCompletion;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
@@ -19,7 +20,9 @@ namespace AvaloniaEdit.Demo
         private static Bitmap Foo = new Bitmap("res/foo.png");
         private static Bitmap Bulb = new Bitmap("res/bulb.png");
         private static TextEditor _editor;
+        private static SearchResultBackgroundRenderer _selectionRenderer;
         private static DispatcherTimer _delayMoveTimer;
+        private static ScrollBar? _verticalScrollBar;
 
         public static int Main(string[] args)
         {
@@ -61,12 +64,12 @@ namespace AvaloniaEdit.Demo
                 textEditor.Options.ShowBoxForControlCharacters = true;
                 textEditor.Options.ColumnRulerPositions = new List<int>() { 80, 100 };
                 textEditor.TextArea.IndentationStrategy = new Indentation.CSharp.CSharpIndentationStrategy(textEditor.Options);
-                //textEditor.TextArea.Caret.PositionChanged += Caret_PositionChanged;
                 textEditor.TextArea.RightClickMovesCaret = true;
 
                 textEditor.Document = new TextDocument(
     "// AvaloniaEdit supports displaying control chars: \a or \b or \v" + Environment.NewLine +
-    "// AvaloniaEdit supports displaying underline and strikethrough");
+    "-- AvaloniaEdit supports displaying underline and strikethrough" + Environment.NewLine +
+    "foo(a, b). bar(B, x) :- g, c.");
                 textEditor.TextArea.TextView.LineTransformers.Add(new UnderlineAndStrikeThroughTransformer());
 
                 _errorMargin = new MarkerMargin { Width = 16, MarkerImage = Foo };
@@ -91,7 +94,13 @@ namespace AvaloniaEdit.Demo
                 textEditor.TextArea.LeftMargins.Insert(index, _bulbMargin);
                 _editor = textEditor;
 
-                return Window(out var window)
+                _selectionRenderer = new SearchResultBackgroundRenderer();
+                textEditor.TextArea.TextView.BackgroundRenderers.Add(_selectionRenderer);
+                textEditor.TextArea.SelectionChanged += TextArea_SelectionChanged;
+                
+                textEditor.TemplateApplied += TextEditor_TemplateApplied;
+
+                Window(out var window)
                     .Styles(
                         new StyleInclude((Uri?)null) { Source = new Uri("avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml") },
                         completionStyle)
@@ -111,12 +120,65 @@ namespace AvaloniaEdit.Demo
                           )
                         )
                     .Title(tb1.ObserveText().Select(x => x?.ToUpper()));
+                
+                return window;
             }
 
             return AppBuilder.Configure<Application>()
               .UsePlatformDetect()
               .UseFluentTheme()
               .StartWithClassicDesktopLifetime(Build, args);
+        }
+
+        private static void TextEditor_TemplateApplied(object? sender, TemplateAppliedEventArgs e)
+        {
+            if (_verticalScrollBar is null)
+            {
+                var scrollView = e.NameScope.Find<ScrollViewer>("PART_ScrollViewer");
+                scrollView.TemplateApplied += (s, ee) =>
+                {
+                    if (_verticalScrollBar is null)
+                    {
+                        ee.NameScope.Find<ScrollBar>("PART_HorizontalScrollBar").AllowAutoHide = false;
+                        _verticalScrollBar = ee.NameScope.Find<ScrollBar>("PART_VerticalScrollBar");
+                        _verticalScrollBar.AllowAutoHide = false;
+                        _verticalScrollBar.Width = 20;
+                        _selectionRenderer.VerticalScroll = _verticalScrollBar;
+                        _verticalScrollBar.TemplateApplied += (_, eee) =>
+                        { 
+                            if (_selectionRenderer.ScrollLineUpButton is null)
+                            {
+                                _selectionRenderer.ScrollLineUpButton = eee.NameScope.Find<Button>("PART_LineUpButton");
+                            }
+                        };
+                    }
+                };
+            }
+        }
+
+        private static void TextArea_SelectionChanged(object? sender, EventArgs e)
+        {
+            _selectionRenderer.Matches.Clear();
+            string selectedText = _editor.TextArea.Selection.GetText();
+            if (selectedText is not null && selectedText.Length > 0)
+            {
+                int startIndex = 0;
+                while (true)
+                {
+                    startIndex = _editor.Text.IndexOf(selectedText, startIndex);
+                    if (startIndex == -1)
+                    {
+                        break;
+                    }
+
+                    if (!_editor.TextArea.Selection.Contains(startIndex))
+                    {
+                        _selectionRenderer.Matches.Add(new TextSegment() { StartOffset = startIndex, Length = selectedText.Length });
+                    }
+
+                    startIndex += selectedText.Length;
+                }
+            }
         }
 
         private static void textEditor_TextArea_TextEntering(object sender, TextInputEventArgs e)
@@ -429,5 +491,62 @@ namespace AvaloniaEdit.Demo
         public abstract bool CanExecute(object parameter);
         public abstract void Execute(object parameter);
         public abstract event EventHandler CanExecuteChanged;
+    }
+
+    internal class SearchResultBackgroundRenderer : IBackgroundRenderer
+    {
+        public KnownLayer Layer => KnownLayer.Background;
+
+        public SearchResultBackgroundRenderer()
+        {
+            _markerBrush = Brushes.LightSteelBlue;
+        }
+
+        private IBrush _markerBrush;
+
+        public ScrollBar VerticalScroll { get; set; }
+
+        public Button ScrollLineUpButton { get; set; }
+
+        public List<TextSegment> Matches { get; set; } = new List<TextSegment>();
+
+        public void Draw(TextView textView, DrawingContext drawingContext)
+        {
+            if (VerticalScroll is not null && ScrollLineUpButton is not null)
+            {
+                drawingContext.FillRectangle(Brushes.Aquamarine, new Rect(textView.Bounds.Right - 10 - VerticalScroll.Width, ScrollLineUpButton.Height, 10, VerticalScroll.Bounds.Height - ScrollLineUpButton.Height * 2));
+            }
+
+            if (textView == null)
+                throw new ArgumentNullException(nameof(textView));
+            if (drawingContext == null)
+                throw new ArgumentNullException(nameof(drawingContext));
+
+            if (Matches == null || Matches.Count == 0 || !textView.VisualLinesValid)
+                return;
+
+            var visualLines = textView.VisualLines;
+            if (visualLines.Count == 0)
+                return;
+
+            var viewStart = visualLines.First().FirstDocumentLine.Offset;
+            var viewEnd = visualLines.Last().LastDocumentLine.EndOffset;
+            
+            foreach (var result in Matches.Where(x => x.EndOffset >= viewStart || x.StartOffset <= viewEnd))
+            {
+                var geoBuilder = new BackgroundGeometryBuilder
+                {
+                    AlignToWholePixels = true,
+                    CornerRadius = 3
+                };
+
+                geoBuilder.AddSegment(textView, result);
+                var geometry = geoBuilder.CreateGeometry();
+                if (geometry != null)
+                {
+                    drawingContext.DrawGeometry(_markerBrush, null, geometry);
+                }
+            }
+        }
     }
 }
