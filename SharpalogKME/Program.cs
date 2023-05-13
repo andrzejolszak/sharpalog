@@ -26,7 +26,6 @@ namespace AvaloniaEdit.Demo
 
         public static int Main(string[] args)
         {
-            /// Simple highlighting: DocumentColorizingTransformer
             /// Drawing with layers, e.g. CaretLayer
             /// TextArea.OffsetProperty for AffectsRender and AvaloniaProperty.Register
 
@@ -410,10 +409,12 @@ namespace AvaloniaEdit.Demo
                                     var textDecorations = new TextDecorationCollection(visualLine.TextRunProperties.TextDecorations) { TextDecorations.Underline[0] };
 
                                     visualLine.TextRunProperties.SetTextDecorations(textDecorations);
+                                    visualLine.TextRunProperties.SetForegroundBrush(Brushes.Red);
                                 }
                                 else
                                 {
                                     visualLine.TextRunProperties.SetTextDecorations(TextDecorations.Underline);
+                                    visualLine.TextRunProperties.SetForegroundBrush(Brushes.Green);
                                 }
                             }
                         );
