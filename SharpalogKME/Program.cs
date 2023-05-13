@@ -277,13 +277,13 @@ namespace AvaloniaEdit.Demo
                 _completionWindow.Closed += (o, args) => _completionWindow = null;
 
                 _completionWindow.HorizontalScrollBarVisibilityVisible();
-                _completionWindow.CompletionList.ListBox.ItemTemplate = new FuncDataTemplate<MyCompletionData>((data, _) =>
+                _completionWindow.CompletionList.ListBox.ItemTemplate = new FuncDataTemplate<MyCompletionData>((data, nameScope) =>
                     StackPanel()
                       .OrientationHorizontal().Height(18).VerticalAlignmentCenter()
                       .Children(
                         Image().Width(15).Height(15).Source(data.Image),
                         TextBlock().VerticalAlignmentCenter().Margin(10, 0, 0, 0).FontSize(15).Text(data.Text))
-                    , true);
+                    , false);
 
                 var data = _completionWindow.CompletionList.CompletionData;
                 data.Add(new MyCompletionData("Item1"));
@@ -333,7 +333,12 @@ namespace AvaloniaEdit.Demo
             // Use this property if you want to show a fancy UIElement in the list.
             public object Content => Text;
 
-            public object Description => "Description for " + Text;
+            public object Description => new ScrollViewer() 
+                { 
+                    Content = new TextBlock() { Text = "Description for " + Text, TextWrapping = TextWrapping.Wrap, MaxWidth = 200, Background = Brushes.White },
+                    MaxHeight = 100,
+                    VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
+                };
 
             public double Priority { get; } = 0;
 
