@@ -48,6 +48,9 @@ namespace AvaloniaEdit.Demo
                     Height = 400
                 };
 
+                textEditor.TextArea.TextView.Options.AllowScrollBelowDocument = false;
+                textEditor.TextArea.TextView.Options.HighlightCurrentLine = true;
+
                 textEditor.ShowLineNumbers = true;
                 textEditor.ContextMenu = new ContextMenu
                 {
@@ -95,9 +98,10 @@ namespace AvaloniaEdit.Demo
                 _editor = textEditor;
 
                 _selectionRenderer = new SearchResultBackgroundRenderer();
+                _selectionRenderer.TextEditor = textEditor;
                 textEditor.TextArea.TextView.BackgroundRenderers.Add(_selectionRenderer);
                 textEditor.TextArea.SelectionChanged += TextArea_SelectionChanged;
-                
+
                 textEditor.TemplateApplied += TextEditor_TemplateApplied;
 
                 Window(out var window)
@@ -509,30 +513,39 @@ namespace AvaloniaEdit.Demo
         public Button ScrollLineUpButton { get; set; }
 
         public List<TextSegment> Matches { get; set; } = new List<TextSegment>();
+        public TextEditor TextEditor { get; internal set; }
 
         public void Draw(TextView textView, DrawingContext drawingContext)
         {
-            if (VerticalScroll is not null && ScrollLineUpButton is not null)
-            {
-                drawingContext.FillRectangle(Brushes.Aquamarine, new Rect(textView.Bounds.Right - 10 - VerticalScroll.Width, ScrollLineUpButton.Height, 10, VerticalScroll.Bounds.Height - ScrollLineUpButton.Height * 2));
-            }
-
             if (textView == null)
                 throw new ArgumentNullException(nameof(textView));
             if (drawingContext == null)
                 throw new ArgumentNullException(nameof(drawingContext));
 
-            if (Matches == null || Matches.Count == 0 || !textView.VisualLinesValid)
-                return;
-
             var visualLines = textView.VisualLines;
             if (visualLines.Count == 0)
                 return;
 
-            var viewStart = visualLines.First().FirstDocumentLine.Offset;
-            var viewEnd = visualLines.Last().LastDocumentLine.EndOffset;
-            
-            foreach (var result in Matches.Where(x => x.EndOffset >= viewStart || x.StartOffset <= viewEnd))
+            DocumentLine firstViewLine = visualLines.First().FirstDocumentLine;
+            DocumentLine lastViewLine = visualLines.Last().LastDocumentLine;
+
+            var viewStartOffset = firstViewLine.Offset;
+            var viewEndOffset = lastViewLine.EndOffset;
+
+            if (VerticalScroll is not null && ScrollLineUpButton is not null)
+            {
+                double mapHeight = VerticalScroll.Bounds.Height - ScrollLineUpButton.Height * 2;
+                double mapX = textView.Bounds.Right - 10 - VerticalScroll.Width;
+
+                // Caret:
+                double caretInRange = mapHeight * (TextEditor.TextArea.Caret.Line - 1) / TextEditor.LineCount;
+                drawingContext.FillRectangle(Brushes.Gray, new Rect(mapX, caretInRange + ScrollLineUpButton.Height, 10, 2));
+            }
+
+            if (Matches == null || Matches.Count == 0 || !textView.VisualLinesValid)
+                return;
+
+            foreach (var result in Matches.Where(x => x.EndOffset >= viewStartOffset || x.StartOffset <= viewEndOffset))
             {
                 var geoBuilder = new BackgroundGeometryBuilder
                 {
