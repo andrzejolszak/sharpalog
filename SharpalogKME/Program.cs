@@ -50,6 +50,8 @@ namespace AvaloniaEdit.Demo
 
                 textEditor.TextArea.TextView.Options.AllowScrollBelowDocument = false;
                 textEditor.TextArea.TextView.Options.HighlightCurrentLine = true;
+                textEditor.TextArea.TextView.CurrentLineBackground = Brushes.Transparent;
+                textEditor.TextArea.TextView.CurrentLineBorder = new Pen(Brushes.LightGray);
 
                 textEditor.ShowLineNumbers = true;
                 textEditor.ContextMenu = new ContextMenu
