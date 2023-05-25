@@ -9,7 +9,7 @@ namespace Sharplog
 {
     public static class TokenListExtensions
     {
-        internal static bool TryEat(this List<Token<Token>> self, ref int index, Token tokenToEat)
+        public static bool TryEat(this List<Token<Token>> self, ref int index, Token tokenToEat)
         {
             if (self.Count > index && self[index].ID == tokenToEat)
             {
@@ -20,7 +20,7 @@ namespace Sharplog
             return false;
         }
 
-        internal static bool TryEat(this List<Token<Token>> self, ref int index, string value)
+        public static bool TryEat(this List<Token<Token>> self, ref int index, string value)
         {
             if (self.Count > index && self[index].Value == value)
             {
@@ -31,7 +31,7 @@ namespace Sharplog
             return false;
         }
 
-        internal static bool TryEatSequence(this List<Token<Token>> self, ref int index, params object[] values)
+        public static bool TryEatSequence(this List<Token<Token>> self, ref int index, params object[] values)
         {
             for (int i = 0; i < values.Length; i++)
             {
@@ -54,7 +54,7 @@ namespace Sharplog
             return true;
         }
 
-        internal static bool TryEatOneOf(this List<Token<Token>> self, ref int index, params object[] values)
+        public static bool TryEatOneOf(this List<Token<Token>> self, ref int index, params object[] values)
         {
             for (int i = 0; i < values.Length; i++)
             {
@@ -74,7 +74,7 @@ namespace Sharplog
             return false;
         }
 
-        internal static bool CanEatOneOf(this List<Token<Token>> self, ref int index, params object[] values)
+        public static bool CanEatOneOf(this List<Token<Token>> self, ref int index, params object[] values)
         {
             for (int i = 0; i < values.Length; i++)
             {
@@ -93,7 +93,7 @@ namespace Sharplog
         }
     }
 
-    internal enum Token
+    public enum Token
     {
         Arrow,
         Dot,
@@ -126,7 +126,7 @@ namespace Sharplog
     }
 
     /// <summary>Internal class that encapsulates the parser for the Datalog language.</summary>
-    internal class Parser
+    public class Parser
     {
         /// <summary>
         /// Caution: this has to remain an array, and ordering of elements matters!
@@ -302,7 +302,7 @@ namespace Sharplog
             .AddEndToken(Token.EOF);
 
         /// <exception cref="DatalogException"/>
-        internal static Statement.Statement ParseStmt(List<Token<Token>> tokens, ref int currentIndex, bool isAssertQuery)
+        public static Statement.Statement ParseStmt(List<Token<Token>> tokens, ref int currentIndex, bool isAssertQuery)
         {
             List<Expr> goals = new List<Expr>();
             try

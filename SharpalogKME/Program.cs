@@ -27,8 +27,8 @@ namespace AvaloniaEdit.Demo
                 _editor1 = new CodeEditor();
                 _editor2 = new CodeEditor();
                 _editor1.EditorControl.Document = new TextDocument(
-"// AvaloniaEdit supports displaying control chars: \a or \b or \v" + Environment.NewLine +
-"-- AvaloniaEdit supports displaying underline and strikethrough" + Environment.NewLine +
+"% AvaloniaEdit supports displaying control chars: \a or \b or \v" + Environment.NewLine +
+"% AvaloniaEdit supports displaying underline and strikethrough" + Environment.NewLine +
 "foo(a, b). bar(B, x) :- g, c.");
                 _editor2.EditorControl.Document = new TextDocument("one_liner(a, 1, X).");
 

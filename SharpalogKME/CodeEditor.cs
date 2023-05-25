@@ -1,11 +1,14 @@
-﻿using Avalonia.Media.Imaging;
+﻿using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using AvaloniaEdit;
 using AvaloniaEdit.CodeCompletion;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
 using AvaloniaEdit.Rendering;
 using RoslynPad.Editor;
+using Stringes;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 
 namespace Sharplog.KME
@@ -18,6 +21,7 @@ namespace Sharplog.KME
         private static Bitmap Foo = new Bitmap("res/foo.png");
         private static Bitmap Bulb = new Bitmap("res/bulb.png");
 
+
         private CompletionWindow _completionWindow;
         private OverloadInsightWindow _insightWindow;
         private MarkerMargin _errorMargin;
@@ -28,6 +32,7 @@ namespace Sharplog.KME
         private ScrollBar? _verticalScrollBar;
 
         public TextEditor EditorControl { get; private set; }
+        private SyntaxHighlightTransformer SyntaxHighlighter { get; }
 
         public CodeEditor()
         {
@@ -64,9 +69,7 @@ namespace Sharplog.KME
 
             // Error margin
             _errorMargin = new MarkerMargin { Width = 16, MarkerImage = Foo };
-            _errorMargin.IsVisible = true;
-            _errorMargin.LineNumber = 2;
-            _errorMargin.Message = "Foo";
+            this._errorMargin.IsVisible = true;
             this.EditorControl.TextArea.LeftMargins.Insert(0, _errorMargin);
 
             // Bulb margin with menu
@@ -94,11 +97,14 @@ namespace Sharplog.KME
             this.EditorControl.TextArea.TextEntered += TextAreaTextEntered;
 
             // Syntax highlighting
-            this.EditorControl.TextArea.TextView.LineTransformers.Add(new SyntaxHighlightTransformer());
+            this.SyntaxHighlighter = new SyntaxHighlightTransformer();
+            this.EditorControl.TextArea.TextView.LineTransformers.Add(this.SyntaxHighlighter);
+            this._selectionMatchRenderer.SyntaxHighlighter = this.SyntaxHighlighter;
 
-            _delayMoveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            _delayMoveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             _delayMoveTimer.Stop();
             _delayMoveTimer.Tick += DelayMoveTimerTick;
+            this.EditorControl.TextChanged += CaretPositionChanged;
         }
 
         public IStyle[] GetWindowCompletionStyles() =>
@@ -202,8 +208,11 @@ namespace Sharplog.KME
 
         private void HideBulb() => _bulbMargin.LineNumber = null;
 
-        private void CaretPositionChanged(object? sender, EventArgs e) => this._delayMoveTimer.Start();
-
+        private void CaretPositionChanged(object? sender, EventArgs e)
+        {
+            this._delayMoveTimer.Stop();
+            this._delayMoveTimer.Start();
+        }
         private async void DelayMoveTimerTick(object? sender, EventArgs e)
         {
             if (!_delayMoveTimer.IsEnabled)
@@ -224,6 +233,73 @@ namespace Sharplog.KME
                 };
 
             _bulbMargin.LineNumber = EditorControl.TextArea.Caret.Line;
+
+            int i = 0;
+            try
+            {
+                var tokens = Parser._lexer
+                    .Tokenize(this.EditorControl.Text)
+                    .Where(x => x.ID != Token.EOF)
+                    .Select(x => x.ID == Token.Identifier && x.Value.StartsWith("'") ? new Token<Token>(Token.Identifier, x.Trim('\'')) : x)
+                    .ToList();
+
+                this.SyntaxHighlighter.Tokens = tokens;
+
+                int prevIndex = -1;
+                while (i < tokens.Count)
+                {
+                    if (i <= prevIndex)
+                    {
+                        throw new InvalidOperationException("Parsing progress stalled at index " + i);
+                    }
+
+                    prevIndex = i;
+
+                    if (Parser.TryParseUniverseDeclaration(tokens, ref i, out string universe))
+                    {
+                        continue;
+                    }
+
+                    if (tokens.TryEat(ref i, Token.BraceClose))
+                    {
+                        continue;
+                    }
+
+                    if (tokens.TryEatSequence(ref i, "assert", Token.Colon))
+                    {
+                        Statement.Statement assertStatement = Parser.ParseStmt(tokens, ref i, true);
+                        continue;
+                    }
+
+                    if (tokens.TryEatSequence(ref i, "import", Token.Identifier))
+                    {
+                        continue;
+                    }
+
+                    if (tokens.TryEat(ref i, Token.LineComment) || tokens.TryEat(ref i, Token.MultiLineComment))
+                    {
+                        continue;
+                    }
+
+                    Statement.Statement statement = Parser.ParseStmt(tokens, ref i, false);
+                }
+
+                this.SyntaxHighlighter.SyntaxErrorOffset = null;
+                this.SyntaxHighlighter.SyntaxErrorLine = null;
+                this._errorMargin.LineNumber = null;
+            }
+            catch (Exception ex)
+            {
+                if (this.SyntaxHighlighter.Tokens is not null && this.SyntaxHighlighter.Tokens.Count > i)
+                {
+                    this.SyntaxHighlighter.SyntaxErrorOffset = this.SyntaxHighlighter.Tokens[i].Offset;
+                    this.SyntaxHighlighter.SyntaxErrorLine = this.SyntaxHighlighter.Tokens[i].Line + 1;
+                    this._errorMargin.LineNumber = this.SyntaxHighlighter.SyntaxErrorLine;
+                    this._errorMargin.Message = ex.Message;
+                }
+            }
+
+            this.EditorControl.TextArea.TextView.Redraw();
         }
 
         private void OpenContextMenu()
@@ -348,62 +424,92 @@ namespace Sharplog.KME
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
             }
         }
+    }
 
-        class SyntaxHighlightTransformer : DocumentColorizingTransformer
+    public class SyntaxHighlightTransformer : DocumentColorizingTransformer
+    {
+        public List<Token<Token>>? Tokens { get; set; }
+        public int? SyntaxErrorOffset { get; set; }
+        public int? SyntaxErrorLine { get; set; }
+
+        protected override void ColorizeLine(DocumentLine line)
         {
-            protected override void ColorizeLine(DocumentLine line)
+            if (line.LineNumber == 2)
             {
-                if (line.LineNumber == 2)
+                string lineText = this.CurrentContext.Document.GetText(line);
+
+                int indexOfUnderline = lineText.IndexOf("underline");
+                int indexOfStrikeThrough = lineText.IndexOf("strikethrough");
+
+                if (indexOfUnderline != -1)
                 {
-                    string lineText = this.CurrentContext.Document.GetText(line);
-
-                    int indexOfUnderline = lineText.IndexOf("underline");
-                    int indexOfStrikeThrough = lineText.IndexOf("strikethrough");
-
-                    if (indexOfUnderline != -1)
-                    {
-                        ChangeLinePart(
-                            line.Offset + indexOfUnderline,
-                            line.Offset + indexOfUnderline + "underline".Length,
-                            visualLine =>
+                    ChangeLinePart(
+                        line.Offset + indexOfUnderline,
+                        line.Offset + indexOfUnderline + "underline".Length,
+                        visualLine =>
+                        {
+                            if (visualLine.TextRunProperties.TextDecorations != null)
                             {
-                                if (visualLine.TextRunProperties.TextDecorations != null)
-                                {
-                                    var textDecorations = new TextDecorationCollection(visualLine.TextRunProperties.TextDecorations) { TextDecorations.Underline[0] };
+                                var textDecorations = new TextDecorationCollection(visualLine.TextRunProperties.TextDecorations) { TextDecorations.Underline[0] };
 
-                                    visualLine.TextRunProperties.SetTextDecorations(textDecorations);
-                                    visualLine.TextRunProperties.SetForegroundBrush(Brushes.Red);
-                                }
-                                else
-                                {
-                                    visualLine.TextRunProperties.SetTextDecorations(TextDecorations.Underline);
-                                    visualLine.TextRunProperties.SetForegroundBrush(Brushes.Green);
-                                }
+                                visualLine.TextRunProperties.SetTextDecorations(textDecorations);
+                                visualLine.TextRunProperties.SetForegroundBrush(Brushes.Red);
                             }
-                        );
-                    }
-
-                    if (indexOfStrikeThrough != -1)
-                    {
-                        ChangeLinePart(
-                            line.Offset + indexOfStrikeThrough,
-                            line.Offset + indexOfStrikeThrough + "strikethrough".Length,
-                            visualLine =>
+                            else
                             {
-                                if (visualLine.TextRunProperties.TextDecorations != null)
-                                {
-                                    var textDecorations = new TextDecorationCollection(visualLine.TextRunProperties.TextDecorations) { TextDecorations.Strikethrough[0] };
-
-                                    visualLine.TextRunProperties.SetTextDecorations(textDecorations);
-                                }
-                                else
-                                {
-                                    visualLine.TextRunProperties.SetTextDecorations(TextDecorations.Strikethrough);
-                                }
+                                visualLine.TextRunProperties.SetTextDecorations(TextDecorations.Underline);
+                                visualLine.TextRunProperties.SetForegroundBrush(Brushes.Green);
                             }
-                        );
-                    }
+                        }
+                    );
                 }
+
+                if (indexOfStrikeThrough != -1)
+                {
+                    ChangeLinePart(
+                        line.Offset + indexOfStrikeThrough,
+                        line.Offset + indexOfStrikeThrough + "strikethrough".Length,
+                        visualLine =>
+                        {
+                            if (visualLine.TextRunProperties.TextDecorations != null)
+                            {
+                                var textDecorations = new TextDecorationCollection(visualLine.TextRunProperties.TextDecorations) { TextDecorations.Strikethrough[0] };
+
+                                visualLine.TextRunProperties.SetTextDecorations(textDecorations);
+                            }
+                            else
+                            {
+                                visualLine.TextRunProperties.SetTextDecorations(TextDecorations.Strikethrough);
+                            }
+                        }
+                    );
+                }
+            }
+
+            if (this.SyntaxErrorOffset is not null && this.SyntaxErrorOffset >= line.Offset && this.SyntaxErrorOffset <= line.EndOffset)
+            {
+                ChangeLinePart(
+                    this.SyntaxErrorOffset.Value,
+                    Math.Min(line.EndOffset, this.SyntaxErrorOffset.Value + 1),
+                    visualLine =>
+                    {
+                        if (visualLine.TextRunProperties.TextDecorations != null)
+                        {
+                            var textDecorations = new TextDecorationCollection(visualLine.TextRunProperties.TextDecorations)
+                            {
+                                    CustomTextDecorations.SquiggleUnderline[0]
+                            };
+
+                            visualLine.TextRunProperties.SetTextDecorations(textDecorations);
+                            visualLine.TextRunProperties.SetForegroundBrush(Brushes.Red);
+                        }
+                        else
+                        {
+                            visualLine.TextRunProperties.SetTextDecorations(CustomTextDecorations.SquiggleUnderline);
+                            visualLine.TextRunProperties.SetForegroundBrush(Brushes.Red);
+                        }
+                    }
+                );
             }
         }
     }
@@ -459,7 +565,7 @@ namespace Sharplog.KME
         }
     }
 
-    internal class SelectionMatchRenderer : IBackgroundRenderer
+    public class SelectionMatchRenderer : IBackgroundRenderer
     {
         public KnownLayer Layer => KnownLayer.Background;
 
@@ -476,6 +582,7 @@ namespace Sharplog.KME
 
         public List<TextSegment> Matches { get; set; } = new List<TextSegment>();
         public TextEditor TextEditor { get; internal set; }
+        public SyntaxHighlightTransformer SyntaxHighlighter { get; internal set; }
 
         public void Draw(TextView textView, DrawingContext drawingContext)
         {
@@ -502,6 +609,13 @@ namespace Sharplog.KME
                 // Caret:
                 double caretInRange = mapHeight * (TextEditor.TextArea.Caret.Line - 1) / TextEditor.LineCount;
                 drawingContext.FillRectangle(Brushes.Gray, new Rect(mapX, caretInRange + ScrollLineUpButton.Height, 10, 2));
+
+                // Syntax error
+                if (this.SyntaxHighlighter is not null && this.SyntaxHighlighter.SyntaxErrorLine is not null)
+                {
+                    double errorInRange = mapHeight * (this.SyntaxHighlighter.SyntaxErrorLine.Value - 1) / TextEditor.LineCount;
+                    drawingContext.FillRectangle(Brushes.Red, new Rect(mapX + 6, errorInRange + ScrollLineUpButton.Height, 4, 4));
+                }
             }
 
             if (Matches == null || Matches.Count == 0 || !textView.VisualLinesValid)
@@ -523,5 +637,72 @@ namespace Sharplog.KME
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Defines a set of commonly used text decorations.
+    /// </summary>
+    public static class CustomTextDecorations
+    {
+        static CustomTextDecorations()
+        {
+            Underline = new TextDecorationCollection
+                        {
+                            new TextDecoration
+                            {
+                                Location = Avalonia.Media.TextDecorationLocation.Underline
+                            }
+                        };
+
+            Strikethrough = new TextDecorationCollection
+                            {
+                                new TextDecoration
+                                {
+                                    Location = Avalonia.Media.TextDecorationLocation.Strikethrough
+                                }
+                            };
+
+            SquiggleUnderline = new TextDecorationCollection
+                       {
+                           new TextDecoration
+                           {
+                               Location = Avalonia.Media.TextDecorationLocation.Underline,
+                               StrokeDashArray = new AvaloniaList<double>{1, 1},
+                               Stroke = Brushes.Red,
+                               StrokeThickness = 3,
+                               StrokeThicknessUnit = TextDecorationUnit.Pixel,
+                               StrokeOffsetUnit = TextDecorationUnit.Pixel,
+                               StrokeOffset = 4
+                           }
+                       };
+
+            Baseline = new TextDecorationCollection
+                       {
+                           new TextDecoration
+                           {
+                               Location = Avalonia.Media.TextDecorationLocation.Baseline
+                           }
+                       };
+        }
+
+        /// <summary>
+        /// Gets a <see cref="TextDecorationCollection"/> containing an underline.
+        /// </summary>
+        public static TextDecorationCollection Underline { get; }
+
+        /// <summary>
+        /// Gets a <see cref="TextDecorationCollection"/> containing a strikethrough.
+        /// </summary>
+        public static TextDecorationCollection Strikethrough { get; }
+
+        /// <summary>
+        /// Gets a <see cref="TextDecorationCollection"/> containing an overline.
+        /// </summary>
+        public static TextDecorationCollection SquiggleUnderline { get; }
+
+        /// <summary>
+        /// Gets a <see cref="TextDecorationCollection"/> containing a baseline.
+        /// </summary>
+        public static TextDecorationCollection Baseline { get; }
     }
 }
