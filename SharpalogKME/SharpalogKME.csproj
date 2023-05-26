@@ -8,11 +8,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Ast\Ast2Editor.cs" />
+    <Compile Remove="Ast\Languages\Tutorial.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Ast\Ast2Editor.cs" />
+    <None Include="Ast\Languages\Tutorial.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.0.0-preview6" />
     <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.0.0-preview6" />
     <PackageReference Include="Avalonia.Desktop" Version="11.0.0-preview6" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.0-preview6" />
     <PackageReference Include="NXUI" Version="11.0.0-preview6" />
+    <PackageReference Include="RangeTree" Version="3.0.1" />
   </ItemGroup>
 
   <ItemGroup>
