@@ -7,6 +7,7 @@ using AvaloniaEdit.CodeCompletion;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
 using AvaloniaEdit.Rendering;
+using AvaloniaEdit.Utils;
 using RoslynPad.Editor;
 using Stringes;
 using System.ComponentModel;
@@ -25,13 +26,14 @@ namespace Sharplog.KME
 
 
         private CompletionWindow _completionWindow;
-        private OverloadInsightWindow _insightWindow;
+        private OverloadInsightWindow _overloadInsightWindow;
         private MarkerMargin _errorMargin;
         private MarkerMargin _bulbMargin;
         private ContextActionsBulbContextMenu _contextMenu;
         private SelectionMatchRenderer _selectionMatchRenderer;
         private DispatcherTimer _delayMoveTimer;
         private ScrollBar? _verticalScrollBar;
+        private OverloadInsightWindow _hoverInsightsWindow;
 
         public TextEditor EditorControl { get; private set; }
         private SyntaxHighlightTransformer SyntaxHighlighter { get; }
@@ -106,10 +108,42 @@ namespace Sharplog.KME
             // Smalltalk-like in-line run results
             this.EditorControl.TextArea.TextView.ElementGenerators.Add(new RunResultElementGenerator());
 
+            // Read-only 
+            this.EditorControl.TextArea.ReadOnlySectionProvider = new CustomReadOnlySectionProvider();
+
+            // Hover
+            this.EditorControl.PointerHover += EditorControl_PointerHover;
+            this.EditorControl.PointerHoverStopped += EditorControl_PointerHoverStopped;
+
             _delayMoveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             _delayMoveTimer.Stop();
             _delayMoveTimer.Tick += DelayMoveTimerTick;
             this.EditorControl.TextChanged += CaretPositionChanged;
+        }
+
+        private void EditorControl_PointerHoverStopped(object? sender, PointerEventArgs e)
+        {
+            this._hoverInsightsWindow?.Close();
+            this._hoverInsightsWindow = null;
+        }
+
+        private void EditorControl_PointerHover(object? sender, PointerEventArgs e)
+        {
+            TextViewPosition? pos = this.EditorControl.GetPositionFromPoint(e.GetPosition(this.EditorControl.TextArea));
+            int offsetFromPoint = this.EditorControl.Document.GetOffset(pos.Value.Location);
+            if (offsetFromPoint == this.SyntaxHighlighter.SyntaxErrorOffset)
+            {
+                this._hoverInsightsWindow = new OverloadInsightWindow(this.EditorControl.TextArea);
+                this._hoverInsightsWindow.HorizontalOffset = e.GetPosition(this.EditorControl.TextArea.TextView).X;
+                this._hoverInsightsWindow.VerticalOffset = e.GetPosition(this.EditorControl.TextArea.TextView).Y;
+
+                this._hoverInsightsWindow.Provider = new CompletionOverloadProvider(new[]
+                {
+                    ("Syntax error:", this._errorMargin.Message),
+                });
+
+                this._hoverInsightsWindow.Open();
+            }
         }
 
         public IStyle[] GetWindowCompletionStyles() =>
@@ -183,7 +217,7 @@ namespace Sharplog.KME
                 }
             }
 
-            _insightWindow?.Hide();
+            _overloadInsightWindow?.Hide();
 
             // Do not set e.Handled=true.
             // We still want to insert the character that was typed.
@@ -307,17 +341,17 @@ namespace Sharplog.KME
             }
             else if (e.Text == "(")
             {
-                _insightWindow = new OverloadInsightWindow(e.Source as TextArea);
-                _insightWindow.Closed += (o, args) => _insightWindow = null;
+                _overloadInsightWindow = new OverloadInsightWindow(e.Source as TextArea);
+                _overloadInsightWindow.Closed += (o, args) => _overloadInsightWindow = null;
 
-                _insightWindow.Provider = new CompletionOverloadProvider(new[]
+                _overloadInsightWindow.Provider = new CompletionOverloadProvider(new[]
                 {
                     ("Method1(int, string)", "Method1 description"),
                     ("Method2(int)", "Method2 description"),
                     ("Method3(string)", "Method3 description"),
                 });
 
-                _insightWindow.Show();
+                _overloadInsightWindow.Show();
             }
         }
 
@@ -670,7 +704,7 @@ namespace Sharplog.KME
     }
 }
 
-sealed class RunResultElementGenerator : VisualLineElementGenerator
+class RunResultElementGenerator : VisualLineElementGenerator
 {
     public override int GetFirstInterestedOffset(int startOffset)
     {
@@ -765,6 +799,26 @@ sealed class RunResultElementGenerator : VisualLineElementGenerator
             drawingContext.FillRectangle(DarkGrayBrush, r, 2.5f);
 
             base.Draw(drawingContext, newOrigin);
+        }
+    }
+}
+
+class CustomReadOnlySectionProvider : IReadOnlySectionProvider
+{
+    public bool CanInsert(int offset)
+    {
+        return offset > 5;
+    }
+
+    public IEnumerable<ISegment> GetDeletableSegments(ISegment segment)
+    {
+        if (segment.Offset > 5)
+        {
+            return ExtensionMethods.Sequence(segment);
+        }
+        else
+        {
+            return Enumerable.Empty<ISegment>();
         }
     }
 }
