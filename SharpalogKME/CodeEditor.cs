@@ -682,6 +682,7 @@ sealed class RunResultElementGenerator : VisualLineElementGenerator
             var c = relevantText.Text[relevantText.Offset + i];
             switch (c)
             {
+                case 'ø':
                 case '§':
                     // The offset will come from the parser/runner
                     return startOffset + i;
@@ -703,6 +704,11 @@ sealed class RunResultElementGenerator : VisualLineElementGenerator
             runProperties.SetForegroundBrush(Brushes.White);
             var text = FormattedTextElement.PrepareText(TextFormatter.Current, "bananas", runProperties);
             return new SpecialCharacterBoxElement(text);
+        }
+        else if (c == 'ø')
+        {
+            // Probably the simpler approach
+            return new InlineObjectElement(0, new TextBox() { Text = "Foo bar\nnextLine\ntoo", BorderBrush = Brushes.Gray, BorderThickness = new Thickness(2), IsReadOnly = true });
         }
 
         return null;
