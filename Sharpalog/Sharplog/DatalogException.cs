@@ -1,3 +1,4 @@
+using Stringes;
 using System;
 
 namespace Sharplog
@@ -19,6 +20,10 @@ namespace Sharplog
     public class DatalogException : Exception
     {
         private const long serialVersionUID = 1L;
+
+        public int TokenIndex { get; set; }
+
+        public List<Token<Token>> Tokens { get; set; }
 
         /// <summary>Constructor with a message</summary>
         /// <param name="message">A description of the problem</param>

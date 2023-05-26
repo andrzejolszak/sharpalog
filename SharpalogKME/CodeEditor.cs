@@ -234,62 +234,20 @@ namespace Sharplog.KME
 
             _bulbMargin.LineNumber = EditorControl.TextArea.Caret.Line;
 
-            int i = 0;
             try
             {
-                var tokens = Parser._lexer
-                    .Tokenize(this.EditorControl.Text)
-                    .Where(x => x.ID != Token.EOF)
-                    .Select(x => x.ID == Token.Identifier && x.Value.StartsWith("'") ? new Token<Token>(Token.Identifier, x.Trim('\'')) : x)
-                    .ToList();
+                Universe parseUniverse = new Universe();
+                parseUniverse.ExecuteAll2(this.EditorControl.Text, out var tokens, parseOnly: true);
 
                 this.SyntaxHighlighter.Tokens = tokens;
-
-                int prevIndex = -1;
-                while (i < tokens.Count)
-                {
-                    if (i <= prevIndex)
-                    {
-                        throw new InvalidOperationException("Parsing progress stalled at index " + i);
-                    }
-
-                    prevIndex = i;
-
-                    if (Parser.TryParseUniverseDeclaration(tokens, ref i, out string universe))
-                    {
-                        continue;
-                    }
-
-                    if (tokens.TryEat(ref i, Token.BraceClose))
-                    {
-                        continue;
-                    }
-
-                    if (tokens.TryEatSequence(ref i, "assert", Token.Colon))
-                    {
-                        Statement.Statement assertStatement = Parser.ParseStmt(tokens, ref i, true);
-                        continue;
-                    }
-
-                    if (tokens.TryEatSequence(ref i, "import", Token.Identifier))
-                    {
-                        continue;
-                    }
-
-                    if (tokens.TryEat(ref i, Token.LineComment) || tokens.TryEat(ref i, Token.MultiLineComment))
-                    {
-                        continue;
-                    }
-
-                    Statement.Statement statement = Parser.ParseStmt(tokens, ref i, false);
-                }
-
                 this.SyntaxHighlighter.SyntaxErrorOffset = null;
                 this.SyntaxHighlighter.SyntaxErrorLine = null;
                 this._errorMargin.LineNumber = null;
             }
-            catch (Exception ex)
+            catch (DatalogException ex)
             {
+                this.SyntaxHighlighter.Tokens = ex.Tokens;
+                int i = ex.TokenIndex;
                 if (this.SyntaxHighlighter.Tokens is not null && this.SyntaxHighlighter.Tokens.Count > i)
                 {
                     this.SyntaxHighlighter.SyntaxErrorOffset = this.SyntaxHighlighter.Tokens[i].Offset;

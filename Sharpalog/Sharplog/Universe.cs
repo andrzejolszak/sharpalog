@@ -196,8 +196,11 @@ namespace Sharplog
         /// <exception cref="DatalogException">on syntax and I/O errors encountered while executing.</exception>
         /// <seealso cref="Sharplog.Output.QueryOutput"/>
         /// <exception cref="Sharplog.DatalogException"/>
-        public List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll2(string stream, bool parseOnly = false)
+        public List<(Statement.Statement, IDictionary<string, string>)> ExecuteAll2(string stream, out List<Token<Token>> tokens, bool parseOnly = false)
         {
+            int i = 0;
+            tokens = null;
+
             try
             {
                 // Tracks all query answers
@@ -205,14 +208,13 @@ namespace Sharplog
                 Dictionary<string, Universe> universes = new Dictionary<string, Universe>();
                 Universe currentUniverse = this;
 
-                List<Token<Token>> tokens = Parser._lexer
+                tokens = Parser._lexer
                     .Tokenize(stream)
                     .Where(x => x.ID != Token.EOF)
                     .Select(x => x.ID == Token.Identifier && x.Value.StartsWith("'") ? new Token<Token>(Token.Identifier, x.Trim('\'')) : x)
                     .ToList();
 
                 int prevIndex = -1;
-                int i = 0;
                 while (i < tokens.Count)
                 {
                     if (i <= prevIndex)
@@ -247,9 +249,9 @@ namespace Sharplog
                     }
                     else if (tokens.TryEatSequence(ref i, "import", Token.Identifier))
                     {
-                        if (!universes.TryGetValue(tokens[i-1].Value, out Universe imported))
+                        if (!universes.TryGetValue(tokens[i - 1].Value, out Universe imported))
                         {
-                            throw new DatalogException("[line " + tokens[i-1].Line + "] Undefined universe " + tokens[i-1].Value);
+                            throw new DatalogException("[line " + tokens[i - 1].Line + "] Undefined universe " + tokens[i - 1].Value);
                         }
 
                         currentUniverse.Edb.AddAll(imported.Edb.All);
@@ -285,9 +287,9 @@ namespace Sharplog
 
                 return answers;
             }
-            catch (IOException e)
+            catch (Exception e)
             {
-                throw new DatalogException(e);
+                throw new DatalogException(e) { TokenIndex = i, Tokens = tokens };
             }
         }
 
@@ -303,7 +305,7 @@ namespace Sharplog
         /// <exception cref="Sharplog.DatalogException"/>
         public Dictionary<Statement.Statement, List<(Statement.Statement, IDictionary<string, string>)>> ExecuteAll(string statements, bool parseOnly = false)
         {
-            return GroupByAsDictionary(ExecuteAll2(statements, parseOnly), x => x.Item1);
+            return GroupByAsDictionary(ExecuteAll2(statements, out var _,  parseOnly), x => x.Item1);
         }
 
         public static Dictionary<TKey, List<TSource>> GroupByAsDictionary<TSource, TKey>(IEnumerable<TSource> that, Func<TSource, TKey> groupKeySelector)
