@@ -1,5 +1,7 @@
 ﻿using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Media.Immutable;
+using Avalonia.Media.TextFormatting;
 using AvaloniaEdit;
 using AvaloniaEdit.CodeCompletion;
 using AvaloniaEdit.Document;
@@ -100,6 +102,9 @@ namespace Sharplog.KME
             this.SyntaxHighlighter = new SyntaxHighlightTransformer();
             this.EditorControl.TextArea.TextView.LineTransformers.Add(this.SyntaxHighlighter);
             this._selectionMatchRenderer.SyntaxHighlighter = this.SyntaxHighlighter;
+
+            // Smalltalk-like in-line run results
+            this.EditorControl.TextArea.TextView.ElementGenerators.Add(new RunResultElementGenerator());
 
             _delayMoveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             _delayMoveTimer.Stop();
@@ -662,5 +667,98 @@ namespace Sharplog.KME
         /// Gets a <see cref="TextDecorationCollection"/> containing a baseline.
         /// </summary>
         public static TextDecorationCollection Baseline { get; }
+    }
+}
+
+sealed class RunResultElementGenerator : VisualLineElementGenerator
+{
+    public override int GetFirstInterestedOffset(int startOffset)
+    {
+        var endLine = CurrentContext.VisualLine.LastDocumentLine;
+        var relevantText = CurrentContext.GetText(startOffset, endLine.EndOffset - startOffset);
+
+        for (var i = 0; i < relevantText.Count; i++)
+        {
+            var c = relevantText.Text[relevantText.Offset + i];
+            switch (c)
+            {
+                case '§':
+                    // The offset will come from the parser/runner
+                    return startOffset + i;
+                default:
+                    break;
+            }
+        }
+        return -1;
+    }
+
+    public override VisualLineElement ConstructElement(int offset)
+    {
+        // The offset will come from the parser/runner
+        var c = CurrentContext.Document.GetCharAt(offset);
+
+        if (c == '§')
+        {
+            var runProperties = new VisualLineElementTextRunProperties(CurrentContext.GlobalTextRunProperties);
+            runProperties.SetForegroundBrush(Brushes.White);
+            var text = FormattedTextElement.PrepareText(TextFormatter.Current, "bananas", runProperties);
+            return new SpecialCharacterBoxElement(text);
+        }
+
+        return null;
+    }
+
+    private sealed class SpecialCharacterBoxElement : FormattedTextElement
+    {
+        public SpecialCharacterBoxElement(TextLine line) : base(line, 1)
+        {
+        }
+
+        public override TextRun CreateTextRun(int startVisualColumn, ITextRunConstructionContext context)
+        {
+            return new SpecialCharacterTextRun(this, TextRunProperties);
+        }
+    }
+
+    internal sealed class SpecialCharacterTextRun : FormattedTextRun
+    {
+        private static readonly ISolidColorBrush DarkGrayBrush;
+
+        internal const double BoxMargin = 3;
+
+        static SpecialCharacterTextRun()
+        {
+            DarkGrayBrush = new ImmutableSolidColorBrush(Color.FromArgb(200, 128, 128, 128));
+        }
+
+        public SpecialCharacterTextRun(FormattedTextElement element, TextRunProperties properties)
+            : base(element, properties)
+        {
+        }
+
+        public override Size Size
+        {
+            get
+            {
+                var s = base.Size;
+
+                return s.WithWidth(s.Width + BoxMargin);
+            }
+        }
+
+        public override void Draw(DrawingContext drawingContext, Point origin)
+        {
+            var (x, y) = origin;
+
+            var newOrigin = new Point(x + (BoxMargin / 2), y);
+
+            var (width, height) = Size;
+
+            var r = new Rect(x, y, width, height);
+
+            drawingContext.FillRectangle(DarkGrayBrush, r, 2.5f);
+
+            base.Draw(drawingContext, newOrigin);
+        }
     }
 }
