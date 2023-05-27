@@ -1,4 +1,5 @@
-﻿using Avalonia.Media;
+﻿using Avalonia.Controls;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Media.Immutable;
 using Avalonia.Media.TextFormatting;
@@ -33,7 +34,7 @@ namespace Sharplog.KME
         private SelectionMatchRenderer _selectionMatchRenderer;
         private DispatcherTimer _delayMoveTimer;
         private ScrollBar? _verticalScrollBar;
-        private OverloadInsightWindow _hoverInsightsWindow;
+        private FreeFormInsightWindow _hoverInsightsWindow;
 
         public TextEditor EditorControl { get; private set; }
         private SyntaxHighlightTransformer SyntaxHighlighter { get; }
@@ -127,14 +128,19 @@ namespace Sharplog.KME
             if (offsetFromPoint == this.SyntaxHighlighter.SyntaxErrorOffset)
             {
                 this._hoverInsightsWindow?.Close();
-                this._hoverInsightsWindow = new OverloadInsightWindow(this.EditorControl.TextArea);
-                this._hoverInsightsWindow.HorizontalOffset = e.GetPosition(this.EditorControl.TextArea.TextView).X;
-                this._hoverInsightsWindow.VerticalOffset = e.GetPosition(this.EditorControl.TextArea.TextView).Y;
-
+                this._hoverInsightsWindow = new FreeFormInsightWindow(this.EditorControl.TextArea, pos.Value);
                 this._hoverInsightsWindow.Provider = new CompletionOverloadProvider(new[]
                 {
-                    ("Syntax error:", this._errorMargin.Message),
-                    ("ff", "bars")
+                    ("Syntax error:", (object)this._errorMargin.Message),
+                    ("ff", (object)"bars"),
+                    ("ctrl", (object)                       
+                        StackPanel()
+                        .Children(
+                          Button(out var button)
+                            .Content("Please click me!"),
+                          Label()
+                            .Content(button.ObserveOnClick().Select(x => $"You clicked.")))
+                        )
                 });
 
                 this._hoverInsightsWindow.Open();
@@ -244,6 +250,13 @@ namespace Sharplog.KME
 
         private void CaretPositionChanged(object? sender, EventArgs e)
         {
+            // Move hover with text - for lens
+            // if (this._hoverInsightsWindow is not null)
+            // {
+            //     this._hoverInsightsWindow.Position = new TextViewPosition(this._hoverInsightsWindow.Position.Line, this._hoverInsightsWindow.Position.Column + 1);
+            //     this._hoverInsightsWindow.UpdatePos();
+            // }
+
             this._hoverInsightsWindow?.Close();
             this._hoverInsightsWindow = null;
 
@@ -344,9 +357,9 @@ namespace Sharplog.KME
 
                 _overloadInsightWindow.Provider = new CompletionOverloadProvider(new[]
                 {
-                    ("Method1(int, string)", "Method1 description"),
-                    ("Method2(int)", "Method2 description"),
-                    ("Method3(string)", "Method3 description"),
+                    ("Method1(int, string)", (object)"Method1 description"),
+                    ("Method2(int)", (object)"Method2 description"),
+                    ("Method3(string)", (object)"Method3 description"),
                 });
 
                 _overloadInsightWindow.Show();
@@ -386,10 +399,10 @@ namespace Sharplog.KME
 
         private class CompletionOverloadProvider : IOverloadProvider
         {
-            private readonly IList<(string header, string content)> _items;
+            private readonly IList<(string header, object content)> _items;
             private int _selectedIndex;
 
-            public CompletionOverloadProvider(IList<(string header, string content)> items)
+            public CompletionOverloadProvider(IList<(string header, object content)> items)
             {
                 _items = items;
                 SelectedIndex = 0;
@@ -755,6 +768,66 @@ class CustomReadOnlySectionProvider : IReadOnlySectionProvider
         else
         {
             return Enumerable.Empty<ISegment>();
+        }
+    }
+}
+
+public class FreeFormInsightWindow : InsightWindow
+{
+    private readonly OverloadViewer _overloadViewer = new OverloadViewer();
+
+    public IOverloadProvider Provider
+    {
+        get
+        {
+            return _overloadViewer.Provider;
+        }
+        set
+        {
+            _overloadViewer.Provider = value;
+        }
+    }
+
+    public TextViewPosition Position { get; set; }
+
+    public void UpdatePos()
+    {
+        // For lens?
+        base.SetPosition(this.Position);
+        this.UpdatePosition();
+    }
+
+    public FreeFormInsightWindow(TextArea textArea, TextViewPosition position)
+        : base(textArea)
+    {
+        _overloadViewer.Margin = new Thickness(2.0, 0.0, 0.0, 0.0);
+        this.Position = position;
+        base.Child = _overloadViewer;
+        base.SetPosition(this.Position);
+        base.CloseAutomatically = false;
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (!e.Handled && Provider != null && Provider.Count > 1)
+        {
+            switch (e.Key)
+            {
+                case Key.Up:
+                    e.Handled = true;
+                    _overloadViewer.ChangeIndex(-1);
+                    break;
+                case Key.Down:
+                    e.Handled = true;
+                    _overloadViewer.ChangeIndex(1);
+                    break;
+            }
+
+            if (e.Handled)
+            {
+                UpdatePosition();
+            }
         }
     }
 }
