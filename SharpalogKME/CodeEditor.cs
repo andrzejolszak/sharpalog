@@ -108,23 +108,16 @@ namespace Sharplog.KME
             // Smalltalk-like in-line run results
             this.EditorControl.TextArea.TextView.ElementGenerators.Add(new RunResultElementGenerator());
 
-            // Read-only 
+            // Read-only: will be useful for projectional
             this.EditorControl.TextArea.ReadOnlySectionProvider = new CustomReadOnlySectionProvider();
 
             // Hover
             this.EditorControl.PointerHover += EditorControl_PointerHover;
-            this.EditorControl.PointerHoverStopped += EditorControl_PointerHoverStopped;
 
             _delayMoveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             _delayMoveTimer.Stop();
             _delayMoveTimer.Tick += DelayMoveTimerTick;
             this.EditorControl.TextChanged += CaretPositionChanged;
-        }
-
-        private void EditorControl_PointerHoverStopped(object? sender, PointerEventArgs e)
-        {
-            this._hoverInsightsWindow?.Close();
-            this._hoverInsightsWindow = null;
         }
 
         private void EditorControl_PointerHover(object? sender, PointerEventArgs e)
@@ -133,6 +126,7 @@ namespace Sharplog.KME
             int offsetFromPoint = this.EditorControl.Document.GetOffset(pos.Value.Location);
             if (offsetFromPoint == this.SyntaxHighlighter.SyntaxErrorOffset)
             {
+                this._hoverInsightsWindow?.Close();
                 this._hoverInsightsWindow = new OverloadInsightWindow(this.EditorControl.TextArea);
                 this._hoverInsightsWindow.HorizontalOffset = e.GetPosition(this.EditorControl.TextArea.TextView).X;
                 this._hoverInsightsWindow.VerticalOffset = e.GetPosition(this.EditorControl.TextArea.TextView).Y;
@@ -140,6 +134,7 @@ namespace Sharplog.KME
                 this._hoverInsightsWindow.Provider = new CompletionOverloadProvider(new[]
                 {
                     ("Syntax error:", this._errorMargin.Message),
+                    ("ff", "bars")
                 });
 
                 this._hoverInsightsWindow.Open();
@@ -249,6 +244,9 @@ namespace Sharplog.KME
 
         private void CaretPositionChanged(object? sender, EventArgs e)
         {
+            this._hoverInsightsWindow?.Close();
+            this._hoverInsightsWindow = null;
+
             this._delayMoveTimer.Stop();
             this._delayMoveTimer.Start();
         }
@@ -647,7 +645,7 @@ namespace Sharplog.KME
                         {
                             new TextDecoration
                             {
-                                Location = Avalonia.Media.TextDecorationLocation.Underline
+                                Location = Avalonia.Media.TextDecorationLocation.Underline,
                             }
                         };
 
@@ -717,7 +715,6 @@ class RunResultElementGenerator : VisualLineElementGenerator
             switch (c)
             {
                 case 'ø':
-                case '§':
                     // The offset will come from the parser/runner
                     return startOffset + i;
                 default:
@@ -732,74 +729,13 @@ class RunResultElementGenerator : VisualLineElementGenerator
         // The offset will come from the parser/runner
         var c = CurrentContext.Document.GetCharAt(offset);
 
-        if (c == '§')
-        {
-            var runProperties = new VisualLineElementTextRunProperties(CurrentContext.GlobalTextRunProperties);
-            runProperties.SetForegroundBrush(Brushes.White);
-            var text = FormattedTextElement.PrepareText(TextFormatter.Current, "bananas", runProperties);
-            return new SpecialCharacterBoxElement(text);
-        }
-        else if (c == 'ø')
+        if (c == 'ø')
         {
             // Probably the simpler approach
             return new InlineObjectElement(0, new TextBox() { Text = "Foo bar\nnextLine\ntoo", BorderBrush = Brushes.Gray, BorderThickness = new Thickness(2), IsReadOnly = true });
         }
 
         return null;
-    }
-
-    private sealed class SpecialCharacterBoxElement : FormattedTextElement
-    {
-        public SpecialCharacterBoxElement(TextLine line) : base(line, 1)
-        {
-        }
-
-        public override TextRun CreateTextRun(int startVisualColumn, ITextRunConstructionContext context)
-        {
-            return new SpecialCharacterTextRun(this, TextRunProperties);
-        }
-    }
-
-    internal sealed class SpecialCharacterTextRun : FormattedTextRun
-    {
-        private static readonly ISolidColorBrush DarkGrayBrush;
-
-        internal const double BoxMargin = 3;
-
-        static SpecialCharacterTextRun()
-        {
-            DarkGrayBrush = new ImmutableSolidColorBrush(Color.FromArgb(200, 128, 128, 128));
-        }
-
-        public SpecialCharacterTextRun(FormattedTextElement element, TextRunProperties properties)
-            : base(element, properties)
-        {
-        }
-
-        public override Size Size
-        {
-            get
-            {
-                var s = base.Size;
-
-                return s.WithWidth(s.Width + BoxMargin);
-            }
-        }
-
-        public override void Draw(DrawingContext drawingContext, Point origin)
-        {
-            var (x, y) = origin;
-
-            var newOrigin = new Point(x + (BoxMargin / 2), y);
-
-            var (width, height) = Size;
-
-            var r = new Rect(x, y, width, height);
-
-            drawingContext.FillRectangle(DarkGrayBrush, r, 2.5f);
-
-            base.Draw(drawingContext, newOrigin);
-        }
     }
 }
 
