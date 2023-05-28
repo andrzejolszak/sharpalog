@@ -1,16 +1,50 @@
 ﻿using AvaloniaEdit;
+using AvaloniaEdit.Document;
+using AvaloniaEdit.Editing;
 using IntervalTree;
+using ProjectionalBlazorMonaco;
 using Sharplog.KME;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Text.Json;
 
 namespace Ast2
 {
     public class Ast2Editor
     {
+        private void InitAndLoadExample(int exampleNumber)
+        {
+            this.Init();
+
+            this.SetRoot(new Node());
+            if (exampleNumber == 0)
+            {
+                foreach (Action<Node, Ast2Editor> b in Tutorial.Builders)
+                {
+                    b.Invoke(this.Root, this);
+                    this.Root.AddChild(ReadOnlyTextNode.NewLine()).AddChild(ReadOnlyTextNode.NewLine());
+                }
+            }
+            else
+            {
+                this.ConsoleLog("Loading: " + exampleNumber);
+                Tutorial.Builders[exampleNumber - 1].Invoke(this.Root, this);
+            }
+
+            this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
+        }
+
+        /*private void OnModelContentChanged(ModelContentChangedEvent eventArg)
+        {
+            // TODO
+            // Use this instead of overriding commands for letters.
+            // RangeLength = 0 for inserts. <>0 for deletes
+            // await this._astEditor.OnTextTyped(eventArg);
+        }*/
+
+        private void ForceRefresh()
+        {
+            this.RefreshWholeEditor(UserInputResult.HandledNeedsGlobalRefresh());
+        }
+
         public readonly CodeEditor _monacoEditor;
 
         private long _debugId = 0;
@@ -32,9 +66,12 @@ namespace Ast2
             this._monacoEditor = monacoEditor;
         }
 
-        public async Task Init()
+        public void Init()
         {
-            await this.AddCommands();
+            this._monacoEditor.EditorControl.TextArea.Caret.PositionChanged += OnPositionChanged;
+            this._monacoEditor.EditorControl.KeyDown += this.OnKeyDown;
+            this._monacoEditor.EditorControl.KeyUp += this.OnKeyUp;
+            this._monacoEditor.EditorControl.PointerReleased += this.OnMouseDown;
         }
 
         public void SetRoot(Node root)
@@ -42,173 +79,35 @@ namespace Ast2
             this.Root = root;
             this.CurrentNode = root;
             this.CurrentPosition = new TextViewPosition();
-            this.CurrentOffset = 0;
             this.CurrentSelectionStart = 0;
             this.CurrentSelectionEnd = 0;
         }
 
-        public async Task ConsoleLog(string msg)
+        public void ConsoleLog(string msg)
         {
             // await window.Console.Log(msg);
         }
 
-        private async Task AddCommands()
+        public void OnMouseDown(object s, PointerReleasedEventArgs e)
         {
-            await _monacoEditor.AddCommand((int)Key.CtrlCmd | (int)Key.Home, async (editor, keyCode) =>
-            {
-                await SetAndRevealPosition(new Position { LineNumber = 0, Column = 0 });
-            });
-
-            await _monacoEditor.AddCommand((int)Key.Home, async (editor, keyCode) =>
-            {
-                await SetAndRevealPosition(new Position { LineNumber = this.CurrentPosition.LineNumber, Column = 0 });
-            });
-
-            await _monacoEditor.AddCommand((int)KeyCode.End, async (editor, keyCode) =>
-            {
-                await SetAndRevealPosition(new Position { LineNumber = this.CurrentPosition.LineNumber, Column = 1000000 });
-            });
-
-            await _monacoEditor.AddAction("suggest", "", new[] { (int)KeyMode.CtrlCmd | (int)KeyCode.Space }, "!suggestWidgetVisible", null, null, 0, async (editor, keyCode) =>
-            {
-                await this.RefreshCompletions();
-
-                // Show completion programmatic
-                using JsonDocument doc2 = JsonDocument.Parse(@"{}");
-                JsonElement root2 = doc2.RootElement;
-                await _monacoEditor.Trigger("api", "editor.action.triggerSuggest", root2);
-                // await _monacoEditor.Trigger("api", "selectNextSuggestion", root2);
-            });
-
-            await _monacoEditor.AddCommand((int)KeyMode.CtrlCmd | (int)KeyCode.KEY_X, async (editor, keyCode) =>
-            {
-                Console.WriteLine("CMD:" + keyCode);
-            });
-
-            await _monacoEditor.AddCommand((int)KeyMode.CtrlCmd | (int)KeyCode.KEY_Y, async (editor, keyCode) =>
-            {
-                Console.WriteLine("CMD:" + keyCode);
-            });
-
-
-            await _monacoEditor.AddCommand((int)KeyMode.Shift | (int)KeyCode.LeftArrow, async (editor, keyCode) =>
-            {
-                // registerEditorCommand https://github.com/microsoft/vscode/blob/94c9ea46838a9a619aeafb7e8afd1170c967bb55/src/vs/editor/browser/controller/coreCommands.ts
-                using JsonDocument doc2 = JsonDocument.Parse(@"{}");
-                JsonElement root2 = doc2.RootElement;
-                await _monacoEditor.Trigger("api", "cursorLeftSelect", root2);
-            });
-
-            await _monacoEditor.AddCommand((int)KeyMode.Shift | (int)KeyCode.RightArrow, async (editor, keyCode) =>
-            {
-                using JsonDocument doc2 = JsonDocument.Parse(@"{}");
-                JsonElement root2 = doc2.RootElement;
-                await _monacoEditor.Trigger("api", "cursorRightSelect", root2);
-            });
-
-            await _monacoEditor.AddCommand((int)KeyMode.Shift | (int)KeyCode.UpArrow, async (editor, keyCode) =>
-            {
-                using JsonDocument doc2 = JsonDocument.Parse(@"{}");
-                JsonElement root2 = doc2.RootElement;
-                await _monacoEditor.Trigger("api", "cursorUpSelect", root2);
-            });
-
-            await _monacoEditor.AddCommand((int)KeyMode.Shift | (int)KeyCode.DownArrow, async (editor, keyCode) =>
-            {
-                using JsonDocument doc2 = JsonDocument.Parse(@"{}");
-                JsonElement root2 = doc2.RootElement;
-                await _monacoEditor.Trigger("api", "cursorDownSelect", root2);
-            });
-
-            await _monacoEditor.AddAction("RightArrow", "", new[] { (int)KeyCode.RightArrow }, null, null, null, 0, async (editor, keyCode) =>
-            {
-                using JsonDocument doc2 = JsonDocument.Parse(@"{}");
-                JsonElement root2 = doc2.RootElement;
-                await _monacoEditor.Trigger("api", "cursorRight", root2);
-            });
-
-            await _monacoEditor.AddAction("LeftArrow", "", new[] { (int)KeyCode.LeftArrow }, null, null, null, 0, async (editor, keyCode) =>
-            {
-                using JsonDocument doc2 = JsonDocument.Parse(@"{}");
-                JsonElement root2 = doc2.RootElement;
-                await _monacoEditor.Trigger("api", "cursorLeft", root2);
-            });
-
-            await _monacoEditor.AddAction("UpArrow", "", new[] { (int)KeyCode.UpArrow }, "!suggestWidgetVisible", null, null, 0, async (editor, keyCode) =>
-            {
-                using JsonDocument doc2 = JsonDocument.Parse(@"{}");
-                JsonElement root2 = doc2.RootElement;
-                await _monacoEditor.Trigger("api", "cursorUp", root2);
-            });
-
-            await _monacoEditor.AddAction("DownArrow", "", new[] { (int)KeyCode.DownArrow }, "!suggestWidgetVisible", null, null, 0, async (editor, keyCode) =>
-            {
-                using JsonDocument doc2 = JsonDocument.Parse(@"{}");
-                JsonElement root2 = doc2.RootElement;
-                await _monacoEditor.Trigger("api", "cursorDown", root2);
-            });
-
-            await _monacoEditor.AddCommand((int)KeyMode.CtrlCmd | (int)KeyCode.KEY_Z, async (editor, keyCode) =>
-            {
-                Console.WriteLine("CMD:" + keyCode);
-                Position p = await _monacoEditor.GetPosition();
-                TextModel m = await _monacoEditor.GetModel();
-                await m.ApplyEdits(new List<IdentifiedSingleEditOperation> {
-                new IdentifiedSingleEditOperation() {
-                    Range = new BlazorMonaco.Range(p.LineNumber, p.Column, p.LineNumber, p.Column),
-                    // null for delete
-                    Text = "aaa"
-                } });
-
-                await SetAndRevealPosition(await m.ModifyPosition(p, 3));
-
-                // TYPE programmatic
-                using JsonDocument doc = JsonDocument.Parse(@"{""text"": ""test""}");
-                JsonElement root = doc.RootElement;
-                await _monacoEditor.Trigger("keyboard", "type", root);
-            });
-
-            /*
-            import * as monaco from 'monaco-editor/esm/vs/editor/edcore.main';
-            import { SimpleEditorModelResolverService } from 'monaco-editor/esm/vs/editor/standalone/browser/simpleServices';
-            //*
-            //* Monkeypatch to make 'Find All References' work across multiple files
-            //* https://github.com/Microsoft/monaco-editor/issues/779#issuecomment-374258435
-            //*
-            SimpleEditorModelResolverService.prototype.findModel = function(editor, resource) {
-                return monaco.editor.getModels().find(model => model.uri.toString() === resource.toString());
-            };
-            */
-
-            /*
-            await m.ApplyEdits(new List<IdentifiedSingleEditOperation> {
-                new IdentifiedSingleEditOperation() {
-                    Range = range,
-                    Text = "aaaaaaa"
-                } });
-            */
-        }
-
-        public async Task OnMouseDown(EditorMouseEvent e)
-        {
-            TextModel m = await this._monacoEditor.GetModel();
-            int pos = await m.GetOffsetAt(e.Target.Position);
-            if (pos < 0)
+            TextViewPosition? pos = this._monacoEditor.EditorControl.GetPositionFromPoint(e.GetPosition(this._monacoEditor.EditorControl.TextArea));
+            if (pos is null)
             {
                 return;
             }
 
-            await ConsoleLog("OnMouseDown");
+            ConsoleLog("OnMouseDown");
 
-            (int, Node) node = this.AtPosition(pos);
+            (int, Node) node = this.AtPosition(this._monacoEditor.EditorControl.Document.GetOffset(pos.Value.Location));
             if (node.Item2 != null)
             {
                 UserInputResult res = node.Item2.OnMouseClickBubble(this.GetEditorState(), e, node.Item2);
-                await this.HandleUserInputResult(res);
+                this.HandleUserInputResult(res);
             }
         }
 
-        public async Task OnTextTyped(ModelContentChangedEvent eventArg)
+        /* TODO
+         * public void OnTextTyped(ModelContentChangedEvent eventArg)
         {
             if (this._refreshing)
             {
@@ -217,8 +116,6 @@ namespace Ast2
 
             await ConsoleLog("OnTextTyped: " + eventArg.Changes[0]?.Text);
 
-            var window = await _jsRuntime.Window();
-            await using (await window.Console.Time("OnTextTyped" + _debugId++))
             {
                 if (this._refreshing || eventArg == null)
                 {
@@ -239,11 +136,11 @@ namespace Ast2
                 res.NeedsGlobalEditorRefresh = true;
                 await HandleUserInputResult(res);
             }
-        }
+        }*/
 
-        private async Task RefreshCompletions()
+        private void RefreshCompletions()
         {
-            List<AstAutocompleteItem> completions = await this.GetCompletions();
+            List<AstAutocompleteItem> completions = this.GetCompletions();
             List<object> jsCompletions = new List<object>(completions.Count);
             foreach (AstAutocompleteItem c in completions)
             {
@@ -260,10 +157,10 @@ namespace Ast2
                 jsCompletions.Add(compl);
             }
 
-            await _jsRuntime.InvokeVoidAsync(@"setCompletionsArray", jsCompletions);
+            // TODO: set the completions
         }
 
-        public async Task HandleUserInputResult(UserInputResult res)
+        public void HandleUserInputResult(UserInputResult res)
         {
             if (res.NeedsGlobalEditorRefresh)
             {
@@ -273,35 +170,30 @@ namespace Ast2
                 }
 
                 this.Root.CreateView(this.GetEditorState());
-                await this.RefreshWholeEditor(res);
+                this.RefreshWholeEditor(res);
             }
         }
 
-        public async Task RefreshWholeEditor(UserInputResult res)
+        public void RefreshWholeEditor(UserInputResult res)
         {
             if (this._refreshing)
             {
                 return;
             }
 
-            var window = await _jsRuntime.Window();
-            await using (await window.Console.Time("RefreshWholeEditor" + _debugId++))
             {
                 this._refreshing = true;
                 this._visibleNodesIntervalTree.Clear();
                 this.VisibleNodesList.Clear();
 
-                List<(string text, PositionInfo info, ModelDecorationOptions style, ModelDecorationOptions backgroundStyle, ModelDecorationOptions overlayStyle)> renderInfo = new List<(string text, PositionInfo info, ModelDecorationOptions style, ModelDecorationOptions backgroundStyle, ModelDecorationOptions overlayStyle)>(1024);
+                List<(string text, PositionInfo info, TextDecoration style, TextDecoration backgroundStyle, TextDecoration overlayStyle)> renderInfo = new List<(string text, PositionInfo info, TextDecoration style, TextDecoration backgroundStyle, TextDecoration overlayStyle)>(1024);
                 int addedLength = 0;
 
 
-                await using (await window.Console.Time("RenderViewsRecusive" + _debugId++))
-                {
-                    RenderViewsRecusive(this.Root, renderInfo, ref addedLength);
-                }
+                RenderViewsRecusive(this.Root, renderInfo, ref addedLength);
 
                 StringBuilder sb = new StringBuilder();
-                List<ModelDeltaDecoration> decors = new List<ModelDeltaDecoration>(renderInfo.Count);
+                List<TextDecoration> decors = new List<TextDecoration>(renderInfo.Count);
                 int line = 1;
                 int colInLine = 1;
                 foreach (var r in renderInfo)
@@ -321,68 +213,65 @@ namespace Ast2
                     if (r.text != "\r\n")
                     {
                         colInLine += r.text.Length;
-                        ModelDeltaDecoration d = new ModelDeltaDecoration
-                        {
-                            Range = new BlazorMonaco.Range { StartColumn = startCol, StartLineNumber = startLine, EndColumn = colInLine, EndLineNumber = line },
-                            Options = new ModelDecorationOptions
-                            {
-                                InlineClassName = r.style?.InlineClassName ?? "decorationPointer",
-                                HoverMessage = new[] { new MarkdownString { Value = r.info.StartOffset + "-" + r.info.EndOffset } },
-                                Minimap = new ModelDecorationMinimapOptions { Color = "red" },
-                                OverviewRuler = new ModelDecorationOverviewRulerOptions { Color = "blue" }
-                            }
-                        };
-                        decors.Add(d);
+                        // TextDecoration d = new TextDecoration
+                        // {
+                        //     Range = new BlazorMonaco.Range { StartColumn = startCol, StartLineNumber = startLine, EndColumn = colInLine, EndLineNumber = line },
+                        //     Options = new TextDecoration
+                        //     {
+                        //         InlineClassName = r.style?.InlineClassName ?? "decorationPointer",
+                        //         HoverMessage = new[] { new MarkdownString { Value = r.info.StartOffset + "-" + r.info.EndOffset } },
+                        //         Minimap = new ModelDecorationMinimapOptions { Color = "red" },
+                        //         OverviewRuler = new ModelDecorationOverviewRulerOptions { Color = "blue" }
+                        //     }
+                        // };
+                        // decors.Add(d);
                     }
                 }
 
-                Position oldPos = this.CurrentPosition;
+                TextViewPosition oldPos = this.CurrentPosition;
                 Node oldNode = this.CurrentNode;
 
-                await using (await window.Console.Time("Editor.SetValue" + _debugId++))
                 {
-                    await this._monacoEditor.SetValue(sb.ToString());
+                    this._monacoEditor.EditorControl.Text = sb.ToString();
                 }
 
-                await using (await window.Console.Time("Editor.DeltaDecorations" + _debugId++))
-                {
-                    _ = await _monacoEditor.DeltaDecorations(null, decors.ToArray());
-                }
+                // {
+                //     _ = _monacoEditor.DeltaDecorations(null, decors.ToArray());
+                // }
 
                 this._refreshing = false;
 
-                await using (await window.Console.Time("SetPosition" + _debugId++))
                 {
                     if (res.NewLocalPosition.HasValue)
                     {
-                        Position newPos = await this.GetPositionAt(res.NewLocalPositionContext.PositionInfo.StartOffset + res.NewLocalPosition.Value);
+                        TextLocation newPos = this.GetPositionAt(res.NewLocalPositionContext.PositionInfo.StartOffset + res.NewLocalPosition.Value);
                         if (newPos != null)
                         {
-                            await SetAndRevealPosition(newPos);
+                            SetAndRevealPosition(newPos);
                         }
                     }
                     else if (res.ChangeFocusToNode != null)
                     {
-                        Position newPos = await this.GetPositionAt(res.ChangeFocusToNode.PositionInfo.StartOffset);
+                        TextLocation newPos = this.GetPositionAt(res.ChangeFocusToNode.PositionInfo.StartOffset);
                         if (newPos != null)
                         {
-                            await SetAndRevealPosition(newPos);
+                            SetAndRevealPosition(newPos);
                         }
                     }
                     else
                     {
-                        await SetAndRevealPosition(oldPos);
+                        SetAndRevealPosition(oldPos.Location);
                     }
                 }
             }
         }
 
-        private async Task<Selection> GetSelection()
+        private Selection GetSelection()
         {
-            return await this._monacoEditor.GetSelection();
+            return this._monacoEditor.EditorControl.TextArea.Selection;
         }
 
-        private void RenderViewsRecusive(Node node, List<(string text, PositionInfo info, ModelDecorationOptions style, ModelDecorationOptions backgroundStyle, ModelDecorationOptions overlayStyle)> res, ref int addedLength)
+        private void RenderViewsRecusive(Node node, List<(string text, PositionInfo info, TextDecoration style, TextDecoration backgroundStyle, TextDecoration overlayStyle)> res, ref int addedLength)
         {
             if (node.View != null && (node.VisualChildren?.Count ?? 0) == 0)
             {
@@ -408,13 +297,6 @@ namespace Ast2
             }
         }
 
-        public async Task<int> GetCurrentEditorControlPositionStart()
-        {
-            Position p = await this._monacoEditor.GetPosition();
-            TextModel m = await this._monacoEditor.GetModel();
-            return await m.GetOffsetAt(p);
-        }
-
         public int ListIndex() => AtPosition(this.CurrentOffset).Item1;
 
         public List<Node> VisibleNodesList { get; } = new List<Node>(100);
@@ -425,7 +307,7 @@ namespace Ast2
 
         public TextViewPosition CurrentPosition { get; private set; } = new TextViewPosition();
 
-        public int CurrentOffset { get; private set; }
+        public int CurrentOffset => this._monacoEditor.EditorControl.Document.GetOffset(this.CurrentPosition.Location);
         // TODO: this breaks down after text editign
         public List<string> SelectionStyleIds { get; private set; } = new List<string>(2);
         public int CurrentSelectionStart { get; private set; }
@@ -453,29 +335,29 @@ namespace Ast2
             return res[0].Item1 < res[1].Item1 ? res[0] : res[1];
         }
 
-        private async Task PopupMenu_ClosedWithouSelection(object sender, EventArgs e)
+        private void PopupMenu_ClosedWithouSelection(object sender, EventArgs e)
         {
-            await this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
+            this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
         }
 
 
-        public async Task OnAstCompletionSelected(string completionId)
+        public void OnAstCompletionSelected(string completionId)
         {
-            await ConsoleLog("OnAstCompletionSelected" + completionId);
+            ConsoleLog("OnAstCompletionSelected" + completionId);
             AstAutocompleteItem ai = this.LastCompletionsById[completionId];
             ai.TriggerItemSelected();
-            await this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
+            this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
         }
 
-        public async Task OnKeyUp(KeyboardEvent e)
+        public void OnKeyUp(object s, KeyEventArgs e)
         {
-            await ConsoleLog("OnKeyUp");
+            ConsoleLog("OnKeyUp");
             Node currNode = this.CurrentNode;
             UserInputResult res = currNode.OnKeyUpBubble(this.GetEditorState(), e, currNode);
-            await this .HandleUserInputResult(res);
+            this .HandleUserInputResult(res);
         }
 
-        public async Task OnKeyDown(KeyboardEvent e)
+        public void OnKeyDown(object sender, KeyEventArgs e)
         {
             if (this._refreshing)
             {
@@ -483,54 +365,54 @@ namespace Ast2
             }
 
             // TODO: convert to actions
-            await ConsoleLog("OnKeyDown");
-            if (e.CtrlKey && e.KeyCode == KeyCode.RightArrow)
+            ConsoleLog("OnKeyDown");
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.Right)
             {
                 int listIndex = this.ListIndex();
                 if (listIndex < this.VisibleNodesList.Count - 1)
                 {
                     int newPosition = this.VisibleNodesList[listIndex + 1].PositionInfo.StartOffset;
-                    await this.Select(newPosition);
+                    this.Select(newPosition);
                 }                
             }
-            else if (e.CtrlKey && e.KeyCode == KeyCode.LeftArrow)
+            else if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.Left)
             {
                 int listIndex = this.ListIndex();
                 if (listIndex > 0)
                 {
                     int newPosition = this.VisibleNodesList[listIndex - 1].PositionInfo.EndOffset;
-                    await this.Select(newPosition);
+                    this.Select(newPosition);
                 }
             }
-            else if (e.CtrlKey && e.KeyCode == KeyCode.UpArrow)
+            else if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key== Key.Up)
             {
                 /*INode parent = this.SelectedNode.Parent;
                 int newPosition = this.NodeManager.GetFirsPositionOfNode(parent);
                 this.Select(newPosition);
                 e.Handled = true;*/
             }
-            else if (e.KeyCode == KeyCode.F5)
+            else if (e.Key == Key.F5)
             {
-                await this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
+                this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
             }
             else
             {
                 Node currNode = this.CurrentNode;
                 UserInputResult res = currNode.OnKeyDownBubble(this.GetEditorState(), e, currNode);
-                await this.HandleUserInputResult(res);
+                this.HandleUserInputResult(res);
             }
         }
 
-        private async Task Select(int position)
+        private void Select(int position)
         {
-            Position newPos = await this.GetPositionAt(position);
-            await SetAndRevealPosition(newPos);
+            TextLocation newPos = this.GetPositionAt(position);
+            SetAndRevealPosition(newPos);
         }
 
-        private async Task SetAndRevealPosition(TextViewPosition position)
+        private void SetAndRevealPosition(TextLocation position)
         {
-            await _monacoEditor.EditorControl.TextArea.Caret.Position = position;
-            await _monacoEditor.RevealPosition(position);
+            _monacoEditor.EditorControl.TextArea.Caret.Location = position;
+            _monacoEditor.EditorControl.ScrollTo(position.Line, position.Column);
         }
 
         public Node GetParent(Node node, bool jumpHole)
@@ -549,36 +431,34 @@ namespace Ast2
             return parent;
         }
 
-        public async Task OnPositionChanged(CursorPositionChangedEvent e)
+        public void OnPositionChanged(object? sender, EventArgs e)
         {
-            if (this._refreshing || e.Source == "deleteLeft")
+            // TODO source = deleteLeft
+            if (this._refreshing)
             {
                 return;
             }
 
-            if (e.Source != "api" && e.Source != "mouse")
-            {
-                await this.SetAndRevealPosition(this.CurrentPosition);
-                return;
-            }
-
+            // TODO source != api and != mouse
+            // if (e.Source != "api" && e.Source != "mouse")
+            // {
+            //     this.SetAndRevealPosition(this.CurrentPosition);
+            //     return;
+            // }
+            // 
             // TODO: consider skipping if position unchanged
 
-            var window = await _jsRuntime.Window();
-            await using (await window.Console.Time("OnPositionChanged" + _debugId++))
             {
                 // await using (await window.Console.Time("GetOffsets"))
                 {
-                    this.CurrentPosition = e.Position;
-                    TextModel m = await this._monacoEditor.GetModel();
-                    this.CurrentOffset = await m.GetOffsetAt(e.Position);
-                    Selection s = await this._monacoEditor.GetSelection();
-                    this.CurrentSelectionStart = await m.GetOffsetAt(new Position() { Column = s.StartColumn, LineNumber = s.StartLineNumber });
-                    this.CurrentSelectionEnd = await m.GetOffsetAt(new Position() { Column = s.EndColumn, LineNumber = s.EndLineNumber });
+                    this.CurrentPosition = this._monacoEditor.EditorControl.TextArea.Caret.Position;
+                    Selection s = this.GetSelection();
+                    this.CurrentSelectionStart = this._monacoEditor.EditorControl.Document.GetOffset(s.StartPosition.Location);
+                    this.CurrentSelectionEnd = this._monacoEditor.EditorControl.Document.GetOffset(s.EndPosition.Location);
                 }
 
                 Node current = this.AtPosition(this.CurrentOffset).Item2;
-                await ConsoleLog("CO" + this.CurrentOffset);
+                ConsoleLog("CO" + this.CurrentOffset);
                 if (current?.PositionInfo == null)
                 {
                     return;
@@ -589,12 +469,6 @@ namespace Ast2
                     // TODO: next node?
                 }
 
-                if (this.SelectionStyleIds.Count > 0)
-                {
-                    await this._monacoEditor.DeltaDecorations(SelectionStyleIds.ToArray(), new ModelDeltaDecoration[0]);
-                    this.SelectionStyleIds.Clear();
-                }
-
                 if (this.CurrentNode != current)
                 {
                     EditorState es = this.GetEditorState();
@@ -603,10 +477,10 @@ namespace Ast2
 
                     if (res1.HasValue)
                     {
-                        await this.HandleUserInputResult(res1.Value);
+                        this.HandleUserInputResult(res1.Value);
                     }
 
-                    await this.HandleUserInputResult(res2);
+                    this.HandleUserInputResult(res2);
                 }
 
                 this.CurrentNode = current;
@@ -640,51 +514,50 @@ namespace Ast2
                         max = n.PositionInfo.EndOffset;
                     }
 
-                    this.SelectionStyleIds.AddRange(await this.SetStyleForRange(min, max, Styles.SelectedParentNodeText, null));
+                    this.SetStyleForRange(min, max, Styles.SelectedParentNodeText, null);
                 }
 
-                this.SelectionStyleIds.AddRange(await this.SetStyleForRange(this.CurrentNode.PositionInfo.StartOffset, this.CurrentNode.PositionInfo.EndOffset, Styles.SelectedNodeText, null));
+                this.SetStyleForRange(this.CurrentNode.PositionInfo.StartOffset, this.CurrentNode.PositionInfo.EndOffset, Styles.SelectedNodeText, null);
             }
         }
 
-        private async Task<Position> GetPositionAt(int offset)
+        private TextLocation GetPositionAt(int offset)
         {
-            TextModel model = await this._monacoEditor.GetModel();
-            return await model.GetPositionAt(offset);
+            return this._monacoEditor.EditorControl.Document.GetLocation(offset);
         }
 
-        private async Task<string[]> SetStyleForRange(int min, int max, ModelDecorationOptions selectedParentNodeText, string hoverMessage)
+        private void SetStyleForRange(int min, int max, TextDecoration selectedParentNodeText, string hoverMessage)
         {
-            List<ModelDeltaDecoration> decors = new List<ModelDeltaDecoration>(1);
-            Position startPos = await this.GetPositionAt(min);
-            Position endPos = await this.GetPositionAt(max);
-            ModelDeltaDecoration d = new ModelDeltaDecoration
-            {
-                Range = new BlazorMonaco.Range { StartColumn = startPos.Column, StartLineNumber = startPos.LineNumber, EndColumn = endPos.Column, EndLineNumber = endPos.LineNumber },
-                Options = new ModelDecorationOptions
-                {
-                    InlineClassName = selectedParentNodeText.InlineClassName,
-                    Minimap = new ModelDecorationMinimapOptions { Color = "red" },
-                    OverviewRuler = new ModelDecorationOverviewRulerOptions { Color = "blue" }
-                }
-            };
-
-            if (hoverMessage != null)
-            {
-                d.Options.HoverMessage = new[] { new MarkdownString { Value = hoverMessage } };
-            }
-
-            decors.Add(d);
-
-            return await _monacoEditor.DeltaDecorations(null, decors.ToArray());
+            // List<TextDecoration> decors = new List<TextDecoration>(1);
+            // TextLocation startPos = this.GetPositionAt(min);
+            // TextLocation endPos = this.GetPositionAt(max);
+            // TextDecoration d = new TextDecoration
+            // {
+            //     Range = new BlazorMonaco.Range { StartColumn = startPos.Column, StartLineNumber = startPos.LineNumber, EndColumn = endPos.Column, EndLineNumber = endPos.LineNumber },
+            //     Options = new TextDecoration
+            //     {
+            //         InlineClassName = selectedParentNodeText.InlineClassName,
+            //         Minimap = new ModelDecorationMinimapOptions { Color = "red" },
+            //         OverviewRuler = new ModelDecorationOverviewRulerOptions { Color = "blue" }
+            //     }
+            // };
+            // 
+            // if (hoverMessage != null)
+            // {
+            //     d.Options.HoverMessage = new[] { new MarkdownString { Value = hoverMessage } };
+            // }
+            // 
+            // decors.Add(d);
+            // 
+            // _monacoEditor.DeltaDecorations(null, decors.ToArray());
         }
 
         public EditorState GetEditorState()
         {
-            return new EditorState(this, this.CurrentOffset, this.CurrentSelectionStart, this.CurrentSelectionEnd);
+            return new EditorState(this.CurrentOffset, this.CurrentSelectionStart, this.CurrentSelectionEnd, this.FactoryRegistry, this.VisibleNodesList);
         }
 
-        public async Task<List<AstAutocompleteItem>> GetCompletions()
+        public List<AstAutocompleteItem> GetCompletions()
         {
             List<AstAutocompleteItem> completions = this.CurrentNode.GetCustomCompletions(this.GetEditorState());
             this.LastCompletionsById = completions.ToDictionary(x => x.Id);

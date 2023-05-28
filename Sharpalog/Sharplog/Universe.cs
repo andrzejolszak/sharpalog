@@ -289,6 +289,7 @@ namespace Sharplog
             }
             catch (Exception e)
             {
+                // TODO: assume current line broken, and collect all exceptions instead of returning just the first one
                 throw new DatalogException(e) { TokenIndex = i, Tokens = tokens };
             }
         }
