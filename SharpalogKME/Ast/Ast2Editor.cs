@@ -4,13 +4,15 @@ using AvaloniaEdit.Editing;
 using IntervalTree;
 using ProjectionalBlazorMonaco;
 using Sharplog.KME;
+using System;
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Ast2
 {
     public class Ast2Editor
     {
-        private void InitAndLoadExample(int exampleNumber)
+        public void InitAndLoadExample(int exampleNumber)
         {
             this.Init();
 
@@ -69,16 +71,33 @@ namespace Ast2
         public void Init()
         {
             this._monacoEditor.EditorControl.TextArea.Caret.PositionChanged += OnPositionChanged;
-            this._monacoEditor.EditorControl.KeyDown += this.OnKeyDown;
+            this._monacoEditor.EditorControl.AddHandler(TextEditor.KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
             this._monacoEditor.EditorControl.KeyUp += this.OnKeyUp;
             this._monacoEditor.EditorControl.PointerReleased += this.OnMouseDown;
+            this._monacoEditor.EditorControl.Document.Changing += Document_Changing;
+        }
+
+        private void Document_Changing(object? sender, DocumentChangeEventArgs e)
+        {
+            if (this._refreshing || e == null)
+            {
+                return;
+            }
+
+            bool isDel = e.RemovalLength != 0;
+            string text = (isDel ? new string('\b', e.RemovalLength) : string.Empty) + e.InsertedText.Text;
+            
+            // TODO: multi select
+            UserInputResult res = this.CurrentNode.OnTextChangingBubble(this.GetEditorState(isDel && e.Offset == this.CurrentOffset && e.RemovalLength == 1 ? 1 : 0), text, this.CurrentNode);
+            res.NeedsGlobalEditorRefresh = true;
+            Dispatcher.UIThread.Post(() => HandleUserInputResult(res));
         }
 
         public void SetRoot(Node root)
         {
             this.Root = root;
             this.CurrentNode = root;
-            this.CurrentPosition = new TextViewPosition();
+            this.CurrentPosition = new TextViewPosition(1, 1);
             this.CurrentSelectionStart = 0;
             this.CurrentSelectionEnd = 0;
         }
@@ -105,38 +124,6 @@ namespace Ast2
                 this.HandleUserInputResult(res);
             }
         }
-
-        /* TODO
-         * public void OnTextTyped(ModelContentChangedEvent eventArg)
-        {
-            if (this._refreshing)
-            {
-                return;
-            }
-
-            await ConsoleLog("OnTextTyped: " + eventArg.Changes[0]?.Text);
-
-            {
-                if (this._refreshing || eventArg == null)
-                {
-                    return;
-                }
-
-                ModelContentChange change = eventArg.Changes[0];
-
-                if (this.LastCompletionsById.ContainsKey(change.Text))
-                {
-                    return;
-                }
-
-                bool isDel = change.RangeLength != 0;
-                string text = (isDel ? new string('\b', change.RangeLength) : string.Empty) + change.Text;
-
-                UserInputResult res = this.CurrentNode.OnTextChangingBubble(this.GetEditorState(), text, this.CurrentNode);
-                res.NeedsGlobalEditorRefresh = true;
-                await HandleUserInputResult(res);
-            }
-        }*/
 
         private void RefreshCompletions()
         {
@@ -305,7 +292,7 @@ namespace Ast2
 
         public Dictionary<string, AstAutocompleteItem> LastCompletionsById { get; private set; } = new Dictionary<string, AstAutocompleteItem>();
 
-        public TextViewPosition CurrentPosition { get; private set; } = new TextViewPosition();
+        public TextViewPosition CurrentPosition { get; private set; } = new TextViewPosition(1, 1);
 
         public int CurrentOffset => this._monacoEditor.EditorControl.Document.GetOffset(this.CurrentPosition.Location);
         // TODO: this breaks down after text editign
@@ -354,17 +341,16 @@ namespace Ast2
             ConsoleLog("OnKeyUp");
             Node currNode = this.CurrentNode;
             UserInputResult res = currNode.OnKeyUpBubble(this.GetEditorState(), e, currNode);
-            this .HandleUserInputResult(res);
+            this.HandleUserInputResult(res);
         }
 
-        public void OnKeyDown(object sender, KeyEventArgs e)
+        public void OnPreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (this._refreshing)
             {
                 return;
             }
 
-            // TODO: convert to actions
             ConsoleLog("OnKeyDown");
             if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.Right)
             {
@@ -373,23 +359,22 @@ namespace Ast2
                 {
                     int newPosition = this.VisibleNodesList[listIndex + 1].PositionInfo.StartOffset;
                     this.Select(newPosition);
+                    e.Handled = true;
                 }                
             }
             else if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.Left)
             {
                 int listIndex = this.ListIndex();
-                if (listIndex > 0)
-                {
-                    int newPosition = this.VisibleNodesList[listIndex - 1].PositionInfo.EndOffset;
-                    this.Select(newPosition);
-                }
+                int newPosition = this.VisibleNodesList[Math.Max(0, listIndex - 1)].PositionInfo.EndOffset;
+                this.Select(newPosition);
+                e.Handled = true;
             }
             else if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key== Key.Up)
             {
-                /*INode parent = this.SelectedNode.Parent;
-                int newPosition = this.NodeManager.GetFirsPositionOfNode(parent);
+                Node parent = this.CurrentNode.Parent;
+                int newPosition = parent.PositionInfo.StartOffset;
                 this.Select(newPosition);
-                e.Handled = true;*/
+                e.Handled = true;
             }
             else if (e.Key == Key.F5)
             {
@@ -398,6 +383,7 @@ namespace Ast2
             else
             {
                 Node currNode = this.CurrentNode;
+                
                 UserInputResult res = currNode.OnKeyDownBubble(this.GetEditorState(), e, currNode);
                 this.HandleUserInputResult(res);
             }
@@ -453,8 +439,8 @@ namespace Ast2
                 {
                     this.CurrentPosition = this._monacoEditor.EditorControl.TextArea.Caret.Position;
                     Selection s = this.GetSelection();
-                    this.CurrentSelectionStart = this._monacoEditor.EditorControl.Document.GetOffset(s.StartPosition.Location);
-                    this.CurrentSelectionEnd = this._monacoEditor.EditorControl.Document.GetOffset(s.EndPosition.Location);
+                    this.CurrentSelectionStart =  this._monacoEditor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.StartPosition.Location);
+                    this.CurrentSelectionEnd = this._monacoEditor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.EndPosition.Location);
                 }
 
                 Node current = this.AtPosition(this.CurrentOffset).Item2;
@@ -552,9 +538,9 @@ namespace Ast2
             // _monacoEditor.DeltaDecorations(null, decors.ToArray());
         }
 
-        public EditorState GetEditorState()
+        public EditorState GetEditorState(int offsetAdjustment = 0)
         {
-            return new EditorState(this.CurrentOffset, this.CurrentSelectionStart, this.CurrentSelectionEnd, this.FactoryRegistry, this.VisibleNodesList);
+            return new EditorState(this.CurrentOffset + offsetAdjustment, this.CurrentSelectionStart + offsetAdjustment, this.CurrentSelectionEnd + offsetAdjustment, this.FactoryRegistry, this.VisibleNodesList);
         }
 
         public List<AstAutocompleteItem> GetCompletions()

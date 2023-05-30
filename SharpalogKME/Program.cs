@@ -1,4 +1,5 @@
-﻿using Avalonia.Media.Imaging;
+﻿using Ast2;
+using Avalonia.Media.Imaging;
 using Avalonia.Rendering;
 using AvaloniaEdit.CodeCompletion;
 using AvaloniaEdit.Document;
@@ -16,6 +17,7 @@ namespace AvaloniaEdit.Demo
     {
         private static CodeEditor _editor1;
         private static CodeEditor _editor2;
+        private static Ast2Editor _astEditor;
 
         public static int Main(string[] args)
         {
@@ -26,6 +28,8 @@ namespace AvaloniaEdit.Demo
             {
                 _editor1 = new CodeEditor();
                 _editor2 = new CodeEditor();
+                _astEditor = new Ast2Editor(new CodeEditor());
+                _astEditor.InitAndLoadExample(2);
                 _editor1.EditorControl.Document = new TextDocument(
 "% AvaloniaEdit supports displaying control chars: \a or \b or \v" + Environment.NewLine +
 "% AvaloniaEdit supports displaying underline and strikethrough" + Environment.NewLine +
@@ -48,7 +52,8 @@ namespace AvaloniaEdit.Demo
                             .Content(button.ObserveOnClick().Select(x => $"You clicked.")),
                             _editor1.EditorControl,
                             Label().Content("One-liner: "),
-                            _editor2.EditorControl
+                            _editor2.EditorControl,
+                            _astEditor._monacoEditor.EditorControl
                           )
                         )
                     .Title(tb1.ObserveText().Select(x => x?.ToUpper()));
