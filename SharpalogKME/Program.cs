@@ -29,7 +29,7 @@ namespace AvaloniaEdit.Demo
                 _editor1 = new CodeEditor();
                 _editor2 = new CodeEditor();
                 _astEditor = new Ast2Editor(new CodeEditor());
-                _astEditor.InitAndLoadExample(2);
+                _astEditor.InitAndLoadExample(0);
                 _editor1.EditorControl.Document = new TextDocument(
 "% AvaloniaEdit supports displaying control chars: \a or \b or \v" + Environment.NewLine +
 "% AvaloniaEdit supports displaying underline and strikethrough" + Environment.NewLine +
@@ -53,7 +53,7 @@ namespace AvaloniaEdit.Demo
                             _editor1.EditorControl,
                             Label().Content("One-liner: "),
                             _editor2.EditorControl,
-                            _astEditor._monacoEditor.EditorControl
+                            _astEditor.Editor.EditorControl
                           )
                         )
                     .Title(tb1.ObserveText().Select(x => x?.ToUpper()));

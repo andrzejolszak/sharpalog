@@ -6,6 +6,7 @@ using ProjectionalBlazorMonaco;
 using Sharplog.KME;
 using System;
 using System.Text;
+using static Sharplog.KME.CodeEditor;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace Ast2
@@ -47,9 +48,7 @@ namespace Ast2
             this.RefreshWholeEditor(UserInputResult.HandledNeedsGlobalRefresh());
         }
 
-        public readonly CodeEditor _monacoEditor;
-
-        private long _debugId = 0;
+        public readonly CodeEditor Editor;
 
         /// <summary>
         /// Only nodes that have a View are added here, i.e. children-based nodes are not, but you can retrieve them
@@ -65,16 +64,16 @@ namespace Ast2
 
         public Ast2Editor(CodeEditor monacoEditor)
         {
-            this._monacoEditor = monacoEditor;
+            this.Editor = monacoEditor;
         }
 
         public void Init()
         {
-            this._monacoEditor.EditorControl.TextArea.Caret.PositionChanged += OnPositionChanged;
-            this._monacoEditor.EditorControl.AddHandler(TextEditor.KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
-            this._monacoEditor.EditorControl.KeyUp += this.OnKeyUp;
-            this._monacoEditor.EditorControl.PointerReleased += this.OnMouseDown;
-            this._monacoEditor.EditorControl.Document.Changing += Document_Changing;
+            this.Editor.EditorControl.TextArea.Caret.PositionChanged += OnPositionChanged;
+            this.Editor.EditorControl.AddHandler(TextEditor.KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+            this.Editor.EditorControl.KeyUp += this.OnKeyUp;
+            this.Editor.EditorControl.PointerReleased += this.OnMouseDown;
+            this.Editor.EditorControl.Document.Changing += Document_Changing;
         }
 
         private void Document_Changing(object? sender, DocumentChangeEventArgs e)
@@ -109,7 +108,7 @@ namespace Ast2
 
         public void OnMouseDown(object s, PointerReleasedEventArgs e)
         {
-            TextViewPosition? pos = this._monacoEditor.EditorControl.GetPositionFromPoint(e.GetPosition(this._monacoEditor.EditorControl.TextArea));
+            TextViewPosition? pos = this.Editor.EditorControl.GetPositionFromPoint(e.GetPosition(this.Editor.EditorControl.TextArea));
             if (pos is null)
             {
                 return;
@@ -117,7 +116,7 @@ namespace Ast2
 
             ConsoleLog("OnMouseDown");
 
-            (int, Node) node = this.AtPosition(this._monacoEditor.EditorControl.Document.GetOffset(pos.Value.Location));
+            (int, Node) node = this.AtPosition(this.Editor.EditorControl.Document.GetOffset(pos.Value.Location));
             if (node.Item2 != null)
             {
                 UserInputResult res = node.Item2.OnMouseClickBubble(this.GetEditorState(), e, node.Item2);
@@ -128,23 +127,10 @@ namespace Ast2
         private void RefreshCompletions()
         {
             List<AstAutocompleteItem> completions = this.GetCompletions();
-            List<object> jsCompletions = new List<object>(completions.Count);
-            foreach (AstAutocompleteItem c in completions)
-            {
-
-                // Schema: https://microsoft.github.io/monaco-editor/api/interfaces/monaco.languages.completionitem.html
-                dynamic compl = new System.Dynamic.ExpandoObject();
-                compl.insertText = c.Id;
-                compl.filterText = c.SourceToMatch;
-                compl.label = c.MenuText;
-                compl.documentation = c.DocTitle + " " + c.DocText;
-                compl.kind = 1;
-                compl.detail = c.Id;
-
-                jsCompletions.Add(compl);
-            }
-
-            // TODO: set the completions
+            List<CompletionItem> completionItems = completions.Select(x => new CompletionItem(x.MenuText, x.DocTitle + " " + x.DocText, x.Id, completionAction: (z, y, c) => x.TriggerItemSelected())).ToList();
+            
+            this.Editor.ExternalCompletions.Clear();
+            this.Editor.ExternalCompletions.AddRange(completionItems);
         }
 
         public void HandleUserInputResult(UserInputResult res)
@@ -219,7 +205,7 @@ namespace Ast2
                 Node oldNode = this.CurrentNode;
 
                 {
-                    this._monacoEditor.EditorControl.Text = sb.ToString();
+                    this.Editor.EditorControl.Text = sb.ToString();
                 }
 
                 // {
@@ -255,7 +241,7 @@ namespace Ast2
 
         private Selection GetSelection()
         {
-            return this._monacoEditor.EditorControl.TextArea.Selection;
+            return this.Editor.EditorControl.TextArea.Selection;
         }
 
         private void RenderViewsRecusive(Node node, List<(string text, PositionInfo info, TextDecoration style, TextDecoration backgroundStyle, TextDecoration overlayStyle)> res, ref int addedLength)
@@ -294,7 +280,7 @@ namespace Ast2
 
         public TextViewPosition CurrentPosition { get; private set; } = new TextViewPosition(1, 1);
 
-        public int CurrentOffset => this._monacoEditor.EditorControl.Document.GetOffset(this.CurrentPosition.Location);
+        public int CurrentOffset => this.Editor.EditorControl.Document.GetOffset(this.CurrentPosition.Location);
         // TODO: this breaks down after text editign
         public List<string> SelectionStyleIds { get; private set; } = new List<string>(2);
         public int CurrentSelectionStart { get; private set; }
@@ -352,7 +338,7 @@ namespace Ast2
             }
 
             ConsoleLog("OnKeyDown");
-            if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.Right)
+            if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Right)
             {
                 int listIndex = this.ListIndex();
                 if (listIndex < this.VisibleNodesList.Count - 1)
@@ -362,19 +348,23 @@ namespace Ast2
                     e.Handled = true;
                 }                
             }
-            else if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key == Key.Left)
+            else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Left)
             {
                 int listIndex = this.ListIndex();
                 int newPosition = this.VisibleNodesList[Math.Max(0, listIndex - 1)].PositionInfo.EndOffset;
                 this.Select(newPosition);
                 e.Handled = true;
             }
-            else if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key== Key.Up)
+            else if (e.KeyModifiers == KeyModifiers.Control && e.Key== Key.Up)
             {
                 Node parent = this.CurrentNode.Parent;
                 int newPosition = parent.PositionInfo.StartOffset;
                 this.Select(newPosition);
                 e.Handled = true;
+            }
+            else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Space)
+            {
+                this.RefreshCompletions();
             }
             else if (e.Key == Key.F5)
             {
@@ -397,8 +387,8 @@ namespace Ast2
 
         private void SetAndRevealPosition(TextLocation position)
         {
-            _monacoEditor.EditorControl.TextArea.Caret.Location = position;
-            _monacoEditor.EditorControl.ScrollTo(position.Line, position.Column);
+            Editor.EditorControl.TextArea.Caret.Location = position;
+            Editor.EditorControl.ScrollTo(position.Line, position.Column);
         }
 
         public Node GetParent(Node node, bool jumpHole)
@@ -437,10 +427,10 @@ namespace Ast2
             {
                 // await using (await window.Console.Time("GetOffsets"))
                 {
-                    this.CurrentPosition = this._monacoEditor.EditorControl.TextArea.Caret.Position;
+                    this.CurrentPosition = this.Editor.EditorControl.TextArea.Caret.Position;
                     Selection s = this.GetSelection();
-                    this.CurrentSelectionStart =  this._monacoEditor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.StartPosition.Location);
-                    this.CurrentSelectionEnd = this._monacoEditor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.EndPosition.Location);
+                    this.CurrentSelectionStart =  this.Editor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.StartPosition.Location);
+                    this.CurrentSelectionEnd = this.Editor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.EndPosition.Location);
                 }
 
                 Node current = this.AtPosition(this.CurrentOffset).Item2;
@@ -509,7 +499,7 @@ namespace Ast2
 
         private TextLocation GetPositionAt(int offset)
         {
-            return this._monacoEditor.EditorControl.Document.GetLocation(offset);
+            return this.Editor.EditorControl.Document.GetLocation(offset);
         }
 
         private void SetStyleForRange(int min, int max, TextDecoration selectedParentNodeText, string hoverMessage)
