@@ -29,6 +29,7 @@ namespace AvaloniaEdit.Demo
                 _editor1 = new CodeEditor();
                 _editor2 = new CodeEditor();
                 _astEditor = new Ast2Editor(new CodeEditor());
+                _astEditor.Editor.EditorControl.Height = 400;
                 _astEditor.InitAndLoadExample(0);
                 _editor1.EditorControl.Document = new TextDocument(
 "% AvaloniaEdit supports displaying control chars: \a or \b or \v" + Environment.NewLine +
@@ -38,7 +39,7 @@ namespace AvaloniaEdit.Demo
 
                 Window(out var window)
                     .Styles(_editor1.GetWindowCompletionStyles())
-                    .Title("NXUI").Width(800).Height(600)
+                    .Title("NXUI").Width(800).Height(650)
                     .Content(
                       StackPanel()
                         .Children(

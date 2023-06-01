@@ -15,7 +15,7 @@
 
         public string Text { get; protected set; }
 
-        public TextDecoration Style { get; set; }
+        public VisualStyle Style { get; set; }
 
         public override void CreateView(EditorState editorState)
         {

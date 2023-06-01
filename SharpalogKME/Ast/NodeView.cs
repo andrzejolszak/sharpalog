@@ -2,7 +2,7 @@
 {
     public class NodeView
     {
-        public NodeView(Node node, string text, TextDecoration style, TextDecoration backgroundStyle = null, TextDecoration overlayStyle = null)
+        public NodeView(Node node, string text, VisualStyle style, VisualStyle backgroundStyle = null, VisualStyle overlayStyle = null)
         {
             this.Node = node;
             this.Text = text;
@@ -13,11 +13,11 @@
 
         public string Text { get; }
 
-        public TextDecoration Style { get; }
+        public VisualStyle Style { get; }
 
-        public TextDecoration BackgroundStyle { get; }
+        public VisualStyle BackgroundStyle { get; }
 
-        public TextDecoration OverlayStyle { get; }
+        public VisualStyle OverlayStyle { get; }
         
         public Node Node { get; }
     }

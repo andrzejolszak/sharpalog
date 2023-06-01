@@ -22,7 +22,7 @@ namespace Ast2
 
         public T Target { get; }
 
-        public TextDecoration Style { get; set; }
+        public VisualStyle Style { get; set; }
 
         public string TargetDetachedText { get; set; } = "<null_ref>";
 
@@ -41,9 +41,10 @@ namespace Ast2
             }
         }
 
-        protected override UserInputResult OnMouseClick(EditorState state, PointerReleasedEventArgs e, Node target)
+        protected override UserInputResult OnMouseClick(EditorState state, PointerPressedEventArgs e, Node target)
         {
-            if (e.InitialPressMouseButton == MouseButton.Left && e.KeyModifiers.HasFlag(KeyModifiers.Control) && IsTargetAttached(state))
+            // TODO left mouse button
+            if (e.ClickCount == 1 && e.KeyModifiers.HasFlag(KeyModifiers.Control) && IsTargetAttached(state))
             {
                 return UserInputResult.HandledNeedsGlobalRefresh(this.Target);
             }

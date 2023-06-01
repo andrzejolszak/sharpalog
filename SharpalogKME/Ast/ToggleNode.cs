@@ -15,7 +15,7 @@ namespace Ast2
 
         public event Action<ToggleNode> ValueChanged = x => { };
 
-        public TextDecoration Style { get; set; }
+        public VisualStyle Style { get; set; }
 
         public override void CreateView(EditorState editorState)
         {
@@ -27,7 +27,7 @@ namespace Ast2
             base.CreateView(editorState);
         }
 
-        protected override UserInputResult OnMouseClick(EditorState state, PointerReleasedEventArgs button, Node target)
+        protected override UserInputResult OnMouseClick(EditorState state, PointerPressedEventArgs button, Node target)
         {
             this.IsChecked = !this.IsChecked;
             this.ValueChanged(this);

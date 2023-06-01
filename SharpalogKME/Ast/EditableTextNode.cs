@@ -32,7 +32,7 @@ namespace Ast2
             }
         }
 
-        public TextDecoration Style { get; set; }
+        public VisualStyle Style { get; set; }
 
         public string EmptyText { get; set; } = "◦";
 

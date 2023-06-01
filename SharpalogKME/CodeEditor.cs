@@ -1,4 +1,5 @@
-﻿using Avalonia.Controls;
+﻿using Ast2;
+using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Media.Immutable;
@@ -31,11 +32,13 @@ namespace Sharplog.KME
         private MarkerMargin _errorMargin;
         private MarkerMargin _bulbMargin;
         private ContextActionsBulbContextMenu _contextMenu;
-        private SelectionMatchRenderer _selectionMatchRenderer;
+        private CodeMapAndBackgroundRenderer _selectionMatchRenderer;
         private DispatcherTimer _delayMoveTimer;
         private ScrollBar? _verticalScrollBar;
         private FreeFormInsightWindow _hoverInsightsWindow;
         public List<CompletionItem> ExternalCompletions { get; } = new List<CompletionItem>();
+        public List<(int, int, VisualStyle)> ExternalStyles { get; } = new ();
+        public List<(int, int, VisualStyle)> ExternalSelectionStyles { get; } = new();
 
         public TextEditor EditorControl { get; private set; }
         private SyntaxHighlightTransformer SyntaxHighlighter { get; }
@@ -89,21 +92,14 @@ namespace Sharplog.KME
             this.EditorControl.KeyDown += ContextActionsRendererKeyDown;
             this.EditorControl.TextArea.Caret.PositionChanged += CaretPositionChanged;
 
-            // Scrollbar code map
-            this.EditorControl.TemplateApplied += TextEditorTemplateApplied;
-
-            // Selection renderer
-            _selectionMatchRenderer = new SelectionMatchRenderer();
-            _selectionMatchRenderer.TextEditor = this.EditorControl;
-            this.EditorControl.TextArea.TextView.BackgroundRenderers.Add(_selectionMatchRenderer);
-            this.EditorControl.TextArea.SelectionChanged += TextAreaSelectionChanged;
+            // Scrollbar code map and code background
+            _selectionMatchRenderer = new CodeMapAndBackgroundRenderer(this.EditorControl);
 
             // Completion
-            this.EditorControl.TextArea.TextEntering += TextAreaTextEntering;
             this.EditorControl.TextArea.TextEntered += TextAreaTextEntered;
 
             // Syntax highlighting
-            this.SyntaxHighlighter = new SyntaxHighlightTransformer();
+            this.SyntaxHighlighter = new SyntaxHighlightTransformer() { CodeEditor = this };
             this.EditorControl.TextArea.TextView.LineTransformers.Add(this.SyntaxHighlighter);
             this._selectionMatchRenderer.SyntaxHighlighter = this.SyntaxHighlighter;
 
@@ -130,6 +126,7 @@ namespace Sharplog.KME
             int offsetFromPoint = this.EditorControl.Document.GetOffset(pos.Value.Location);
             if (offsetFromPoint == this.SyntaxHighlighter.SyntaxErrorOffset)
             {
+                // TODO: get from external
                 this._hoverInsightsWindow?.Close();
                 this._hoverInsightsWindow = new FreeFormInsightWindow(this.EditorControl.TextArea, pos.Value);
                 this._hoverInsightsWindow.Provider = new CompletionOverloadProvider(new[]
@@ -157,75 +154,6 @@ namespace Sharplog.KME
                     .Selector(x => x.OfType<CompletionList>().Template().OfType<CompletionListBox>()
                       .Name("PART_ListBox"))
                     .SetAutoCompleteBoxItemTemplate(new DataTemplate() { DataType = typeof(ICompletionData), Content = new TextBlock() })};
-
-        private void TextEditorTemplateApplied(object? sender, TemplateAppliedEventArgs e)
-        {
-            if (_verticalScrollBar is null)
-            {
-                var scrollView = e.NameScope.Find<ScrollViewer>("PART_ScrollViewer");
-                scrollView.TemplateApplied += (s, ee) =>
-                {
-                    if (_verticalScrollBar is null)
-                    {
-                        ee.NameScope.Find<ScrollBar>("PART_HorizontalScrollBar").AllowAutoHide = false;
-                        _verticalScrollBar = ee.NameScope.Find<ScrollBar>("PART_VerticalScrollBar");
-                        _verticalScrollBar.AllowAutoHide = false;
-                        _verticalScrollBar.Width = 20;
-                        _selectionMatchRenderer.VerticalScroll = _verticalScrollBar;
-                        _verticalScrollBar.TemplateApplied += (_, eee) =>
-                        {
-                            if (_selectionMatchRenderer.ScrollLineUpButton is null)
-                            {
-                                _selectionMatchRenderer.ScrollLineUpButton = eee.NameScope.Find<Button>("PART_LineUpButton");
-                            }
-                        };
-                    }
-                };
-            }
-        }
-
-        private void TextAreaSelectionChanged(object? sender, EventArgs e)
-        {
-            _selectionMatchRenderer.Matches.Clear();
-            string selectedText = EditorControl.TextArea.Selection.GetText();
-            if (selectedText is not null && selectedText.Length > 0)
-            {
-                int startIndex = 0;
-                while (true)
-                {
-                    startIndex = EditorControl.Text.IndexOf(selectedText, startIndex);
-                    if (startIndex == -1)
-                    {
-                        break;
-                    }
-
-                    if (!EditorControl.TextArea.Selection.Contains(startIndex))
-                    {
-                        _selectionMatchRenderer.Matches.Add(new TextSegment() { StartOffset = startIndex, Length = selectedText.Length });
-                    }
-
-                    startIndex += selectedText.Length;
-                }
-            }
-        }
-
-        private void TextAreaTextEntering(object sender, TextInputEventArgs e)
-        {
-            if (e.Text.Length > 0 && _completionWindow != null)
-            {
-                if (!char.IsLetterOrDigit(e.Text[0]))
-                {
-                    // Whenever a non-letter is typed while the completion window is open,
-                    // insert the currently selected element.
-                    _completionWindow.CompletionList.RequestInsertion(e);
-                }
-            }
-
-            _overloadInsightWindow?.Hide();
-
-            // Do not set e.Handled=true.
-            // We still want to insert the character that was typed.
-        }
 
         private async void ContextActionsRendererKeyDown(object? sender, KeyEventArgs e)
         {
@@ -345,6 +273,11 @@ namespace Sharplog.KME
             data.Add(new CompletionItem("Item1", "desc sample", "replaced", Foo));
             data.Add(new CompletionItem("Item2", "desc"));
 
+            _completionWindow.CompletionList.ListBox.SelectionChanged += (s, e) =>
+            {
+                // TODO: mouse selection
+                // _completionWindow.CompletionList.RequestInsertion(e);
+            };
 
             _completionWindow.Show();
         }
@@ -448,54 +381,39 @@ namespace Sharplog.KME
         public int? SyntaxErrorOffset { get; set; }
         public int? SyntaxErrorLine { get; set; }
 
+        public CodeEditor CodeEditor { get; internal set; }
+
         protected override void ColorizeLine(DocumentLine line)
         {
-            if (line.LineNumber == 2)
+            // TODO: perf
+            foreach ((int, int, VisualStyle) s in this.CodeEditor.ExternalStyles.Concat(this.CodeEditor.ExternalSelectionStyles))
             {
-                string lineText = this.CurrentContext.Document.GetText(line);
-
-                int indexOfUnderline = lineText.IndexOf("underline");
-                int indexOfStrikeThrough = lineText.IndexOf("strikethrough");
-
-                if (indexOfUnderline != -1)
+                // TODO: styles cannot go across lines
+                if (s.Item1 >= line.Offset && s.Item2 <= line.EndOffset)
                 {
                     ChangeLinePart(
-                        line.Offset + indexOfUnderline,
-                        line.Offset + indexOfUnderline + "underline".Length,
+                        s.Item1,
+                        s.Item2,
                         visualLine =>
                         {
                             if (visualLine.TextRunProperties.TextDecorations != null)
                             {
-                                var textDecorations = new TextDecorationCollection(visualLine.TextRunProperties.TextDecorations) { TextDecorations.Underline[0] };
-
-                                visualLine.TextRunProperties.SetTextDecorations(textDecorations);
-                                visualLine.TextRunProperties.SetForegroundBrush(Brushes.Red);
-                            }
-                            else
-                            {
-                                visualLine.TextRunProperties.SetTextDecorations(TextDecorations.Underline);
-                                visualLine.TextRunProperties.SetForegroundBrush(Brushes.Green);
-                            }
-                        }
-                    );
-                }
-
-                if (indexOfStrikeThrough != -1)
-                {
-                    ChangeLinePart(
-                        line.Offset + indexOfStrikeThrough,
-                        line.Offset + indexOfStrikeThrough + "strikethrough".Length,
-                        visualLine =>
-                        {
-                            if (visualLine.TextRunProperties.TextDecorations != null)
-                            {
-                                var textDecorations = new TextDecorationCollection(visualLine.TextRunProperties.TextDecorations) { TextDecorations.Strikethrough[0] };
-
+                                var textDecorations = new TextDecorationCollection(visualLine.TextRunProperties.TextDecorations.Union(s.Item3.TextDecorations));
                                 visualLine.TextRunProperties.SetTextDecorations(textDecorations);
                             }
                             else
                             {
-                                visualLine.TextRunProperties.SetTextDecorations(TextDecorations.Strikethrough);
+                                visualLine.TextRunProperties.SetTextDecorations(s.Item3.TextDecorations);
+                            }
+
+                            if (s.Item3.ForegroundBrush is not null)
+                            {
+                                visualLine.TextRunProperties.SetForegroundBrush(s.Item3.ForegroundBrush);
+                            }
+
+                            if (s.Item3.BackgroundBrush is not null)
+                            {
+                                visualLine.TextRunProperties.SetBackgroundBrush(s.Item3.BackgroundBrush);
                             }
                         }
                     );
@@ -581,13 +499,19 @@ namespace Sharplog.KME
         }
     }
 
-    public class SelectionMatchRenderer : IBackgroundRenderer
+    public class CodeMapAndBackgroundRenderer : IBackgroundRenderer
     {
         public KnownLayer Layer => KnownLayer.Background;
 
-        public SelectionMatchRenderer()
+        public CodeMapAndBackgroundRenderer(TextEditor textEditor)
         {
             _markerBrush = Brushes.LightSteelBlue;
+            this.TextEditor = textEditor;
+
+            this.TextEditor.TextArea.SelectionChanged += TextAreaSelectionChanged;
+            this.TextEditor.TemplateApplied += TextEditorTemplateApplied;
+
+            this.TextEditor.TextArea.TextView.BackgroundRenderers.Add(this);
         }
 
         private IBrush _markerBrush;
@@ -617,6 +541,7 @@ namespace Sharplog.KME
             var viewStartOffset = firstViewLine.Offset;
             var viewEndOffset = lastViewLine.EndOffset;
 
+            // Code map
             if (VerticalScroll is not null && ScrollLineUpButton is not null)
             {
                 double mapHeight = VerticalScroll.Bounds.Height - ScrollLineUpButton.Height * 2;
@@ -624,19 +549,24 @@ namespace Sharplog.KME
 
                 // Caret:
                 double caretInRange = mapHeight * (TextEditor.TextArea.Caret.Line - 1) / TextEditor.LineCount;
-                drawingContext.FillRectangle(Brushes.Gray, new Rect(mapX, caretInRange + ScrollLineUpButton.Height, 10, 2));
+                DrawRectangleGeometry(textView, drawingContext, new Rect(mapX, caretInRange + ScrollLineUpButton.Height, 10, 1), Brushes.Black);
 
                 // Syntax error
                 if (this.SyntaxHighlighter is not null && this.SyntaxHighlighter.SyntaxErrorLine is not null)
                 {
                     double errorInRange = mapHeight * (this.SyntaxHighlighter.SyntaxErrorLine.Value - 1) / TextEditor.LineCount;
-                    drawingContext.FillRectangle(Brushes.Red, new Rect(mapX + 6, errorInRange + ScrollLineUpButton.Height, 4, 4));
+                    DrawRectangleGeometry(textView, drawingContext, new Rect(mapX + 6, errorInRange + ScrollLineUpButton.Height, 4, 4), Brushes.Red);
+                }
+
+                // Selection matches
+                foreach (var match in Matches)
+                {
+                    double matchInRange = mapHeight * (this.TextEditor.Document.GetLineByOffset(match.StartOffset).LineNumber - 1) / TextEditor.LineCount;
+                    DrawRectangleGeometry(textView, drawingContext, new Rect(mapX + 2, matchInRange + ScrollLineUpButton.Height, 6, 3), Brushes.SlateGray);
                 }
             }
 
-            if (Matches == null || Matches.Count == 0 || !textView.VisualLinesValid)
-                return;
-
+            // Selection match marks code background
             foreach (var result in Matches.Where(x => x.EndOffset >= viewStartOffset || x.StartOffset <= viewEndOffset))
             {
                 var geoBuilder = new BackgroundGeometryBuilder
@@ -653,6 +583,71 @@ namespace Sharplog.KME
                 }
             }
         }
+
+        private void DrawRectangleGeometry(TextView textView, DrawingContext drawingContext, Rect rectangle, IBrush brush)
+        {
+            var geoBuilder = new BackgroundGeometryBuilder
+            {
+                AlignToWholePixels = true
+            };
+
+            geoBuilder.AddRectangle(textView, rectangle);
+            var geometry = geoBuilder.CreateGeometry();
+            if (geometry != null)
+            {
+                drawingContext.DrawGeometry(brush, null, geometry);
+            }
+        }
+
+        private void TextAreaSelectionChanged(object? sender, EventArgs e)
+        {
+            this.Matches.Clear();
+            string selectedText = this.TextEditor.TextArea.Selection.GetText();
+            if (selectedText is not null && selectedText.Length > 0)
+            {
+                int startIndex = 0;
+                while (true)
+                {
+                    startIndex = this.TextEditor.Text.IndexOf(selectedText, startIndex);
+                    if (startIndex == -1)
+                    {
+                        break;
+                    }
+
+                    if (!this.TextEditor.TextArea.Selection.Contains(startIndex))
+                    {
+                        this.Matches.Add(new TextSegment() { StartOffset = startIndex, Length = selectedText.Length });
+                    }
+
+                    startIndex += selectedText.Length;
+                }
+            }
+        }
+
+        private void TextEditorTemplateApplied(object? sender, TemplateAppliedEventArgs e)
+        {
+            if (VerticalScroll is null)
+            {
+                var scrollView = e.NameScope.Find<ScrollViewer>("PART_ScrollViewer");
+                scrollView.TemplateApplied += (s, ee) =>
+                {
+                    if (VerticalScroll is null)
+                    {
+                        ee.NameScope.Find<ScrollBar>("PART_HorizontalScrollBar").AllowAutoHide = false;
+                        VerticalScroll = ee.NameScope.Find<ScrollBar>("PART_VerticalScrollBar");
+                        VerticalScroll.AllowAutoHide = false;
+                        VerticalScroll.Width = 20;
+                        VerticalScroll.TemplateApplied += (_, eee) =>
+                        {
+                            if (this.ScrollLineUpButton is null)
+                            {
+                                this.ScrollLineUpButton = eee.NameScope.Find<Button>("PART_LineUpButton");
+                            }
+                        };
+                    }
+                };
+            }
+        }
     }
 
     /// <summary>
@@ -666,7 +661,7 @@ namespace Sharplog.KME
                         {
                             new TextDecoration
                             {
-                                Location = Avalonia.Media.TextDecorationLocation.Underline,
+                                Location = Avalonia.Media.TextDecorationLocation.Underline
                             }
                         };
 

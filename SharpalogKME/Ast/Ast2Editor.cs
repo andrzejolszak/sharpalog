@@ -1,4 +1,5 @@
-﻿using AvaloniaEdit;
+﻿using Avalonia.Input.GestureRecognizers;
+using AvaloniaEdit;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
 using IntervalTree;
@@ -72,8 +73,45 @@ namespace Ast2
             this.Editor.EditorControl.TextArea.Caret.PositionChanged += OnPositionChanged;
             this.Editor.EditorControl.AddHandler(TextEditor.KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
             this.Editor.EditorControl.KeyUp += this.OnKeyUp;
-            this.Editor.EditorControl.PointerReleased += this.OnMouseDown;
+            this.Editor.EditorControl.TextArea.TextView.GestureRecognizers.Add(new MouseRecognizer() { Parent = this });
             this.Editor.EditorControl.Document.Changing += Document_Changing;
+        }
+
+        class MouseRecognizer : IGestureRecognizer
+        {
+            public Ast2Editor Parent { get; set; }
+
+            public void Initialize(IInputElement target, IGestureRecognizerActionsDispatcher actions)
+            {
+            }
+
+            public void PointerCaptureLost(IPointer pointer)
+            {
+            }
+
+            public void PointerMoved(PointerEventArgs e)
+            {
+            }
+
+            public void PointerPressed(PointerPressedEventArgs e)
+            {
+                TextViewPosition? pos = this.Parent.Editor.EditorControl.GetPositionFromPoint(e.GetPosition(this.Parent.Editor.EditorControl.TextArea));
+                if (pos is null)
+                {
+                    return;
+                }
+
+                (int, Node) node = this.Parent.AtPosition(this.Parent.Editor.EditorControl.Document.GetOffset(pos.Value.Location));
+                if (node.Item2 != null)
+                {
+                    UserInputResult res = node.Item2.OnMouseClickBubble(this.Parent.GetEditorState(), e, node.Item2);
+                    this.Parent.HandleUserInputResult(res);
+                }
+            }
+
+            public void PointerReleased(PointerReleasedEventArgs e)
+            {
+            }
         }
 
         private void Document_Changing(object? sender, DocumentChangeEventArgs e)
@@ -104,24 +142,6 @@ namespace Ast2
         public void ConsoleLog(string msg)
         {
             // await window.Console.Log(msg);
-        }
-
-        public void OnMouseDown(object s, PointerReleasedEventArgs e)
-        {
-            TextViewPosition? pos = this.Editor.EditorControl.GetPositionFromPoint(e.GetPosition(this.Editor.EditorControl.TextArea));
-            if (pos is null)
-            {
-                return;
-            }
-
-            ConsoleLog("OnMouseDown");
-
-            (int, Node) node = this.AtPosition(this.Editor.EditorControl.Document.GetOffset(pos.Value.Location));
-            if (node.Item2 != null)
-            {
-                UserInputResult res = node.Item2.OnMouseClickBubble(this.GetEditorState(), e, node.Item2);
-                this.HandleUserInputResult(res);
-            }
         }
 
         private void RefreshCompletions()
@@ -159,16 +179,17 @@ namespace Ast2
                 this._visibleNodesIntervalTree.Clear();
                 this.VisibleNodesList.Clear();
 
-                List<(string text, PositionInfo info, TextDecoration style, TextDecoration backgroundStyle, TextDecoration overlayStyle)> renderInfo = new List<(string text, PositionInfo info, TextDecoration style, TextDecoration backgroundStyle, TextDecoration overlayStyle)>(1024);
+                List<(string text, PositionInfo info, VisualStyle style, VisualStyle backgroundStyle, VisualStyle overlayStyle)> renderInfo = new List<(string text, PositionInfo info, VisualStyle style, VisualStyle backgroundStyle, VisualStyle overlayStyle)>(1024);
                 int addedLength = 0;
 
 
                 RenderViewsRecusive(this.Root, renderInfo, ref addedLength);
 
                 StringBuilder sb = new StringBuilder();
-                List<TextDecoration> decors = new List<TextDecoration>(renderInfo.Count);
+                List<VisualStyle> decors = new List<VisualStyle>(renderInfo.Count);
                 int line = 1;
                 int colInLine = 1;
+                this.Editor.ExternalStyles.Clear();
                 foreach (var r in renderInfo)
                 {
                     sb.Append(r.text);
@@ -186,18 +207,7 @@ namespace Ast2
                     if (r.text != "\r\n")
                     {
                         colInLine += r.text.Length;
-                        // TextDecoration d = new TextDecoration
-                        // {
-                        //     Range = new BlazorMonaco.Range { StartColumn = startCol, StartLineNumber = startLine, EndColumn = colInLine, EndLineNumber = line },
-                        //     Options = new TextDecoration
-                        //     {
-                        //         InlineClassName = r.style?.InlineClassName ?? "decorationPointer",
-                        //         HoverMessage = new[] { new MarkdownString { Value = r.info.StartOffset + "-" + r.info.EndOffset } },
-                        //         Minimap = new ModelDecorationMinimapOptions { Color = "red" },
-                        //         OverviewRuler = new ModelDecorationOverviewRulerOptions { Color = "blue" }
-                        //     }
-                        // };
-                        // decors.Add(d);
+                        this.Editor.ExternalStyles.Add((r.info.StartOffset, r.info.EndOffset, r.style));
                     }
                 }
 
@@ -207,10 +217,6 @@ namespace Ast2
                 {
                     this.Editor.EditorControl.Text = sb.ToString();
                 }
-
-                // {
-                //     _ = _monacoEditor.DeltaDecorations(null, decors.ToArray());
-                // }
 
                 this._refreshing = false;
 
@@ -244,7 +250,7 @@ namespace Ast2
             return this.Editor.EditorControl.TextArea.Selection;
         }
 
-        private void RenderViewsRecusive(Node node, List<(string text, PositionInfo info, TextDecoration style, TextDecoration backgroundStyle, TextDecoration overlayStyle)> res, ref int addedLength)
+        private void RenderViewsRecusive(Node node, List<(string text, PositionInfo info, VisualStyle style, VisualStyle backgroundStyle, VisualStyle overlayStyle)> res, ref int addedLength)
         {
             if (node.View != null && (node.VisualChildren?.Count ?? 0) == 0)
             {
@@ -370,6 +376,41 @@ namespace Ast2
             {
                 this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
             }
+            else if (e.Key == Key.LeftCtrl)
+            {
+                // TODO: does not seem to work, TODO: clear
+                Node parent = GetParent(this.CurrentNode, true);
+                if (parent != null && parent != this.Root)
+                {
+                    int min = this.CurrentNode.PositionInfo.StartOffset;
+                    int max = this.CurrentNode.PositionInfo.EndOffset;
+                    int listIndex = this.ListIndex();
+
+                    for (int i = listIndex - 1; i >= 0; i--)
+                    {
+                        Node n = this.VisibleNodesList[i];
+                        if (GetParent(n, true) != parent)
+                        {
+                            break;
+                        }
+
+                        min = n.PositionInfo.StartOffset;
+                    }
+
+                    for (int i = listIndex + 1; i < this.VisibleNodesList.Count; i++)
+                    {
+                        Node n = this.VisibleNodesList[i];
+                        if (GetParent(n, true) != parent)
+                        {
+                            break;
+                        }
+
+                        max = n.PositionInfo.EndOffset;
+                    }
+
+                    this.AddSelectionStyle(min, max, Styles.SelectedParentNodeText, null);
+                }
+            }
             else
             {
                 Node currNode = this.CurrentNode;
@@ -414,6 +455,8 @@ namespace Ast2
             {
                 return;
             }
+
+            this.Editor.ExternalSelectionStyles.Clear();
 
             // TODO source != api and != mouse
             // if (e.Source != "api" && e.Source != "mouse")
@@ -461,39 +504,7 @@ namespace Ast2
 
                 this.CurrentNode = current;
 
-                Node parent = GetParent(this.CurrentNode, true);
-                if (parent != null && parent != this.Root)
-                {
-                    int min = this.CurrentNode.PositionInfo.StartOffset;
-                    int max = this.CurrentNode.PositionInfo.EndOffset;
-                    int listIndex = this.ListIndex();
-
-                    for (int i = listIndex - 1; i >= 0; i--)
-                    {
-                        Node n = this.VisibleNodesList[i];
-                        if (GetParent(n, true) != parent)
-                        {
-                            break;
-                        }
-
-                        min = n.PositionInfo.StartOffset;
-                    }
-
-                    for (int i = listIndex + 1; i < this.VisibleNodesList.Count; i++)
-                    {
-                        Node n = this.VisibleNodesList[i];
-                        if (GetParent(n, true) != parent)
-                        {
-                            break;
-                        }
-
-                        max = n.PositionInfo.EndOffset;
-                    }
-
-                    this.SetStyleForRange(min, max, Styles.SelectedParentNodeText, null);
-                }
-
-                this.SetStyleForRange(this.CurrentNode.PositionInfo.StartOffset, this.CurrentNode.PositionInfo.EndOffset, Styles.SelectedNodeText, null);
+                this.AddSelectionStyle(this.CurrentNode.PositionInfo.StartOffset, this.CurrentNode.PositionInfo.EndOffset, Styles.SelectedNodeText, null);
             }
         }
 
@@ -502,30 +513,9 @@ namespace Ast2
             return this.Editor.EditorControl.Document.GetLocation(offset);
         }
 
-        private void SetStyleForRange(int min, int max, TextDecoration selectedParentNodeText, string hoverMessage)
+        private void AddSelectionStyle(int min, int max, VisualStyle style, string hoverMessage)
         {
-            // List<TextDecoration> decors = new List<TextDecoration>(1);
-            // TextLocation startPos = this.GetPositionAt(min);
-            // TextLocation endPos = this.GetPositionAt(max);
-            // TextDecoration d = new TextDecoration
-            // {
-            //     Range = new BlazorMonaco.Range { StartColumn = startPos.Column, StartLineNumber = startPos.LineNumber, EndColumn = endPos.Column, EndLineNumber = endPos.LineNumber },
-            //     Options = new TextDecoration
-            //     {
-            //         InlineClassName = selectedParentNodeText.InlineClassName,
-            //         Minimap = new ModelDecorationMinimapOptions { Color = "red" },
-            //         OverviewRuler = new ModelDecorationOverviewRulerOptions { Color = "blue" }
-            //     }
-            // };
-            // 
-            // if (hoverMessage != null)
-            // {
-            //     d.Options.HoverMessage = new[] { new MarkdownString { Value = hoverMessage } };
-            // }
-            // 
-            // decors.Add(d);
-            // 
-            // _monacoEditor.DeltaDecorations(null, decors.ToArray());
+            this.Editor.ExternalSelectionStyles.Add((min, max, style));
         }
 
         public EditorState GetEditorState(int offsetAdjustment = 0)

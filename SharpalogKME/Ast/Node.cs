@@ -220,7 +220,7 @@ namespace Ast2
             return UserInputResult.Empty;
         }
 
-        public UserInputResult OnMouseClickBubble(EditorState state, PointerReleasedEventArgs button, Node target)
+        public UserInputResult OnMouseClickBubble(EditorState state, PointerPressedEventArgs button, Node target)
         {
             UserInputResult thisResult = this.OnMouseClick(state, button, target);
             if (thisResult.EventHandled)
@@ -236,7 +236,7 @@ namespace Ast2
             return this.Parent.OnMouseClickBubble(state, button, target);
         }
 
-        protected virtual UserInputResult OnMouseClick(EditorState state, PointerReleasedEventArgs button, Node target)
+        protected virtual UserInputResult OnMouseClick(EditorState state, PointerPressedEventArgs button, Node target)
         {
             return UserInputResult.Empty;
         }
