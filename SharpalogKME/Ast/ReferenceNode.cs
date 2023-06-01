@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Sharplog.KME;
 
 namespace Ast2
 {
@@ -12,7 +13,7 @@ namespace Ast2
         public ReferenceNode(T target)
         {
             this.Target = target;
-            this.Style = Styles.NormalTextBlueBackgroundStyle;
+            this.Style = VisualStyles.NormalTextBlueBackgroundStyle;
 
             this.Target.ViewChangedEvent += () =>
             {
@@ -37,7 +38,7 @@ namespace Ast2
             }
             else
             {
-                this.View = new NodeView(this, this.Target.View.Text, this.Style, overlayStyle: Styles.UnderlineStyle);
+                this.View = new NodeView(this, this.Target.View.Text, this.Style, overlayStyle: VisualStyles.UnderlineStyle);
             }
         }
 

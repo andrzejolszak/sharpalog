@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Sharplog.KME;
 
 namespace Ast2
 {
@@ -23,7 +24,7 @@ namespace Ast2
 
         public override void CreateView(EditorState editorState)
         {
-            this.View = new NodeView(this, this.Selection, Styles.NormalTextBlueBackgroundStyle);
+            this.View = new NodeView(this, this.Selection, VisualStyles.NormalTextBlueBackgroundStyle);
         }
 
         public override List<AstAutocompleteItem> GetCustomCompletions(EditorState state)

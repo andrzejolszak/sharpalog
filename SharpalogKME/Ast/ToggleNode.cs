@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sharplog.KME;
 
 namespace Ast2
 {
@@ -7,7 +8,7 @@ namespace Ast2
     {
         public ToggleNode()
         {
-            this.Style = Styles.NormalTextStyle;
+            this.Style = VisualStyles.NormalTextStyle;
             this.VisualChildren = new List<Node>();
         }
 

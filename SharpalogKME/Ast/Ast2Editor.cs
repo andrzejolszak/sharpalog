@@ -36,14 +36,6 @@ namespace Ast2
             this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
         }
 
-        /*private void OnModelContentChanged(ModelContentChangedEvent eventArg)
-        {
-            // TODO
-            // Use this instead of overriding commands for letters.
-            // RangeLength = 0 for inserts. <>0 for deletes
-            // await this._astEditor.OnTextTyped(eventArg);
-        }*/
-
         private void ForceRefresh()
         {
             this.RefreshWholeEditor(UserInputResult.HandledNeedsGlobalRefresh());
@@ -408,7 +400,7 @@ namespace Ast2
                         max = n.PositionInfo.EndOffset;
                     }
 
-                    this.AddSelectionStyle(min, max, Styles.SelectedParentNodeText, null);
+                    this.AddSelectionStyle(min, max, VisualStyles.SelectedParentNodeText, null);
                 }
             }
             else
@@ -504,7 +496,7 @@ namespace Ast2
 
                 this.CurrentNode = current;
 
-                this.AddSelectionStyle(this.CurrentNode.PositionInfo.StartOffset, this.CurrentNode.PositionInfo.EndOffset, Styles.SelectedNodeText, null);
+                this.AddSelectionStyle(this.CurrentNode.PositionInfo.StartOffset, this.CurrentNode.PositionInfo.EndOffset, VisualStyles.SelectedNodeText, null);
             }
         }
 

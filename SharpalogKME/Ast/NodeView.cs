@@ -1,4 +1,6 @@
-﻿namespace Ast2
+﻿using Sharplog.KME;
+
+namespace Ast2
 {
     public class NodeView
     {

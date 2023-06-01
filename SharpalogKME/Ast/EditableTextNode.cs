@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Sharplog.KME;
 
 namespace Ast2
 {
@@ -11,13 +12,13 @@ namespace Ast2
         {
             this._textHolder = new TextHolder();
             this.Text = text;
-            this.Style = Styles.NormalTextGrayBackgroundStyle;
+            this.Style = VisualStyles.NormalTextGrayBackgroundStyle;
         }
 
         public EditableTextNode(TextHolder sharedTextHolder)
         {
             this._textHolder = sharedTextHolder;
-            this.Style = Styles.NormalTextGrayBackgroundStyle;
+            this.Style = VisualStyles.NormalTextGrayBackgroundStyle;
         }
 
         public string Text
@@ -40,7 +41,7 @@ namespace Ast2
         {
             if (string.IsNullOrEmpty(this.Text))
             {
-                this.View = new NodeView(this, this.EmptyText, Styles.Scratch);
+                this.View = new NodeView(this, this.EmptyText, VisualStyles.Scratch);
             }
             else
             {

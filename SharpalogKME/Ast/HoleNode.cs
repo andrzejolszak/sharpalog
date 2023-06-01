@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using Sharplog.KME;
 
 namespace Ast2
 {
@@ -37,11 +37,11 @@ namespace Ast2
             {
                 if (string.IsNullOrEmpty(this.ScratchText))
                 {
-                    this.View = new NodeView(this, this.EmptyText, Styles.NormalTextRedBackgroundStyle);
+                    this.View = new NodeView(this, this.EmptyText, VisualStyles.NormalTextRedBackgroundStyle);
                 }
                 else
                 {
-                    this.View = new NodeView(this, this.ScratchText + "◦", Styles.NormalTextRedBackgroundStyle);
+                    this.View = new NodeView(this, this.ScratchText + "◦", VisualStyles.NormalTextRedBackgroundStyle);
                 }
 
                 return;

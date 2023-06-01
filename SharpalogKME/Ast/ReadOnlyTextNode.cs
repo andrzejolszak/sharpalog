@@ -1,4 +1,6 @@
-﻿namespace Ast2
+﻿using Sharplog.KME;
+
+namespace Ast2
 {
     public class ReadOnlyTextNode : Node
     {
@@ -10,7 +12,7 @@
         public ReadOnlyTextNode(string text)
         {
             this.Text = text;
-            this.Style = Styles.NormalTextStyle;
+            this.Style = VisualStyles.NormalTextStyle;
         }
 
         public string Text { get; protected set; }
