@@ -8,6 +8,7 @@ using Sharplog.KME;
 using System;
 using System.Text;
 using static Sharplog.KME.CodeEditor;
+using static Sharplog.KME.Completion;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace Ast2
@@ -141,8 +142,8 @@ namespace Ast2
             List<AstAutocompleteItem> completions = this.GetCompletions();
             List<CompletionItem> completionItems = completions.Select(x => new CompletionItem(x.MenuText, x.DocTitle + " " + x.DocText, x.Id, completionAction: (z, y, c) => x.TriggerItemSelected())).ToList();
             
-            this.Editor.ExternalCompletions.Clear();
-            this.Editor.ExternalCompletions.AddRange(completionItems);
+            this.Editor.Completion.ExternalCompletions.Clear();
+            this.Editor.Completion.ExternalCompletions.AddRange(completionItems);
         }
 
         public void HandleUserInputResult(UserInputResult res)
@@ -181,7 +182,7 @@ namespace Ast2
                 List<VisualStyle> decors = new List<VisualStyle>(renderInfo.Count);
                 int line = 1;
                 int colInLine = 1;
-                this.Editor.ExternalStyles.Clear();
+                this.Editor.SyntaxHighlighter.ExternalStyles.Clear();
                 foreach (var r in renderInfo)
                 {
                     sb.Append(r.text);
@@ -199,7 +200,7 @@ namespace Ast2
                     if (r.text != "\r\n")
                     {
                         colInLine += r.text.Length;
-                        this.Editor.ExternalStyles.Add((r.info.StartOffset, r.info.EndOffset, r.style));
+                        this.Editor.SyntaxHighlighter.ExternalStyles.Add((r.info.StartOffset, r.info.EndOffset, r.style));
                     }
                 }
 
@@ -448,7 +449,7 @@ namespace Ast2
                 return;
             }
 
-            this.Editor.ExternalSelectionStyles.Clear();
+            this.Editor.SyntaxHighlighter.ExternalSelectionStyles.Clear();
 
             // TODO source != api and != mouse
             // if (e.Source != "api" && e.Source != "mouse")
@@ -507,7 +508,7 @@ namespace Ast2
 
         private void AddSelectionStyle(int min, int max, VisualStyle style, string hoverMessage)
         {
-            this.Editor.ExternalSelectionStyles.Add((min, max, style));
+            this.Editor.SyntaxHighlighter.ExternalSelectionStyles.Add((min, max, style));
         }
 
         public EditorState GetEditorState(int offsetAdjustment = 0)

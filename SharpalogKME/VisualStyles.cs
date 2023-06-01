@@ -100,3 +100,70 @@ public class VisualStyle : TextRunProperties
         return this;
     }
 }
+
+/// <summary>
+/// Defines a set of commonly used text decorations.
+/// </summary>
+public static class CustomTextDecorations
+{
+    static CustomTextDecorations()
+    {
+        Underline = new TextDecorationCollection
+                        {
+                            new TextDecoration
+                            {
+                                Location = Avalonia.Media.TextDecorationLocation.Underline
+                            }
+                        };
+
+        Strikethrough = new TextDecorationCollection
+                            {
+                                new TextDecoration
+                                {
+                                    Location = Avalonia.Media.TextDecorationLocation.Strikethrough
+                                }
+                            };
+
+        SquiggleUnderline = new TextDecorationCollection
+                       {
+                           new TextDecoration
+                           {
+                               Location = Avalonia.Media.TextDecorationLocation.Underline,
+                               StrokeDashArray = new AvaloniaList<double>{1, 1},
+                               Stroke = Brushes.Red,
+                               StrokeThickness = 3,
+                               StrokeThicknessUnit = TextDecorationUnit.Pixel,
+                               StrokeOffsetUnit = TextDecorationUnit.Pixel,
+                               StrokeOffset = 4
+                           }
+                       };
+
+        Baseline = new TextDecorationCollection
+                       {
+                           new TextDecoration
+                           {
+                               Location = Avalonia.Media.TextDecorationLocation.Baseline
+                           }
+                       };
+    }
+
+    /// <summary>
+    /// Gets a <see cref="TextDecorationCollection"/> containing an underline.
+    /// </summary>
+    public static TextDecorationCollection Underline { get; }
+
+    /// <summary>
+    /// Gets a <see cref="TextDecorationCollection"/> containing a strikethrough.
+    /// </summary>
+    public static TextDecorationCollection Strikethrough { get; }
+
+    /// <summary>
+    /// Gets a <see cref="TextDecorationCollection"/> containing an overline.
+    /// </summary>
+    public static TextDecorationCollection SquiggleUnderline { get; }
+
+    /// <summary>
+    /// Gets a <see cref="TextDecorationCollection"/> containing a baseline.
+    /// </summary>
+    public static TextDecorationCollection Baseline { get; }
+}

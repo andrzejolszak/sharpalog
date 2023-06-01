@@ -1,5 +1,4 @@
-﻿using Avalonia.Media.Imaging;
-using AvaloniaEdit;
+﻿using AvaloniaEdit;
 using AvaloniaEdit.CodeCompletion;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
@@ -7,9 +6,7 @@ using AvaloniaEdit.Rendering;
 using AvaloniaEdit.Utils;
 using RoslynPad.Editor;
 using Stringes;
-using System.ComponentModel;
-using System.IO;
-using System.Runtime.CompilerServices;
+using static Sharplog.KME.Completion;
 
 namespace Sharplog.KME;
 
@@ -17,25 +14,16 @@ namespace Sharplog.KME;
 /// TextArea.OffsetProperty for AffectsRender and AvaloniaProperty.Register
 public class CodeEditor
 {
-    private static Bitmap Foo = new Bitmap("res/foo.png");
-    private static Bitmap Bulb = new Bitmap("res/bulb.png");
-
-
-    private CompletionWindow _completionWindow;
-    private OverloadInsightWindow _overloadInsightWindow;
+    public Completion Completion { get; private set; }
     private MarkerMargin _errorMargin;
     private MarkerMargin _bulbMargin;
     private ContextActionsBulbContextMenu _contextMenu;
     private CodeMapAndBackgroundRenderer _selectionMatchRenderer;
     private DispatcherTimer _delayMoveTimer;
-    private ScrollBar? _verticalScrollBar;
     private FreeFormInsightWindow _hoverInsightsWindow;
-    public List<CompletionItem> ExternalCompletions { get; } = new List<CompletionItem>();
-    public List<(int, int, VisualStyle)> ExternalStyles { get; } = new();
-    public List<(int, int, VisualStyle)> ExternalSelectionStyles { get; } = new();
 
     public TextEditor EditorControl { get; private set; }
-    private SyntaxHighlightTransformer SyntaxHighlighter { get; }
+    public SyntaxHighlightTransformer SyntaxHighlighter { get; }
 
     public CodeEditor()
     {
@@ -71,7 +59,7 @@ public class CodeEditor
         };
 
         // Error margin
-        _errorMargin = new MarkerMargin { Width = 16, MarkerImage = Foo };
+        _errorMargin = new MarkerMargin { Width = 16, MarkerImage = Resources.Foo };
         this._errorMargin.IsVisible = true;
         this.EditorControl.TextArea.LeftMargins.Insert(0, _errorMargin);
 
@@ -79,7 +67,7 @@ public class CodeEditor
         _contextMenu = new ContextActionsBulbContextMenu();
         _bulbMargin = new MarkerMargin { Width = 16, Margin = new Thickness(0, 0, 5, 0) };
         _bulbMargin.MarkerPointerDown += (o, e) => OpenContextMenu();
-        _bulbMargin.MarkerImage = Bulb;
+        _bulbMargin.MarkerImage = Resources.Bulb;
         var index = this.EditorControl.TextArea.LeftMargins.Count > 0 ? this.EditorControl.TextArea.LeftMargins.Count - 1 : 0;
         this.EditorControl.TextArea.LeftMargins.Insert(index, _bulbMargin);
 
@@ -90,10 +78,10 @@ public class CodeEditor
         _selectionMatchRenderer = new CodeMapAndBackgroundRenderer(this.EditorControl);
 
         // Completion
-        this.EditorControl.TextArea.TextEntered += TextAreaTextEntered;
+        this.Completion = new Completion(this.EditorControl);
 
         // Syntax highlighting
-        this.SyntaxHighlighter = new SyntaxHighlightTransformer() { CodeEditor = this };
+        this.SyntaxHighlighter = new SyntaxHighlightTransformer();
         this.EditorControl.TextArea.TextView.LineTransformers.Add(this.SyntaxHighlighter);
         this._selectionMatchRenderer.SyntaxHighlighter = this.SyntaxHighlighter;
 
@@ -110,8 +98,6 @@ public class CodeEditor
         _delayMoveTimer.Stop();
         _delayMoveTimer.Tick += DelayMoveTimerTick;
         this.EditorControl.TextChanged += CaretPositionChanged;
-
-        this.EditorControl.TextArea.DefaultInputHandler.AddBinding(new RoutedCommand("completion"), KeyModifiers.Control, Key.Space, (s, e) => this.ShowCompletionMenu());
     }
 
     private void EditorControl_PointerHover(object? sender, PointerEventArgs e)
@@ -247,140 +233,21 @@ public class CodeEditor
     {
         _contextMenu.Open(_bulbMargin.Marker);
     }
-
-    private void ShowCompletionMenu()
-    {
-        _completionWindow = new CompletionWindow(this.EditorControl.TextArea);
-        _completionWindow.Closed += (o, args) => _completionWindow = null;
-
-        _completionWindow.HorizontalScrollBarVisibilityVisible();
-        _completionWindow.CompletionList.ListBox.ItemTemplate = new FuncDataTemplate<CompletionItem>((data, nameScope) =>
-            StackPanel()
-              .OrientationHorizontal().Height(18).VerticalAlignmentCenter()
-              .Children(
-                Image().Width(15).Height(15).Source(data.Image),
-                TextBlock().VerticalAlignmentCenter().Margin(10, 0, 0, 0).FontSize(15).Text(data.Text))
-            , false);
-
-        var data = _completionWindow.CompletionList.CompletionData;
-        data.AddRange(ExternalCompletions);
-        data.Add(new CompletionItem("Item1", "desc sample", "replaced", Foo));
-        data.Add(new CompletionItem("Item2", "desc"));
-
-        _completionWindow.CompletionList.ListBox.SelectionChanged += (s, e) =>
-        {
-            // TODO: mouse selection
-            // _completionWindow.CompletionList.RequestInsertion(e);
-        };
-
-        _completionWindow.Show();
-    }
-
-    private void TextAreaTextEntered(object sender, TextInputEventArgs e)
-    {
-        if (e.Text == "(")
-        {
-            _overloadInsightWindow = new OverloadInsightWindow(e.Source as TextArea);
-            _overloadInsightWindow.Closed += (o, args) => _overloadInsightWindow = null;
-
-            _overloadInsightWindow.Provider = new CompletionOverloadProvider(new[]
-            {
-                    ("Method1(int, string)", (object)"Method1 description"),
-                    ("Method2(int)", (object)"Method2 description"),
-                    ("Method3(string)", (object)"Method3 description"),
-                });
-
-            _overloadInsightWindow.Show();
-        }
-    }
-
-    public class CompletionItem : ICompletionData
-    {
-        public CompletionItem(string text, string description, string? replacementText = null, IBitmap? image = null, Action<TextArea, ISegment, EventArgs>? completionAction = null)
-        {
-            this.Text = text;
-            this.Image = image;
-            this._description = description;
-            this._replacementText = replacementText;
-            this._completionAction = completionAction;
-        }
-
-        public IBitmap Image { get; }
-
-        private readonly string _description;
-        private readonly string? _replacementText;
-        private readonly Action<TextArea, ISegment, EventArgs>? _completionAction;
-
-        public string Text { get; }
-
-        // Use this property if you want to show a fancy UIElement in the list.
-        public object Content => Text;
-
-        public object Description => new ScrollViewer()
-        {
-            Content = new TextBlock() { Text = this._description, TextWrapping = TextWrapping.Wrap, MaxWidth = 200, Background = Brushes.White },
-            MaxHeight = 100,
-            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
-        };
-
-        public double Priority { get; } = 0;
-
-        public void Complete(TextArea textArea, ISegment completionSegment, EventArgs insertionRequestEventArgs)
-        {
-            textArea.Document.Replace(completionSegment, this._replacementText ?? Text);
-            this._completionAction?.Invoke(textArea, completionSegment, insertionRequestEventArgs);
-        }
-    }
-
-    private class CompletionOverloadProvider : IOverloadProvider
-    {
-        private readonly IList<(string header, object content)> _items;
-        private int _selectedIndex;
-
-        public CompletionOverloadProvider(IList<(string header, object content)> items)
-        {
-            _items = items;
-            SelectedIndex = 0;
-        }
-
-        public int SelectedIndex
-        {
-            get => _selectedIndex;
-            set
-            {
-                _selectedIndex = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(CurrentHeader));
-                OnPropertyChanged(nameof(CurrentContent));
-            }
-        }
-
-        public int Count => _items.Count;
-        public string CurrentIndexText => null;
-        public object CurrentHeader => _items[SelectedIndex].header;
-        public object CurrentContent => _items[SelectedIndex].content;
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        private void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
 }
 
 public class SyntaxHighlightTransformer : DocumentColorizingTransformer
 {
+    public List<(int, int, VisualStyle)> ExternalStyles { get; } = new();
+    public List<(int, int, VisualStyle)> ExternalSelectionStyles { get; } = new();
+
     public List<Token<Token>>? Tokens { get; set; }
     public int? SyntaxErrorOffset { get; set; }
     public int? SyntaxErrorLine { get; set; }
 
-    public CodeEditor CodeEditor { get; internal set; }
-
     protected override void ColorizeLine(DocumentLine line)
     {
         // TODO: perf
-        foreach ((int, int, VisualStyle) s in this.CodeEditor.ExternalStyles.Concat(this.CodeEditor.ExternalSelectionStyles))
+        foreach ((int, int, VisualStyle) s in this.ExternalStyles.Concat(this.ExternalSelectionStyles))
         {
             // TODO: styles cannot go across lines
             if (s.Item1 >= line.Offset && s.Item2 <= line.EndOffset)
@@ -491,73 +358,6 @@ public sealed class LambdaCommand<T> : ICommand
             Busy = false;
         }
     }
-}
-
-/// <summary>
-/// Defines a set of commonly used text decorations.
-/// </summary>
-public static class CustomTextDecorations
-{
-    static CustomTextDecorations()
-    {
-        Underline = new TextDecorationCollection
-                        {
-                            new TextDecoration
-                            {
-                                Location = Avalonia.Media.TextDecorationLocation.Underline
-                            }
-                        };
-
-        Strikethrough = new TextDecorationCollection
-                            {
-                                new TextDecoration
-                                {
-                                    Location = Avalonia.Media.TextDecorationLocation.Strikethrough
-                                }
-                            };
-
-        SquiggleUnderline = new TextDecorationCollection
-                       {
-                           new TextDecoration
-                           {
-                               Location = Avalonia.Media.TextDecorationLocation.Underline,
-                               StrokeDashArray = new AvaloniaList<double>{1, 1},
-                               Stroke = Brushes.Red,
-                               StrokeThickness = 3,
-                               StrokeThicknessUnit = TextDecorationUnit.Pixel,
-                               StrokeOffsetUnit = TextDecorationUnit.Pixel,
-                               StrokeOffset = 4
-                           }
-                       };
-
-        Baseline = new TextDecorationCollection
-                       {
-                           new TextDecoration
-                           {
-                               Location = Avalonia.Media.TextDecorationLocation.Baseline
-                           }
-                       };
-    }
-
-    /// <summary>
-    /// Gets a <see cref="TextDecorationCollection"/> containing an underline.
-    /// </summary>
-    public static TextDecorationCollection Underline { get; }
-
-    /// <summary>
-    /// Gets a <see cref="TextDecorationCollection"/> containing a strikethrough.
-    /// </summary>
-    public static TextDecorationCollection Strikethrough { get; }
-
-    /// <summary>
-    /// Gets a <see cref="TextDecorationCollection"/> containing an overline.
-    /// </summary>
-    public static TextDecorationCollection SquiggleUnderline { get; }
-
-    /// <summary>
-    /// Gets a <see cref="TextDecorationCollection"/> containing a baseline.
-    /// </summary>
-    public static TextDecorationCollection Baseline { get; }
 }
 
 class RunResultElementGenerator : VisualLineElementGenerator
