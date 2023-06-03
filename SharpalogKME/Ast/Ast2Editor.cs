@@ -342,7 +342,7 @@ namespace Ast2
                 int listIndex = this.ListIndex();
                 if (listIndex < this.VisibleNodesList.Count - 1)
                 {
-                    int newPosition = this.VisibleNodesList[listIndex + 1].PositionInfo.StartOffset;
+                    int newPosition = this.VisibleNodesList[listIndex].PositionInfo.EndOffset;
                     this.Select(newPosition);
                     e.Handled = true;
                 }                
@@ -350,8 +350,20 @@ namespace Ast2
             else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Left)
             {
                 int listIndex = this.ListIndex();
-                int newPosition = this.VisibleNodesList[Math.Max(0, listIndex - 1)].PositionInfo.EndOffset;
+                int newPosition = this.VisibleNodesList[Math.Max(0, listIndex - 1)].PositionInfo.StartOffset;
                 this.Select(newPosition);
+                e.Handled = true;
+            }
+            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Down)
+            {
+                DocumentLine nextLine = this.Editor.EditorControl.Document.GetLineByNumber(Math.Min(this.Editor.EditorControl.Document.LineCount, this.CurrentPosition.Line + 1));
+                this.Select(nextLine.Offset + Math.Min(nextLine.Length, this.CurrentPosition.Column - 1));
+                e.Handled = true;
+            }
+            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Up)
+            {
+                DocumentLine nextLine = this.Editor.EditorControl.Document.GetLineByNumber(Math.Max(1, this.CurrentPosition.Line - 1));
+                this.Select(nextLine.Offset + Math.Min(nextLine.Length, this.CurrentPosition.Column - 1));
                 e.Handled = true;
             }
             else if (e.KeyModifiers == KeyModifiers.Control && e.Key== Key.Up)

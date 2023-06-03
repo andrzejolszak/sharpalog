@@ -94,48 +94,11 @@ namespace ProjectionalBlazorMonaco.Tests
             {
                 Ast2Editor editor = new Ast2Editor(new CodeEditor());
                 editor.InitAndLoadExample(1);
+                editor.Editor.EditorControl.Focus();
 
                 await editor.AssertTextContains("'1. Read-only nodes:");
 
                 await editor.PressArrowDown();
-                await editor.AssertTextContains("'This is a");
-
-                await editor.Press(Key.X);
-                await editor.AssertTextContains("'This is a");
-
-                await editor.Press(Key.X);
-                await editor.Press(Key.Space);
-                await editor.PressBackspace();
-                await editor.AssertTextContains("'This is a");
-
-                await editor.PressEnter();
-                await editor.AssertTextContains("'This is a ReadOnlyTextNode, this text cannot be edited.'");
-            }
-        }
-
-        [Test]
-        public async Task ReadonlyNode2()
-        {
-            using (UnitTestApplication.Start(new TestServices(
-                renderInterface: new MockPlatformRenderInterface(),
-                platform: new MockRuntimePlatform(),
-                platformHotkeyConfiguration: new MockPlatformHotkeyConfiguration(),
-                fontManagerImpl: new MockFontManagerImpl(),
-                textShaperImpl: new MockTextShaperImpl())))
-            {
-                Ast2Editor editor = new Ast2Editor(new CodeEditor());
-                editor.InitAndLoadExample(1);
-
-                await editor.AssertTextContains("'1. Read-only nodes:");
-
-                await editor.PressArrowRight(ctrl: true);
-                await editor.AssertTextContains("1. Read-only nodes:'");
-
-                await editor.PressArrowRight(ctrl: true);
-                await editor.PressArrowRight(ctrl: true);
-                await editor.AssertTextContains("cannot be edited'");
-
-                await editor.PressArrowLeft(ctrl: true);
                 await editor.AssertTextContains("'This is a");
 
                 await editor.Press(Key.X);

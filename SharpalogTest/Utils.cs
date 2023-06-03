@@ -17,7 +17,7 @@ namespace ProjectionalBlazorMonaco.Tests
 
             text = text.Replace("\'", "");
 
-            string val = page.Editor.EditorControl.Text.Replace("·", " ").Replace("\n", "\r\n");
+            string val = page.Editor.EditorControl.Text.Replace("·", " ").Replace("\n", "\r\n").Replace("\r\r", "\r");
             int idx = val.IndexOf(text);
             idx.Should().BeGreaterOrEqualTo(0, val);
 
@@ -65,9 +65,9 @@ namespace ProjectionalBlazorMonaco.Tests
                 RoutedEvent = TextEditor.KeyDownEvent,
                 KeyModifiers = inputModifiers,
                 Key = key,
-                Source = textBox.Editor.EditorControl,
+                Source = textBox.Editor.EditorControl.TextArea,
                 Device = KeyboardDevice.Instance,
-                Route = RoutingStrategies.Direct
+                Route = RoutingStrategies.Tunnel
             });
         }
 
