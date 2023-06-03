@@ -13,6 +13,8 @@ namespace ProjectionalBlazorMonaco.Tests
     {
         public static async Task AssertTextContains(this Ast2Editor page, string text)
         {
+            Dispatcher.UIThread.RunJobs();
+
             int caretPosition = text.IndexOf('\'');
 
             text = text.Replace("\'", "");
@@ -65,18 +67,8 @@ namespace ProjectionalBlazorMonaco.Tests
                 RoutedEvent = TextEditor.KeyDownEvent,
                 KeyModifiers = inputModifiers,
                 Key = key,
-                Source = textBox.Editor.EditorControl.TextArea,
-                Device = KeyboardDevice.Instance,
-                Route = RoutingStrategies.Tunnel
-            });
-        }
-
-        private static void RaiseTextEvent(Ast2Editor textBox, string text)
-        {
-            textBox.Editor.EditorControl.RaiseEvent(new TextInputEventArgs
-            {
-                RoutedEvent = TextEditor.TextInputEvent,
-                Text = text
+                Source = textBox.Editor.EditorControl,
+                Device = KeyboardDevice.Instance
             });
         }
 
@@ -151,7 +143,18 @@ namespace ProjectionalBlazorMonaco.Tests
 
         public static async Task Type(this Ast2Editor page, string text)
         {
-            // TODO: send the keys, or just insert?
+            RaiseTextEvent(page, text);
+        }
+
+        private static void RaiseTextEvent(Ast2Editor textBox, string text)
+        {
+            textBox.Editor.EditorControl.TextArea.RaiseEvent(new TextInputEventArgs
+            {
+                RoutedEvent = TextEditor.TextInputEvent,
+                Text = text,
+                Device = KeyboardDevice.Instance,
+                Source = textBox.Editor.EditorControl.TextArea
+            });
         }
 
 
