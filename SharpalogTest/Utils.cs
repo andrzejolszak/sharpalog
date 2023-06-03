@@ -11,7 +11,7 @@ namespace ProjectionalBlazorMonaco.Tests
 {
     public static class Utils
     {
-        public static async Task AssertTextContains(this Ast2Editor page, string text)
+        public static void AssertTextContains(this Ast2Editor page, string text)
         {
             Dispatcher.UIThread.RunJobs();
 
@@ -39,7 +39,7 @@ namespace ProjectionalBlazorMonaco.Tests
         /// <param name="page"></param>
         /// <param name="modifiers"></param>
         /// <returns></returns>
-        public static async Task Press(this Ast2Editor page, Key key, string modifiers = "")
+        public static void Press(this Ast2Editor page, Key key, string modifiers = "")
         {
             KeyModifiers keyModifiers = KeyModifiers.None;
             if (modifiers.Contains("Control+"))
@@ -72,76 +72,76 @@ namespace ProjectionalBlazorMonaco.Tests
             });
         }
 
-        public static async Task PressArrowLeft(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false, int count = 1)
+        public static void PressArrowLeft(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false, int count = 1)
         {
             for (int i = 0; i < count; i++)
             {
-                await Press(page, Key.Left, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
+                Press(page, Key.Left, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
             }
         }
 
-        public static async Task PressArrowRight(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false, int count = 1)
+        public static void PressArrowRight(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false, int count = 1)
         {
             for (int i = 0; i < count; i++)
             {
-                await Press(page, Key.Right, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
+                Press(page, Key.Right, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
             }
         }
 
-        public static async Task PressEnter(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
+        public static void PressEnter(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
         {
-            await Press(page, Key.Enter,(ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
+            Press(page, Key.Enter,(ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
         }
 
-        public static async Task PressControl(this Ast2Editor page)
+        public static void PressControl(this Ast2Editor page)
         {
-            await Press(page, Key.LeftCtrl);
+            Press(page, Key.LeftCtrl);
         }
 
-        public static async Task PressBackspace(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false, int count = 1)
+        public static void PressBackspace(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false, int count = 1)
         {
             for (int i = 0; i < count; i++)
             {
-                await Press(page, Key.Back, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
+                Press(page, Key.Back, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
             }
         }
 
-        public static async Task PressTab(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
+        public static void PressTab(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
         {
-            await Press(page, Key.Tab, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
+            Press(page, Key.Tab, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
         }
 
-        public static async Task PressDelete(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
+        public static void PressDelete(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
         {
-            await Press(page, Key.Delete, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
+            Press(page, Key.Delete, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
         }
 
-        public static async Task PressEscape(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
+        public static void PressEscape(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
         {
-            await Press(page, Key.Escape, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
+            Press(page, Key.Escape, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
         }
 
-        public static async Task PressArrowDown(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
+        public static void PressArrowDown(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
         {
-            await Press(page, Key.Down, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
+            Press(page, Key.Down, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
         }
 
-        public static async Task PressArrowUp(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
+        public static void PressArrowUp(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
         {
-            await Press(page, Key.Up, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
+            Press(page, Key.Up, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
         }
 
-        public static async Task PressEnd(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
+        public static void PressEnd(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
         {
-            await Press(page, Key.End, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
+            Press(page, Key.End, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
         }
 
-        public static async Task PressCtrlSpace(this Ast2Editor page)
+        public static void PressCtrlSpace(this Ast2Editor page)
         {
-            await Press(page, Key.Space, "Control");
+            Press(page, Key.Space, "Control");
         }
 
-        public static async Task Type(this Ast2Editor page, string text)
+        public static void Type(this Ast2Editor page, string text)
         {
             RaiseTextEvent(page, text);
         }
@@ -158,7 +158,7 @@ namespace ProjectionalBlazorMonaco.Tests
         }
 
 
-        public static async Task ClickAsync(this Ast2Editor page, string v, bool ctrl)
+        public static void ClickAsync(this Ast2Editor page, string v, bool ctrl)
         {
             // TODO
             throw new NotImplementedException();
