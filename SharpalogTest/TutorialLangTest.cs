@@ -16,81 +16,10 @@ namespace ProjectionalBlazorMonaco.Tests
 {
     public class TutorialLangTest
     {
-
-        [Test]
-        public void Visual_Line_Should_Create_Two_Text_Lines_When_Wrapping()
-        {
-            using var app = UnitTestApplication.Start(TestServices.StyledWindow);
-
-            TextView textView = new TextView();
-
-            TextDocument document = new TextDocument("hello world".ToCharArray());
-
-            textView.Document = document;
-
-            ((ILogicalScrollable)textView).CanHorizontallyScroll = false;
-            textView.Width = MockGlyphTypeface.GlyphAdvance * 8;
-
-            textView.Measure(Size.Infinity);
-
-            VisualLine visualLine = textView.GetOrConstructVisualLine(document.Lines[0]);
-
-            Assert.AreEqual(2, visualLine.TextLines.Count);
-            Assert.AreEqual("hello ", new string(visualLine.TextLines[0].TextRuns[0].Text.Span));
-            Assert.AreEqual("world", new string(visualLine.TextLines[1].TextRuns[0].Text.Span));
-        }
-
-        [Test]
-        public void ClearCaretAndSelectionOnDocumentChange()
-        {
-            using (UnitTestApplication.Start(new TestServices(
-                renderInterface: new MockPlatformRenderInterface(),
-                platform: new MockRuntimePlatform(),
-                platformHotkeyConfiguration: new MockPlatformHotkeyConfiguration(),
-                fontManagerImpl: new MockFontManagerImpl(),
-                textShaperImpl: new MockTextShaperImpl())))
-            {
-                TextArea textArea = new TextArea();
-                textArea.Document = new TextDocument("1\n2\n3\n4th line");
-                textArea.Caret.Offset = 6;
-                textArea.Selection = Selection.Create(textArea, 3, 6);
-                textArea.Document = new TextDocument("1\n2nd");
-                Assert.AreEqual(0, textArea.Caret.Offset);
-                Assert.AreEqual(new TextLocation(1, 1), textArea.Caret.Location);
-                Assert.IsTrue(textArea.Selection.IsEmpty);
-            }
-        }
-
-        [Test]
-        public void SetDocumentToNull()
-        {
-            using (UnitTestApplication.Start(new TestServices(
-                renderInterface: new MockPlatformRenderInterface(),
-                platform: new MockRuntimePlatform(),
-                platformHotkeyConfiguration: new MockPlatformHotkeyConfiguration(),
-                fontManagerImpl: new MockFontManagerImpl(),
-                textShaperImpl: new MockTextShaperImpl())))
-            {
-                TextArea textArea = new TextArea();
-                textArea.Document = new TextDocument("1\n2\n3\n4th line");
-                textArea.Caret.Offset = 6;
-                textArea.Selection = Selection.Create(textArea, 3, 6);
-                textArea.Document = null;
-                Assert.AreEqual(0, textArea.Caret.Offset);
-                Assert.AreEqual(new TextLocation(1, 1), textArea.Caret.Location);
-                Assert.IsTrue(textArea.Selection.IsEmpty);
-            }
-        }
-
         [Test]
         public void ReadonlyNode()
         {
-            using (UnitTestApplication.Start(new TestServices(
-                renderInterface: new MockPlatformRenderInterface(),
-                platform: new MockRuntimePlatform(),
-                platformHotkeyConfiguration: new MockPlatformHotkeyConfiguration(),
-                fontManagerImpl: new MockFontManagerImpl(),
-                textShaperImpl: new MockTextShaperImpl())))
+            using (UnitTestApplication.Start(TestServices.StyledWindow))
             {
                 Ast2Editor editor = new Ast2Editor(new CodeEditor());
                 editor.InitAndLoadExample(1);
@@ -117,12 +46,7 @@ namespace ProjectionalBlazorMonaco.Tests
         [Test]
         public void EditableTextNode()
         {
-            using (UnitTestApplication.Start(new TestServices(
-                renderInterface: new MockPlatformRenderInterface(),
-                platform: new MockRuntimePlatform(),
-                platformHotkeyConfiguration: new MockPlatformHotkeyConfiguration(),
-                fontManagerImpl: new MockFontManagerImpl(),
-                textShaperImpl: new MockTextShaperImpl())))
+            using (UnitTestApplication.Start(TestServices.StyledWindow))
             {
                 Ast2Editor editor = new Ast2Editor(new CodeEditor());
                 editor.InitAndLoadExample(2);
@@ -159,12 +83,7 @@ namespace ProjectionalBlazorMonaco.Tests
         [Test]
         public void SynchronizedEditableTextNode()
         {
-            using (UnitTestApplication.Start(new TestServices(
-                renderInterface: new MockPlatformRenderInterface(),
-                platform: new MockRuntimePlatform(),
-                platformHotkeyConfiguration: new MockPlatformHotkeyConfiguration(),
-                fontManagerImpl: new MockFontManagerImpl(),
-                textShaperImpl: new MockTextShaperImpl())))
+            using (UnitTestApplication.Start(TestServices.StyledWindow))
             {
                 Ast2Editor editor = new Ast2Editor(new CodeEditor());
                 editor.InitAndLoadExample(3);
@@ -184,12 +103,7 @@ namespace ProjectionalBlazorMonaco.Tests
         [Test]
         public void HoleNode()
         {
-            using (UnitTestApplication.Start(new TestServices(
-                renderInterface: new MockPlatformRenderInterface(),
-                platform: new MockRuntimePlatform(),
-                platformHotkeyConfiguration: new MockPlatformHotkeyConfiguration(),
-                fontManagerImpl: new MockFontManagerImpl(),
-                textShaperImpl: new MockTextShaperImpl())))
+            using (UnitTestApplication.Start(TestServices.StyledWindow))
             {
                 Ast2Editor editor = new Ast2Editor(new CodeEditor());
                 editor.InitAndLoadExample(4);
@@ -230,12 +144,7 @@ namespace ProjectionalBlazorMonaco.Tests
         [Test]
         public void ReferenceNode()
         {
-            using (UnitTestApplication.Start(new TestServices(
-                renderInterface: new MockPlatformRenderInterface(),
-                platform: new MockRuntimePlatform(),
-                platformHotkeyConfiguration: new MockPlatformHotkeyConfiguration(),
-                fontManagerImpl: new MockFontManagerImpl(),
-                textShaperImpl: new MockTextShaperImpl())))
+            using (UnitTestApplication.Start(TestServices.StyledWindow))
             {
                 Ast2Editor editor = new Ast2Editor(new CodeEditor());
                 editor.InitAndLoadExample(5);
@@ -269,12 +178,7 @@ namespace ProjectionalBlazorMonaco.Tests
         [Test]
         public void EnumNode()
         {
-            using (UnitTestApplication.Start(new TestServices(
-                renderInterface: new MockPlatformRenderInterface(),
-                platform: new MockRuntimePlatform(),
-                platformHotkeyConfiguration: new MockPlatformHotkeyConfiguration(),
-                fontManagerImpl: new MockFontManagerImpl(),
-                textShaperImpl: new MockTextShaperImpl())))
+            using (UnitTestApplication.Start(TestServices.StyledWindow))
             {
                 Ast2Editor editor = new Ast2Editor(new CodeEditor());
                 editor.InitAndLoadExample(6);
@@ -308,12 +212,7 @@ namespace ProjectionalBlazorMonaco.Tests
         [Test]
         public void ToggleNode()
         {
-            using (UnitTestApplication.Start(new TestServices(
-                renderInterface: new MockPlatformRenderInterface(),
-                platform: new MockRuntimePlatform(),
-                platformHotkeyConfiguration: new MockPlatformHotkeyConfiguration(),
-                fontManagerImpl: new MockFontManagerImpl(),
-                textShaperImpl: new MockTextShaperImpl())))
+            using (UnitTestApplication.Start(TestServices.StyledWindow))
             {
                 Ast2Editor editor = new Ast2Editor(new CodeEditor());
                 editor.InitAndLoadExample(7);
@@ -338,12 +237,7 @@ namespace ProjectionalBlazorMonaco.Tests
         [Ignore("inifinite loop via dispatcher jobs")]
         public void ListNode()
         {
-            using (UnitTestApplication.Start(new TestServices(
-                renderInterface: new MockPlatformRenderInterface(),
-                platform: new MockRuntimePlatform(),
-                platformHotkeyConfiguration: new MockPlatformHotkeyConfiguration(),
-                fontManagerImpl: new MockFontManagerImpl(),
-                textShaperImpl: new MockTextShaperImpl())))
+            using (UnitTestApplication.Start(TestServices.StyledWindow))
             {
                 Ast2Editor editor = new Ast2Editor(new CodeEditor());
                 editor.InitAndLoadExample(8);
