@@ -22,18 +22,7 @@ namespace Ast2
 
         public Node ChangeFocusToNode { get; set; }
 
-        public int? NewLocalPosition { get; private set; }
-
-        public Node? NewLocalPositionContext { get; private set; }
-
         public Cursor MouseCursor { get; set; }
-
-        public UserInputResult WithNewLocalPosition(Node context, int newPos)
-        {
-            this.NewLocalPosition = newPos;
-            this.NewLocalPositionContext = context;
-            return this;
-        }
     }
 
     public class Node
@@ -246,7 +235,6 @@ namespace Ast2
     {
         public AstAutocompleteItem(string sourceToMatch, string menuText, string docTitle, string docText, string kind = "1")
         {
-            this.Id = Guid.NewGuid().ToString();
             this.SourceToMatch = sourceToMatch;
             this.MenuText = menuText;
             this.DocTitle = docTitle;
@@ -254,7 +242,6 @@ namespace Ast2
             this.Kind = kind;
         }
 
-        public string Id { get; }
         public string SourceToMatch { get; }
         public string MenuText { get; }
         public string DocTitle { get; }

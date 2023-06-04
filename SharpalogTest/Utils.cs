@@ -152,7 +152,7 @@ namespace ProjectionalBlazorMonaco.Tests
                     new AnchorSegment(page.Editor.EditorControl.Document, page.CurrentOffset, 1),
                     new EventArgs());
 
-            page.Editor.Completion.CompletionWindow.Close();
+            page.Editor.Completion.CompletionWindow.Hide();
         }
 
         public static void Type(this Ast2Editor page, string text)

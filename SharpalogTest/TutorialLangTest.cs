@@ -118,8 +118,7 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.AssertTextContains("'Banana is a HoleNode");
 
                 editor.OpenCompletion();
-                editor.PressArrowDown();
-                editor.PressEnter();
+                editor.SelectCompletion("Strawberry");
                 editor.AssertTextContains("'Strawberry is a HoleNode");
 
                 editor.PressArrowRight();

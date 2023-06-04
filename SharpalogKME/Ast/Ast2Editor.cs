@@ -140,7 +140,10 @@ namespace Ast2
         private void RefreshCompletions()
         {
             List<AstAutocompleteItem> completions = this.GetCompletions();
-            List<CompletionItem> completionItems = completions.Select(x => new CompletionItem(x.MenuText, x.DocTitle + " " + x.DocText, x.Id, completionAction: (z, y, c) => x.TriggerItemSelected())).ToList();
+            List<CompletionItem> completionItems = completions.Select(x => new CompletionItem(
+                x.MenuText,
+                x.DocTitle + " " + x.DocText,
+                completionAction: (z, y, c) => x.TriggerItemSelected())).ToList();
             
             this.Editor.Completion.ExternalCompletions.Clear();
             this.Editor.Completion.ExternalCompletions.AddRange(completionItems);
@@ -212,28 +215,13 @@ namespace Ast2
 
                 {
                     string s = sb.ToString();
-                    try
-                    {
-                        this.Editor.EditorControl.Text = s;
-                    }
-                    catch
-                    {
-                        // For tests
-                    }
+                    this.Editor.EditorControl.Text = s;
                 }
 
                 this._refreshing = false;
 
                 {
-                    if (res.NewLocalPosition.HasValue)
-                    {
-                        TextLocation newPos = this.GetPositionAt(res.NewLocalPositionContext.PositionInfo.StartOffset + res.NewLocalPosition.Value);
-                        if (newPos != null)
-                        {
-                            SetAndRevealPosition(newPos);
-                        }
-                    }
-                    else if (res.ChangeFocusToNode != null)
+                    if (res.ChangeFocusToNode != null)
                     {
                         TextLocation newPos = this.GetPositionAt(res.ChangeFocusToNode.PositionInfo.StartOffset);
                         if (newPos != null)
@@ -286,8 +274,6 @@ namespace Ast2
 
         public Node CurrentNode { get; private set; }
 
-        public Dictionary<string, AstAutocompleteItem> LastCompletionsById { get; private set; } = new Dictionary<string, AstAutocompleteItem>();
-
         public TextViewPosition CurrentPosition { get; private set; } = new TextViewPosition(1, 1);
 
         public int CurrentOffset => this.Editor.EditorControl.Document.GetOffset(this.CurrentPosition.Location);
@@ -309,27 +295,13 @@ namespace Ast2
             {
                 return res[0];
             }
-
+            
             if (res.Length > 2)
             {
                 throw new InvalidOperationException("res.Length>2 = " + res.Length);
             }
 
             return res[0].Item1 < res[1].Item1 ? res[0] : res[1];
-        }
-
-        private void PopupMenu_ClosedWithouSelection(object sender, EventArgs e)
-        {
-            this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
-        }
-
-
-        public void OnAstCompletionSelected(string completionId)
-        {
-            ConsoleLog("OnAstCompletionSelected" + completionId);
-            AstAutocompleteItem ai = this.LastCompletionsById[completionId];
-            ai.TriggerItemSelected();
-            this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
         }
 
         public void OnKeyUp(object s, KeyEventArgs e)
@@ -542,7 +514,6 @@ namespace Ast2
         public List<AstAutocompleteItem> GetCompletions()
         {
             List<AstAutocompleteItem> completions = this.CurrentNode.GetCustomCompletions(this.GetEditorState());
-            this.LastCompletionsById = completions.ToDictionary(x => x.Id);
             return completions;
         }
     }

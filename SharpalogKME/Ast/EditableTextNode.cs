@@ -78,14 +78,14 @@ namespace Ast2
                 insertingText = insertingText.Replace("\b", "");
                 if (insertingText.Length == 0)
                 {
-                    return (UserInputResult.HandledNeedsGlobalRefresh().WithNewLocalPosition(node, Math.Max(state.SelectionStart, state.SelectionEnd) - len - node.PositionInfo.StartOffset), text);
+                    return (UserInputResult.HandledNeedsGlobalRefresh(), text);
                 }
             }
 
             if (insertingText.Length > 0)
             {
                 text = text.Insert(internalOffset - backspaceLength, insertingText);
-                return (UserInputResult.HandledNeedsGlobalRefresh().WithNewLocalPosition(node, Math.Min(state.SelectionStart, state.SelectionEnd) + insertingText.Length - node.PositionInfo.StartOffset), text);
+                return (UserInputResult.HandledNeedsGlobalRefresh(), text);
             }
             else
             {

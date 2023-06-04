@@ -116,7 +116,7 @@ namespace Ast2
                     }
                 }
 
-                return UserInputResult.HandledNeedsGlobalRefresh().WithNewLocalPosition(this, newGlobalOffset - this.PositionInfo.StartOffset);
+                return UserInputResult.HandledNeedsGlobalRefresh();
             }
 
             return base.OnKeyDown(state, keys, target);
