@@ -9,7 +9,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpalogTest", "SharpalogT
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpalogBenchmarks", "SharpalogBenchmarks\SharpalogBenchmarks.csproj", "{D9E6A096-40F0-4061-BAB0-3E749D7B2CDB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpalogKME", "SharpalogKME\SharpalogKME.csproj", "{277A70AA-57E1-43CE-A871-C717369D58E3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpalogKME", "SharpalogKME\SharpalogKME.csproj", "{277A70AA-57E1-43CE-A871-C717369D58E3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BA82F448-B313-4593-84C1-737AE3CE6924}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvaloniaEdit", "AvaloniaEdit\AvaloniaEdit.csproj", "{BA99C42E-72EC-4D56-8052-7B9B6A6874D6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +37,10 @@ Global
 		{277A70AA-57E1-43CE-A871-C717369D58E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{277A70AA-57E1-43CE-A871-C717369D58E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{277A70AA-57E1-43CE-A871-C717369D58E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA99C42E-72EC-4D56-8052-7B9B6A6874D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA99C42E-72EC-4D56-8052-7B9B6A6874D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA99C42E-72EC-4D56-8052-7B9B6A6874D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA99C42E-72EC-4D56-8052-7B9B6A6874D6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
