@@ -113,11 +113,11 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.PressArrowDown();
                 editor.AssertTextContains("'◊ is a HoleNode");
 
-                editor.PressCtrlSpace();
-                editor.PressEnter();
+                editor.OpenCompletion();
+                editor.SelectCompletion("Banana");
                 editor.AssertTextContains("'Banana is a HoleNode");
 
-                editor.PressCtrlSpace();
+                editor.OpenCompletion();
                 editor.PressArrowDown();
                 editor.PressEnter();
                 editor.AssertTextContains("'Strawberry is a HoleNode");
@@ -132,7 +132,7 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.AssertTextContains("'◊ is a HoleNode");
 
                 editor.Type("xxx");
-                editor.PressCtrlSpace();
+                editor.OpenCompletion();
                 editor.PressEnter();
                 editor.AssertTextContains("xxx'◦ is a HoleNode");
 
@@ -154,7 +154,7 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.PressArrowDown();
                 editor.AssertTextContains("'◊ is a Hole for ReferenceNode");
 
-                editor.PressCtrlSpace();
+                editor.OpenCompletion();
                 editor.PressEnter();
                 editor.AssertTextContains("'an existing EditableTextNode.◦ is a Hole for ReferenceNode");
 
@@ -188,7 +188,7 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.PressArrowDown();
                 editor.AssertTextContains("'foo is an EnumNode");
 
-                editor.PressCtrlSpace();
+                editor.OpenCompletion();
                 editor.PressEnter();
                 editor.AssertTextContains("'bar is an EnumNode");
 
@@ -197,11 +197,11 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.PressEscape();
                 editor.AssertTextContains("'bar is an EnumNode");
 
-                editor.PressCtrlSpace();
+                editor.OpenCompletion();
                 editor.PressArrowRight(count: 2);
                 editor.AssertTextContains("ba'r is an EnumNode");
 
-                editor.PressCtrlSpace();
+                editor.OpenCompletion();
                 editor.PressArrowDown();
                 editor.PressArrowDown();
                 editor.PressEnter();

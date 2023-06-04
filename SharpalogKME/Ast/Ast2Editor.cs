@@ -120,7 +120,7 @@ namespace Ast2
             // TODO: multi select
             UserInputResult res = this.CurrentNode.OnTextChangingBubble(this.GetEditorState(isDel && e.Offset == this.CurrentOffset && e.RemovalLength == 1 ? 1 : 0), text, this.CurrentNode);
             res.NeedsGlobalEditorRefresh = true;
-            Dispatcher.UIThread.Post(() => HandleUserInputResult(res));
+            HandleUserInputResult(res);
         }
 
         public void SetRoot(Node root)
@@ -155,8 +155,11 @@ namespace Ast2
                     return;
                 }
 
-                this.Root.CreateView(this.GetEditorState());
-                this.RefreshWholeEditor(res);
+                Dispatcher.UIThread.Post(() =>
+                {
+                    this.Root.CreateView(this.GetEditorState());
+                    this.RefreshWholeEditor(res);
+                });
             }
         }
 
@@ -208,7 +211,15 @@ namespace Ast2
                 Node oldNode = this.CurrentNode;
 
                 {
-                    this.Editor.EditorControl.Text = sb.ToString();
+                    string s = sb.ToString();
+                    try
+                    {
+                        this.Editor.EditorControl.Text = s;
+                    }
+                    catch
+                    {
+                        // For tests
+                    }
                 }
 
                 this._refreshing = false;
@@ -354,13 +365,13 @@ namespace Ast2
                 this.Select(newPosition);
                 e.Handled = true;
             }
-            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Down)
+            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Down && !this.Editor.Completion.IsVisible)
             {
                 DocumentLine nextLine = this.Editor.EditorControl.Document.GetLineByNumber(Math.Min(this.Editor.EditorControl.Document.LineCount, this.CurrentPosition.Line + 1));
                 this.Select(nextLine.Offset + Math.Min(nextLine.Length, this.CurrentPosition.Column - 1));
                 e.Handled = true;
             }
-            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Up)
+            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Up && !this.Editor.Completion.IsVisible)
             {
                 DocumentLine nextLine = this.Editor.EditorControl.Document.GetLineByNumber(Math.Max(1, this.CurrentPosition.Line - 1));
                 this.Select(nextLine.Offset + Math.Min(nextLine.Length, this.CurrentPosition.Column - 1));

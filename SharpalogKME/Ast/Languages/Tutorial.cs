@@ -28,8 +28,8 @@ namespace ProjectionalBlazorMonaco
                 .AddChild(new ReadOnlyTextNode(" . Editing either will affect the other."));
             },
             (n, e) => {
-                e.FactoryRegistry.Add((typeof(ReadOnlyTextNode), () => new Banana()));
-                e.FactoryRegistry.Add((typeof(ReadOnlyTextNode), () => new Strawberry()));
+                e.FactoryRegistry.Add((typeof(Banana), () => new Banana()));
+                e.FactoryRegistry.Add((typeof(Strawberry), () => new Strawberry()));
                 e.FactoryRegistry.Add((typeof(EditableTextNode), () => new EditableTextNode("Bus")));
                 e.FactoryRegistry.Add((typeof(EditableTextNode), () => new EditableTextNode("Busstop")));
 

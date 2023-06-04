@@ -14,7 +14,7 @@ public class Completion
 {
     private readonly TextEditor _textEditor;
 
-    private CompletionWindow _completionWindow;
+    public CompletionWindow CompletionWindow { get; private set; }
 
     private OverloadInsightWindow _overloadInsightWindow;
 
@@ -28,32 +28,37 @@ public class Completion
         this._textEditor.TextArea.DefaultInputHandler.AddBinding(new RoutedCommand("completion"), KeyModifiers.Control, Key.Space, (s, e) => this.ShowCompletionMenu());
     }
 
-    private void ShowCompletionMenu()
+    public bool IsVisible => this.CompletionWindow != null;
+
+    public void ShowCompletionMenu()
     {
-        _completionWindow = new CompletionWindow(this._textEditor.TextArea);
-        _completionWindow.Closed += (o, args) => _completionWindow = null;
+        CompletionWindow = new CompletionWindow(this._textEditor.TextArea);
+        CompletionWindow.Closed += (o, args) => CompletionWindow = null;
 
-        _completionWindow.HorizontalScrollBarVisibilityVisible();
-        _completionWindow.CompletionList.ListBox.ItemTemplate = new FuncDataTemplate<CompletionItem>((data, nameScope) =>
-            StackPanel()
-              .OrientationHorizontal().Height(18).VerticalAlignmentCenter()
-              .Children(
-                Image().Width(15).Height(15).Source(data.Image),
-                TextBlock().VerticalAlignmentCenter().Margin(10, 0, 0, 0).FontSize(15).Text(data.Text))
-            , false);
-
-        var data = _completionWindow.CompletionList.CompletionData;
+        CompletionWindow.HorizontalScrollBarVisibilityVisible();
+        var data = CompletionWindow.CompletionList.CompletionData;
         data.AddRange(ExternalCompletions);
         data.Add(new CompletionItem("Item1", "desc sample", "replaced", Resources.Foo));
         data.Add(new CompletionItem("Item2", "desc"));
 
-        _completionWindow.CompletionList.ListBox.SelectionChanged += (s, e) =>
+        if (CompletionWindow.CompletionList.ListBox is not null)
         {
-            // TODO: mouse selection
-            // _completionWindow.CompletionList.RequestInsertion(e);
-        };
+            CompletionWindow.CompletionList.ListBox.ItemTemplate = new FuncDataTemplate<CompletionItem>((data, nameScope) =>
+                StackPanel()
+                  .OrientationHorizontal().Height(18).VerticalAlignmentCenter()
+                  .Children(
+                    Image().Width(15).Height(15).Source(data.Image),
+                    TextBlock().VerticalAlignmentCenter().Margin(10, 0, 0, 0).FontSize(15).Text(data.Text))
+                , false);
 
-        _completionWindow.Show();
+            CompletionWindow.CompletionList.ListBox.SelectionChanged += (s, e) =>
+            {
+                // TODO: mouse selection
+                // _completionWindow.CompletionList.RequestInsertion(e);
+            };
+        }
+
+        CompletionWindow.Show();
     }
 
     private void TextAreaTextEntered(object sender, TextInputEventArgs e)
