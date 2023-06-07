@@ -2,6 +2,7 @@
 using AvaloniaEdit;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
+using HarfBuzzSharp;
 using IntervalTree;
 using ProjectionalBlazorMonaco;
 using Sharplog.KME;
@@ -64,10 +65,30 @@ namespace Ast2
         public void Init()
         {
             this.Editor.EditorControl.TextArea.Caret.PositionChanged += OnPositionChanged;
+            this.Editor.EditorControl.TextArea.SelectionChanged += SelectionChanged;
             this.Editor.EditorControl.AddHandler(TextEditor.KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
             this.Editor.EditorControl.KeyUp += this.OnKeyUp;
             this.Editor.EditorControl.TextArea.TextView.GestureRecognizers.Add(new MouseRecognizer() { Parent = this });
-            this.Editor.EditorControl.Document.Changing += Document_Changing;
+            this.Editor.EditorControl.TextArea.TextEntering += TextEntering;
+
+            // TODO: Raise textarea.KeyDown to invoke?
+            // this.Editor.EditorControl.TextArea.DefaultInputHandler.AddBinding(new RoutedCommand("left"), KeyModifiers.None, Key.Left, (s, e) => this.MoveCaret(-1));
+            // this.Editor.EditorControl.TextArea.DefaultInputHandler.AddBinding(new RoutedCommand("right"), KeyModifiers.None, Key.Right, (s, e) => this.MoveCaret(1));
+        }
+
+        public void MoveCaret(int delta)
+        {
+            TextLocation pos = this.CurrentPosition.Location;
+            int offset = this.Editor.EditorControl.Document.GetOffset(pos);
+            if (this.Editor.EditorControl.Document.GetCharAt(offset) == '\r'
+                && this.Editor.EditorControl.Document.GetCharAt(offset + 1) == '\n'
+                && delta == 1)
+            {
+                delta = 2;
+            }
+            
+            TextLocation moved = this.GetPositionAt(Math.Clamp(this.Editor.EditorControl.Document.GetOffset(pos) + delta, 0, this.Editor.EditorControl.Document.TextLength));
+            SetAndRevealPosition(moved);
         }
 
         class MouseRecognizer : IGestureRecognizer
@@ -107,19 +128,27 @@ namespace Ast2
             }
         }
 
-        private void Document_Changing(object? sender, DocumentChangeEventArgs e)
+        private void TextEntering(object? sender, TextInputEventArgs e)
         {
-            if (this._refreshing || e == null)
+            // Only fires on text entry (i.e. not on deletion, not on other keys). Use keyBindings and set handled instead. Raise textarea.KeyDown to invoke
+            // TODO: reverse bubbling
+            if (this._refreshing || e == null || e.Text == null)
             {
                 return;
             }
 
-            bool isDel = e.RemovalLength != 0;
-            string text = (isDel ? new string('\b', e.RemovalLength) : string.Empty) + e.InsertedText.Text;
+            bool isDel = e.Text == "\b";
+            string text = (isDel ? new string('\b', e.Text.Length) : string.Empty) + e.Text;
             
             // TODO: multi select
-            UserInputResult res = this.CurrentNode.OnTextChangingBubble(this.GetEditorState(isDel && e.Offset == this.CurrentOffset && e.RemovalLength == 1 ? 1 : 0), text, this.CurrentNode);
+            UserInputResult res = this.CurrentNode.OnTextChangingBubble(this.GetEditorState(isDel && e.Text.Length == 1 ? 1 : 0), text, this.CurrentNode);
             res.NeedsGlobalEditorRefresh = true;
+
+            if (res.EventHandled)
+            {
+                e.Handled = true;
+            }
+
             HandleUserInputResult(res);
         }
 
@@ -139,11 +168,18 @@ namespace Ast2
 
         private void RefreshCompletions()
         {
+            this.Root.CreateView(this.GetEditorState());
+
             List<AstAutocompleteItem> completions = this.GetCompletions();
             List<CompletionItem> completionItems = completions.Select(x => new CompletionItem(
                 x.MenuText,
                 x.DocTitle + " " + x.DocText,
-                completionAction: (z, y, c) => x.TriggerItemSelected())).ToList();
+                completionAction: (z, y, c) => 
+                {
+                    Node n = x.TriggerItemSelected();
+                    this.Root.CreateView(this.GetEditorState());
+                    this.RefreshWholeEditor(UserInputResult.HandledNeedsGlobalRefresh(changeFocusToNode: n, caretDelta: n.View.Text.Length));
+                })).ToList();
             
             this.Editor.Completion.ExternalCompletions.Clear();
             this.Editor.Completion.ExternalCompletions.AddRange(completionItems);
@@ -158,9 +194,10 @@ namespace Ast2
                     return;
                 }
 
+                this.Root.CreateView(this.GetEditorState());
+
                 Dispatcher.UIThread.Post(() =>
                 {
-                    this.Root.CreateView(this.GetEditorState());
                     this.RefreshWholeEditor(res);
                 });
             }
@@ -210,7 +247,7 @@ namespace Ast2
                     }
                 }
 
-                TextViewPosition oldPos = this.CurrentPosition;
+                TextLocation oldPos = this.CurrentPosition.Location;
                 Node oldNode = this.CurrentNode;
 
                 {
@@ -221,18 +258,19 @@ namespace Ast2
                 this._refreshing = false;
 
                 {
+                    bool cursorManipulated = false;
+
                     if (res.ChangeFocusToNode != null)
                     {
-                        TextLocation newPos = this.GetPositionAt(res.ChangeFocusToNode.PositionInfo.StartOffset);
-                        if (newPos != null)
-                        {
-                            SetAndRevealPosition(newPos);
-                        }
+                        oldPos = this.GetPositionAt(res.ChangeFocusToNode.PositionInfo.StartOffset);
                     }
-                    else
+                    
+                    if (res.CaretDelta != null)
                     {
-                        SetAndRevealPosition(oldPos.Location);
+                        oldPos = this.GetPositionAt(this.Editor.EditorControl.Document.GetOffset(oldPos) + res.CaretDelta.Value);
                     }
+
+                    SetAndRevealPosition(oldPos);
                 }
             }
         }
@@ -364,6 +402,14 @@ namespace Ast2
             {
                 this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
             }
+            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Left)
+            {
+                this.MoveCaret(-1);
+            }
+            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Right)
+            {
+                this.MoveCaret(1);
+            }
             else if (e.Key == Key.LeftCtrl)
             {
                 // TODO: does not seem to work, TODO: clear
@@ -417,7 +463,7 @@ namespace Ast2
         private void SetAndRevealPosition(TextLocation position)
         {
             Editor.EditorControl.TextArea.Caret.Location = position;
-            Editor.EditorControl.ScrollTo(position.Line, position.Column);
+            Editor.EditorControl.TextArea.Caret.BringCaretToView();
         }
 
         public Node GetParent(Node node, bool jumpHole)
@@ -456,13 +502,11 @@ namespace Ast2
             // TODO: consider skipping if position unchanged
 
             {
-                // await using (await window.Console.Time("GetOffsets"))
-                {
-                    this.CurrentPosition = this.Editor.EditorControl.TextArea.Caret.Position;
-                    Selection s = this.GetSelection();
-                    this.CurrentSelectionStart =  this.Editor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.StartPosition.Location);
-                    this.CurrentSelectionEnd = this.Editor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.EndPosition.Location);
-                }
+                this.CurrentPosition = this.Editor.EditorControl.TextArea.Caret.Position;
+
+                Selection s = this.GetSelection();
+                this.CurrentSelectionStart = this.Editor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.StartPosition.Location);
+                this.CurrentSelectionEnd = this.Editor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.EndPosition.Location);
 
                 Node current = this.AtPosition(this.CurrentOffset).Item2;
                 ConsoleLog("CO" + this.CurrentOffset);
@@ -494,6 +538,13 @@ namespace Ast2
 
                 this.AddSelectionStyle(this.CurrentNode.PositionInfo.StartOffset, this.CurrentNode.PositionInfo.EndOffset, VisualStyles.SelectedNodeText, null);
             }
+        }
+
+        private void SelectionChanged(object? sender, EventArgs e)
+        {
+            Selection s = this.GetSelection();
+            this.CurrentSelectionStart = this.Editor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.StartPosition.Location);
+            this.CurrentSelectionEnd = this.Editor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.EndPosition.Location);
         }
 
         private TextLocation GetPositionAt(int offset)

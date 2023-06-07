@@ -14,7 +14,16 @@ namespace Ast2
 
         public static readonly UserInputResult Handled = new UserInputResult() { EventHandled = true };
 
-        public static UserInputResult HandledNeedsGlobalRefresh(Node changeFocusToNode = null, Cursor cursor = null) => new UserInputResult() { EventHandled = true, NeedsGlobalEditorRefresh = true, ChangeFocusToNode = changeFocusToNode, MouseCursor = cursor };
+        public static readonly UserInputResult HandledNoMove = new UserInputResult() { EventHandled = true, CaretDelta = 0 };
+
+        public static UserInputResult HandledNeedsGlobalRefresh(Node changeFocusToNode = null, Cursor cursor = null, int? caretDelta = null) => new UserInputResult() 
+        {
+            EventHandled = true,
+            NeedsGlobalEditorRefresh = true,
+            ChangeFocusToNode = changeFocusToNode,
+            MouseCursor = cursor,
+            CaretDelta = caretDelta
+        };
 
         public bool EventHandled { get; set; }
         
@@ -23,6 +32,8 @@ namespace Ast2
         public Node ChangeFocusToNode { get; set; }
 
         public Cursor MouseCursor { get; set; }
+
+        public int? CaretDelta { get; set; }
     }
 
     public class Node
@@ -117,18 +128,18 @@ namespace Ast2
 
         public UserInputResult OnTextChangingBubble(EditorState state, string insertingText, Node target)
         {
-            UserInputResult thisResult = this.OnTextChanging(state, insertingText, target);
-            if (thisResult.EventHandled)
+            UserInputResult parentRes = UserInputResult.Empty;
+            if (this.Parent != null)
             {
-                return thisResult;
+                parentRes = this.Parent.OnTextChangingBubble(state, insertingText, target);
             }
 
-            if (this.Parent == null)
+            if (parentRes.EventHandled)
             {
-                return UserInputResult.Handled;
+                return parentRes;
             }
-
-            return this.Parent.OnTextChangingBubble(state, insertingText, target);
+            
+            return this.OnTextChanging(state, insertingText, target);
         }
 
         protected virtual UserInputResult OnTextChanging(EditorState state, string insertingText, Node target)
@@ -248,8 +259,8 @@ namespace Ast2
         public string DocText { get; }
         public string Kind { get; }
 
-        public event Action OnItemSelected = () => { };
+        public event Func<Node?> OnItemSelected = () => null;
 
-        public void TriggerItemSelected() => this.OnItemSelected();
+        public Node TriggerItemSelected() => this.OnItemSelected();
     }
 }

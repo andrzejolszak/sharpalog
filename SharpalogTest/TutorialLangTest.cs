@@ -31,15 +31,15 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.AssertTextContains("'This is a");
 
                 editor.Type("x");
-                editor.AssertTextContains("T'his is a");
+                editor.AssertTextContains("'This is a");
 
                 editor.Type("x");
                 editor.Type(" ");
                 editor.PressBackspace();
-                editor.AssertTextContains("Thi's is a");
+                editor.AssertTextContains("'This is a");
 
                 editor.PressEnter();
-                editor.AssertTextContains("Thi's is a ReadOnlyTextNode, this text cannot be edited.'");
+                editor.AssertTextContains("'This is a ReadOnlyTextNode, this text cannot be edited.'");
             }
         }
 
@@ -115,13 +115,19 @@ namespace ProjectionalBlazorMonaco.Tests
 
                 editor.OpenCompletion();
                 editor.SelectCompletion("Banana");
-                editor.AssertTextContains("'Banana is a HoleNode");
+                editor.AssertTextContains("Banana' is a HoleNode");
 
+                editor.PressArrowLeft();
+                editor.AssertTextContains("Banan'a is a HoleNode");
                 editor.OpenCompletion();
                 editor.SelectCompletion("Strawberry");
-                editor.AssertTextContains("'Strawberry is a HoleNode");
+                editor.AssertTextContains("Strawberry' is a HoleNode");
 
-                editor.PressArrowRight();
+                editor.PressArrowLeft();
+                editor.Type("x");
+                editor.AssertTextContains("Strawberr'y is a HoleNode");
+
+                // TODO: \b
                 editor.PressBackspace();
                 editor.AssertTextContains("'◊ is a HoleNode");
 
@@ -154,11 +160,11 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.AssertTextContains("'◊ is a Hole for ReferenceNode");
 
                 editor.OpenCompletion();
-                editor.PressEnter();
-                editor.AssertTextContains("'an existing EditableTextNode.◦ is a Hole for ReferenceNode");
+                editor.SelectCompletion("an existing EditableTextNode");
+                editor.AssertTextContains("an existing EditableTextNode.◦' is a Hole for ReferenceNode");
 
                 editor.Type("x");
-                editor.AssertTextContains("'an existing EditableTextNode.◦ is a Hole for ReferenceNode");
+                editor.AssertTextContains("an existing EditableTextNode.◦ is a Hole for ReferenceNode");
 
                 editor.PressEnd();
                 editor.PressArrowLeft();
@@ -188,23 +194,21 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.AssertTextContains("'foo is an EnumNode");
 
                 editor.OpenCompletion();
-                editor.PressEnter();
+                editor.SelectCompletion("bar");
                 editor.AssertTextContains("'bar is an EnumNode");
 
                 editor.Type("x");
                 editor.PressBackspace();
                 editor.PressEscape();
-                editor.AssertTextContains("'bar is an EnumNode");
+                editor.AssertTextContains("b'ar is an EnumNode");
 
                 editor.OpenCompletion();
                 editor.PressArrowRight(count: 2);
-                editor.AssertTextContains("ba'r is an EnumNode");
+                editor.AssertTextContains("b'ar is an EnumNode");
 
                 editor.OpenCompletion();
-                editor.PressArrowDown();
-                editor.PressArrowDown();
-                editor.PressEnter();
-                editor.AssertTextContains("fo'o is an EnumNode");
+                editor.SelectCompletion("foo");
+                editor.AssertTextContains("f'oo is an EnumNode");
             }
         }
 
@@ -228,7 +232,7 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.AssertTextContains("[' ] is a ToggleNode");
 
                 editor.Type("x");
-                editor.AssertTextContains("[ '] is a ToggleNode");
+                editor.AssertTextContains("[' ] is a ToggleNode");
             }
         }
 

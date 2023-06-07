@@ -41,10 +41,10 @@ namespace Ast2
             {
                 this.IsChecked = !this.IsChecked;
                 this.ValueChanged(this);
-                return UserInputResult.HandledNeedsGlobalRefresh(this.VisualChildren[1]);
+                return UserInputResult.HandledNeedsGlobalRefresh(this.VisualChildren[1], caretDelta: 0);
             }
 
-            return base.OnTextChanging(state, insertingText, target);
+            return UserInputResult.HandledNoMove;
         }
     }
 }

@@ -23,5 +23,10 @@ namespace Ast2
         {
             this.View = new NodeView(this, this.Text, this.Style);
         }
+
+        protected override UserInputResult OnTextChanging(EditorState state, string insertingText, Node target)
+        {
+            return UserInputResult.HandledNoMove;
+        }
     }
 }

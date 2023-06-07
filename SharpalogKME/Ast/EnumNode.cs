@@ -33,7 +33,12 @@ namespace Ast2
             foreach (string item in this.Items.OrderBy(x => x))
             {
                 AstAutocompleteItem autocomplete = new AstAutocompleteItem(this.Selection, item, "tooltip", "tooltipetext");
-                autocomplete.OnItemSelected += () => this.Selection = item;
+                autocomplete.OnItemSelected += () =>
+                {
+                    this.Selection = item;
+                    return this;
+                };
+
                 res.Add(autocomplete);
             }
 

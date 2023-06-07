@@ -146,13 +146,13 @@ namespace ProjectionalBlazorMonaco.Tests
 
         public static void SelectCompletion(this Ast2Editor page, string containsText)
         {
+            page.Editor.Completion.CompletionWindow.Hide();
+
             page.Editor.Completion.ExternalCompletions.Single(x => x.Text.Contains(containsText))
                 .Complete(
                     page.Editor.EditorControl.TextArea,
                     new AnchorSegment(page.Editor.EditorControl.Document, page.CurrentOffset, 1),
                     new EventArgs());
-
-            page.Editor.Completion.CompletionWindow.Hide();
         }
 
         public static void Type(this Ast2Editor page, string text)

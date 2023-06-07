@@ -97,7 +97,12 @@ namespace Ast2
                 if (typeof(T).IsAssignableFrom(item.Type))
                 {
                     AstAutocompleteItem autocomplete = new AstAutocompleteItem(string.IsNullOrEmpty(this.ScratchText) ? text : item.Type.Name, item.Type.Name, "tooltip", "tooltipetext");
-                    autocomplete.OnItemSelected += () => this.SetChild(item.Factory.Invoke() as T);
+                    autocomplete.OnItemSelected += () =>
+                    {
+                        T node = item.Factory.Invoke() as T;
+                        this.SetChild(node);
+                        return node;
+                    };
                     res.Add(autocomplete);
                 }
             }
@@ -117,7 +122,12 @@ namespace Ast2
                         var constructedRefType = type.MakeGenericType(refType);
                         T newRef = (T)Activator.CreateInstance(constructedRefType, node);
 
-                        autocomplete.OnItemSelected += () => this.SetChild(newRef);
+                        autocomplete.OnItemSelected += () =>
+                        {
+                            this.SetChild(newRef);
+                            return newRef;
+                        };
+
                         res.Add(autocomplete);
                     }
                 }
