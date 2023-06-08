@@ -29,7 +29,7 @@ public class Completion
         this._textEditor.TextArea.DefaultInputHandler.AddBinding(new RoutedCommand("completion"), KeyModifiers.Control, Key.Space, (s, e) => this.ShowCompletionMenu());
     }
 
-    public bool IsVisible => this.CompletionWindow != null;
+    public bool IsVisible => this.CompletionWindow?.IsVisible ?? false;
 
     public void ShowCompletionMenu()
     {
@@ -78,6 +78,12 @@ public class Completion
 
             _overloadInsightWindow.Show();
         }
+    }
+
+    public void Hide()
+    {
+        this.CompletionWindow?.Hide();
+        this.CompletionWindow = null;
     }
 
     public class CompletionItem : ICompletionData

@@ -128,12 +128,7 @@ namespace Ast2
 
         public UserInputResult OnTextChangingBubble(EditorState state, string insertingText, Node target)
         {
-            UserInputResult parentRes = UserInputResult.Empty;
-            if (this.Parent != null)
-            {
-                parentRes = this.Parent.OnTextChangingBubble(state, insertingText, target);
-            }
-
+            UserInputResult parentRes = this.Parent?.OnTextChangingBubble(state, insertingText, target) ?? UserInputResult.Empty;
             if (parentRes.EventHandled)
             {
                 return parentRes;
@@ -159,18 +154,13 @@ namespace Ast2
 
         public UserInputResult OnNodeIsSelectedBubble(EditorState state, bool hasFocus, Node target)
         {
-            UserInputResult thisResult = this.OnNodeIsSelectedChanged(state, hasFocus, target);
-            if (thisResult.EventHandled)
+            UserInputResult parentRes = this.Parent?.OnNodeIsSelectedBubble(state, hasFocus, target) ?? UserInputResult.Empty;
+            if (parentRes.EventHandled)
             {
-                return thisResult;
+                return parentRes;
             }
 
-            if (this.Parent == null)
-            {
-                return UserInputResult.Handled;
-            }
-
-            return this.Parent.OnNodeIsSelectedBubble(state, hasFocus, target);
+            return this.OnNodeIsSelectedChanged(state, hasFocus, target);
         }
 
         protected virtual UserInputResult OnNodeIsSelectedChanged(EditorState state, bool hasFocus, Node target)
@@ -180,18 +170,13 @@ namespace Ast2
 
         public UserInputResult OnKeyDownBubble(EditorState state, KeyEventArgs keys, Node target)
         {
-            UserInputResult thisResult = this.OnKeyDown(state, keys, target);
-            if (thisResult.EventHandled)
+            UserInputResult parentRes = this.Parent?.OnKeyDownBubble(state, keys, target) ?? UserInputResult.Empty;
+            if (parentRes.EventHandled)
             {
-                return thisResult;
+                return parentRes;
             }
 
-            if (this.Parent == null)
-            {
-                return UserInputResult.Handled;
-            }
-
-            return this.Parent.OnKeyDownBubble(state, keys, target);
+            return this.OnKeyDown(state, keys, target);
         }
 
         protected virtual UserInputResult OnKeyDown(EditorState state, KeyEventArgs keys, Node target)
@@ -201,18 +186,13 @@ namespace Ast2
 
         public UserInputResult OnKeyUpBubble(EditorState state, KeyEventArgs keys, Node target)
         {
-            UserInputResult thisResult = this.OnKeyUp(state, keys, target);
-            if (thisResult.EventHandled)
+            UserInputResult parentRes = this.Parent?.OnKeyUpBubble(state, keys, target) ?? UserInputResult.Empty;
+            if (parentRes.EventHandled)
             {
-                return thisResult;
+                return parentRes;
             }
 
-            if (this.Parent == null)
-            {
-                return UserInputResult.Handled;
-            }
-
-            return this.Parent.OnKeyUpBubble(state, keys, target);
+            return this.OnKeyUp(state, keys, target);
         }
 
         protected virtual UserInputResult OnKeyUp(EditorState state, KeyEventArgs keys, Node target)
@@ -222,18 +202,12 @@ namespace Ast2
 
         public UserInputResult OnMouseClickBubble(EditorState state, PointerPressedEventArgs button, Node target)
         {
-            UserInputResult thisResult = this.OnMouseClick(state, button, target);
-            if (thisResult.EventHandled)
+            UserInputResult parentRes = this.Parent?.OnMouseClickBubble(state, button, target) ?? UserInputResult.Empty;
+            if (parentRes.EventHandled)
             {
-                return thisResult;
+                return parentRes;
             }
-
-            if (this.Parent == null)
-            {
-                return UserInputResult.Handled;
-            }
-
-            return this.Parent.OnMouseClickBubble(state, button, target);
+            return this.OnMouseClick(state, button, target);
         }
 
         protected virtual UserInputResult OnMouseClick(EditorState state, PointerPressedEventArgs button, Node target)

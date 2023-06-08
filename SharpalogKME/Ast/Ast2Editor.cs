@@ -62,32 +62,162 @@ namespace Ast2
             this.Editor = monacoEditor;
         }
 
+        public TextArea TextArea => this.Editor.EditorControl.TextArea;
+
+        public TextDocument Document => this.Editor.EditorControl.Document;
+
         public void Init()
         {
-            this.Editor.EditorControl.TextArea.Caret.PositionChanged += OnPositionChanged;
-            this.Editor.EditorControl.TextArea.SelectionChanged += SelectionChanged;
+            this.TextArea.Caret.PositionChanged += OnPositionChanged;
+            this.TextArea.SelectionChanged += SelectionChanged;
             this.Editor.EditorControl.AddHandler(TextEditor.KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
             this.Editor.EditorControl.KeyUp += this.OnKeyUp;
-            this.Editor.EditorControl.TextArea.TextView.GestureRecognizers.Add(new MouseRecognizer() { Parent = this });
-            this.Editor.EditorControl.TextArea.TextEntering += TextEntering;
+            this.TextArea.TextView.GestureRecognizers.Add(new MouseRecognizer() { Parent = this });
+            this.TextArea.TextEntering += TextEntering;
+        }
 
-            // TODO: Raise textarea.KeyDown to invoke?
-            // this.Editor.EditorControl.TextArea.DefaultInputHandler.AddBinding(new RoutedCommand("left"), KeyModifiers.None, Key.Left, (s, e) => this.MoveCaret(-1));
-            // this.Editor.EditorControl.TextArea.DefaultInputHandler.AddBinding(new RoutedCommand("right"), KeyModifiers.None, Key.Right, (s, e) => this.MoveCaret(1));
+        public void OnPreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (this._refreshing)
+            {
+                return;
+            }
+
+            e.Handled = true;
+
+            if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Right)
+            {
+                int listIndex = this.ListIndex();
+                if (listIndex < this.VisibleNodesList.Count - 1)
+                {
+                    int newPosition = this.VisibleNodesList[listIndex].PositionInfo.EndOffset;
+                    this.Select(newPosition);
+                }
+            }
+            else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Left)
+            {
+                int listIndex = this.ListIndex();
+                int newPosition = this.VisibleNodesList[Math.Max(0, listIndex - 1)].PositionInfo.StartOffset;
+                this.Select(newPosition);
+            }
+            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Down && !this.Editor.Completion.IsVisible)
+            {
+                DocumentLine nextLine = this.Document.GetLineByNumber(Math.Min(this.Document.LineCount, this.CurrentPosition.Line + 1));
+                this.Select(nextLine.Offset + Math.Min(nextLine.Length, this.CurrentPosition.Column - 1));
+            }
+            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Up && !this.Editor.Completion.IsVisible)
+            {
+                DocumentLine nextLine = this.Document.GetLineByNumber(Math.Max(1, this.CurrentPosition.Line - 1));
+                this.Select(nextLine.Offset + Math.Min(nextLine.Length, this.CurrentPosition.Column - 1));
+            }
+            else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Up)
+            {
+                Node parent = this.CurrentNode.Parent;
+                int newPosition = parent.PositionInfo.StartOffset;
+                this.Select(newPosition);
+            }
+            else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Space)
+            {
+                this.RefreshCompletions();
+                e.Handled = false;
+            }
+            else if (e.Key == Key.F5)
+            {
+                this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
+            }
+            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Left)
+            {
+                this.MoveCaret(-1);
+            }
+            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Right)
+            {
+                this.MoveCaret(1);
+            }
+            else if (e.KeyModifiers == KeyModifiers.Shift && e.Key == Key.Right)
+            {
+                var oldPosition = this.CurrentPosition;
+                this.MoveCaret(1);
+                this.TextArea.Selection = this.TextArea.Selection.StartSelectionOrSetEndpoint(oldPosition, this.CurrentPosition);
+            }
+            else if (e.KeyModifiers == KeyModifiers.Shift && e.Key == Key.Left)
+            {
+                var oldPosition = this.CurrentPosition;
+                this.MoveCaret(-1);
+                this.TextArea.Selection = this.TextArea.Selection.StartSelectionOrSetEndpoint(oldPosition, this.CurrentPosition);
+            }
+            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.End)
+            {
+                DocumentLine line = this.Document.GetLineByNumber(this.CurrentPosition.Line);
+                int delta = line.TotalLength - line.DelimiterLength - this.CurrentPosition.Column + 1;
+                if (delta > 0)
+                {
+                    this.MoveCaret(delta);
+                }
+            }
+            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Back)
+            {
+                this.TextEntering(null, new TextInputEventArgs() { Text = "\b" });
+            }
+            else if (e.Key == Key.LeftCtrl)
+            {
+                // TODO: does not seem to work, TODO: clear
+                Node parent = GetParent(this.CurrentNode, true);
+                if (parent != null && parent != this.Root)
+                {
+                    int min = this.CurrentNode.PositionInfo.StartOffset;
+                    int max = this.CurrentNode.PositionInfo.EndOffset;
+                    int listIndex = this.ListIndex();
+
+                    for (int i = listIndex - 1; i >= 0; i--)
+                    {
+                        Node n = this.VisibleNodesList[i];
+                        if (GetParent(n, true) != parent)
+                        {
+                            break;
+                        }
+
+                        min = n.PositionInfo.StartOffset;
+                    }
+
+                    for (int i = listIndex + 1; i < this.VisibleNodesList.Count; i++)
+                    {
+                        Node n = this.VisibleNodesList[i];
+                        if (GetParent(n, true) != parent)
+                        {
+                            break;
+                        }
+
+                        max = n.PositionInfo.EndOffset;
+                    }
+
+                    this.AddSelectionStyle(min, max, VisualStyles.SelectedParentNodeText, null);
+                }
+            }
+            else
+            {
+                e.Handled = false;
+
+                Node currNode = this.CurrentNode;
+
+                UserInputResult res = currNode.OnKeyDownBubble(this.GetEditorState(), e, currNode);
+                this.HandleUserInputResult(res);
+            }
         }
 
         public void MoveCaret(int delta)
         {
             TextLocation pos = this.CurrentPosition.Location;
-            int offset = this.Editor.EditorControl.Document.GetOffset(pos);
-            if (this.Editor.EditorControl.Document.GetCharAt(offset) == '\r'
-                && this.Editor.EditorControl.Document.GetCharAt(offset + 1) == '\n'
+            int offset = this.Document.GetOffset(pos);
+            
+            if (offset + 1 < this.Document.TextLength 
+                && this.Document.GetCharAt(offset) == '\r'
+                && this.Document.GetCharAt(offset + 1) == '\n'
                 && delta == 1)
             {
                 delta = 2;
             }
             
-            TextLocation moved = this.GetPositionAt(Math.Clamp(this.Editor.EditorControl.Document.GetOffset(pos) + delta, 0, this.Editor.EditorControl.Document.TextLength));
+            TextLocation moved = this.GetPositionAt(Math.Clamp(this.Document.GetOffset(pos) + delta, 0, this.Document.TextLength));
             SetAndRevealPosition(moved);
         }
 
@@ -109,13 +239,13 @@ namespace Ast2
 
             public void PointerPressed(PointerPressedEventArgs e)
             {
-                TextViewPosition? pos = this.Parent.Editor.EditorControl.GetPositionFromPoint(e.GetPosition(this.Parent.Editor.EditorControl.TextArea));
+                TextViewPosition? pos = this.Parent.Editor.EditorControl.GetPositionFromPoint(e.GetPosition(this.Parent.TextArea));
                 if (pos is null)
                 {
                     return;
                 }
 
-                (int, Node) node = this.Parent.AtPosition(this.Parent.Editor.EditorControl.Document.GetOffset(pos.Value.Location));
+                (int, Node) node = this.Parent.AtPosition(this.Parent.Document.GetOffset(pos.Value.Location));
                 if (node.Item2 != null)
                 {
                     UserInputResult res = node.Item2.OnMouseClickBubble(this.Parent.GetEditorState(), e, node.Item2);
@@ -136,12 +266,9 @@ namespace Ast2
             {
                 return;
             }
-
-            bool isDel = e.Text == "\b";
-            string text = (isDel ? new string('\b', e.Text.Length) : string.Empty) + e.Text;
-            
+           
             // TODO: multi select
-            UserInputResult res = this.CurrentNode.OnTextChangingBubble(this.GetEditorState(isDel && e.Text.Length == 1 ? 1 : 0), text, this.CurrentNode);
+            UserInputResult res = this.CurrentNode.OnTextChangingBubble(this.GetEditorState(), e.Text, this.CurrentNode);
             res.NeedsGlobalEditorRefresh = true;
 
             if (res.EventHandled)
@@ -156,7 +283,6 @@ namespace Ast2
         {
             this.Root = root;
             this.CurrentNode = root;
-            this.CurrentPosition = new TextViewPosition(1, 1);
             this.CurrentSelectionStart = 0;
             this.CurrentSelectionEnd = 0;
         }
@@ -267,7 +393,7 @@ namespace Ast2
                     
                     if (res.CaretDelta != null)
                     {
-                        oldPos = this.GetPositionAt(this.Editor.EditorControl.Document.GetOffset(oldPos) + res.CaretDelta.Value);
+                        oldPos = this.GetPositionAt(this.Document.GetOffset(oldPos) + res.CaretDelta.Value);
                     }
 
                     SetAndRevealPosition(oldPos);
@@ -277,7 +403,7 @@ namespace Ast2
 
         private Selection GetSelection()
         {
-            return this.Editor.EditorControl.TextArea.Selection;
+            return this.TextArea.Selection;
         }
 
         private void RenderViewsRecusive(Node node, List<(string text, PositionInfo info, VisualStyle style, VisualStyle backgroundStyle, VisualStyle overlayStyle)> res, ref int addedLength)
@@ -312,9 +438,9 @@ namespace Ast2
 
         public Node CurrentNode { get; private set; }
 
-        public TextViewPosition CurrentPosition { get; private set; } = new TextViewPosition(1, 1);
+        public TextViewPosition CurrentPosition => this.TextArea.Caret.Position;
 
-        public int CurrentOffset => this.Editor.EditorControl.Document.GetOffset(this.CurrentPosition.Location);
+        public int CurrentOffset => this.Document.GetOffset(this.CurrentPosition.Location);
         // TODO: this breaks down after text editign
         public List<string> SelectionStyleIds { get; private set; } = new List<string>(2);
         public int CurrentSelectionStart { get; private set; }
@@ -350,110 +476,6 @@ namespace Ast2
             this.HandleUserInputResult(res);
         }
 
-        public void OnPreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            if (this._refreshing)
-            {
-                return;
-            }
-
-            ConsoleLog("OnKeyDown");
-            if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Right)
-            {
-                int listIndex = this.ListIndex();
-                if (listIndex < this.VisibleNodesList.Count - 1)
-                {
-                    int newPosition = this.VisibleNodesList[listIndex].PositionInfo.EndOffset;
-                    this.Select(newPosition);
-                    e.Handled = true;
-                }                
-            }
-            else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Left)
-            {
-                int listIndex = this.ListIndex();
-                int newPosition = this.VisibleNodesList[Math.Max(0, listIndex - 1)].PositionInfo.StartOffset;
-                this.Select(newPosition);
-                e.Handled = true;
-            }
-            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Down && !this.Editor.Completion.IsVisible)
-            {
-                DocumentLine nextLine = this.Editor.EditorControl.Document.GetLineByNumber(Math.Min(this.Editor.EditorControl.Document.LineCount, this.CurrentPosition.Line + 1));
-                this.Select(nextLine.Offset + Math.Min(nextLine.Length, this.CurrentPosition.Column - 1));
-                e.Handled = true;
-            }
-            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Up && !this.Editor.Completion.IsVisible)
-            {
-                DocumentLine nextLine = this.Editor.EditorControl.Document.GetLineByNumber(Math.Max(1, this.CurrentPosition.Line - 1));
-                this.Select(nextLine.Offset + Math.Min(nextLine.Length, this.CurrentPosition.Column - 1));
-                e.Handled = true;
-            }
-            else if (e.KeyModifiers == KeyModifiers.Control && e.Key== Key.Up)
-            {
-                Node parent = this.CurrentNode.Parent;
-                int newPosition = parent.PositionInfo.StartOffset;
-                this.Select(newPosition);
-                e.Handled = true;
-            }
-            else if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Space)
-            {
-                this.RefreshCompletions();
-            }
-            else if (e.Key == Key.F5)
-            {
-                this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
-            }
-            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Left)
-            {
-                this.MoveCaret(-1);
-            }
-            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Right)
-            {
-                this.MoveCaret(1);
-            }
-            else if (e.Key == Key.LeftCtrl)
-            {
-                // TODO: does not seem to work, TODO: clear
-                Node parent = GetParent(this.CurrentNode, true);
-                if (parent != null && parent != this.Root)
-                {
-                    int min = this.CurrentNode.PositionInfo.StartOffset;
-                    int max = this.CurrentNode.PositionInfo.EndOffset;
-                    int listIndex = this.ListIndex();
-
-                    for (int i = listIndex - 1; i >= 0; i--)
-                    {
-                        Node n = this.VisibleNodesList[i];
-                        if (GetParent(n, true) != parent)
-                        {
-                            break;
-                        }
-
-                        min = n.PositionInfo.StartOffset;
-                    }
-
-                    for (int i = listIndex + 1; i < this.VisibleNodesList.Count; i++)
-                    {
-                        Node n = this.VisibleNodesList[i];
-                        if (GetParent(n, true) != parent)
-                        {
-                            break;
-                        }
-
-                        max = n.PositionInfo.EndOffset;
-                    }
-
-                    this.AddSelectionStyle(min, max, VisualStyles.SelectedParentNodeText, null);
-                }
-            }
-            else
-            {
-                Node currNode = this.CurrentNode;
-                
-                UserInputResult res = currNode.OnKeyDownBubble(this.GetEditorState(), e, currNode);
-                this.HandleUserInputResult(res);
-            }
-        }
-
         private void Select(int position)
         {
             TextLocation newPos = this.GetPositionAt(position);
@@ -462,8 +484,8 @@ namespace Ast2
 
         private void SetAndRevealPosition(TextLocation position)
         {
-            Editor.EditorControl.TextArea.Caret.Location = position;
-            Editor.EditorControl.TextArea.Caret.BringCaretToView();
+            TextArea.Caret.Location = position;
+            TextArea.Caret.BringCaretToView();
         }
 
         public Node GetParent(Node node, bool jumpHole)
@@ -502,11 +524,9 @@ namespace Ast2
             // TODO: consider skipping if position unchanged
 
             {
-                this.CurrentPosition = this.Editor.EditorControl.TextArea.Caret.Position;
-
                 Selection s = this.GetSelection();
-                this.CurrentSelectionStart = this.Editor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.StartPosition.Location);
-                this.CurrentSelectionEnd = this.Editor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.EndPosition.Location);
+                this.CurrentSelectionStart = this.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.StartPosition.Location);
+                this.CurrentSelectionEnd = this.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.EndPosition.Location);
 
                 Node current = this.AtPosition(this.CurrentOffset).Item2;
                 ConsoleLog("CO" + this.CurrentOffset);
@@ -543,13 +563,13 @@ namespace Ast2
         private void SelectionChanged(object? sender, EventArgs e)
         {
             Selection s = this.GetSelection();
-            this.CurrentSelectionStart = this.Editor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.StartPosition.Location);
-            this.CurrentSelectionEnd = this.Editor.EditorControl.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.EndPosition.Location);
+            this.CurrentSelectionStart = this.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.StartPosition.Location);
+            this.CurrentSelectionEnd = this.Document.GetOffset(s.IsEmpty ? this.CurrentPosition.Location : s.EndPosition.Location);
         }
 
         private TextLocation GetPositionAt(int offset)
         {
-            return this.Editor.EditorControl.Document.GetLocation(offset);
+            return this.Document.GetLocation(offset);
         }
 
         private void AddSelectionStyle(int min, int max, VisualStyle style, string hoverMessage)

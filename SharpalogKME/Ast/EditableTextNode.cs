@@ -78,7 +78,7 @@ namespace Ast2
                 insertingText = insertingText.Replace("\b", "");
                 if (insertingText.Length == 0)
                 {
-                    return (UserInputResult.HandledNeedsGlobalRefresh(caretDelta: insertingText.Length), text);
+                    return (UserInputResult.HandledNeedsGlobalRefresh(caretDelta: -1), text);
                 }
             }
 

@@ -127,7 +127,6 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.Type("x");
                 editor.AssertTextContains("Strawberr'y is a HoleNode");
 
-                // TODO: \b
                 editor.PressBackspace();
                 editor.AssertTextContains("'◊ is a HoleNode");
 
@@ -137,12 +136,19 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.AssertTextContains("'◊ is a HoleNode");
 
                 editor.Type("xxx");
-                editor.OpenCompletion();
-                editor.PressEnter();
                 editor.AssertTextContains("xxx'◦ is a HoleNode");
-
+                editor.PressArrowLeft(count: 3);
+                editor.AssertTextContains("'xxx◦ is a HoleNode");
                 editor.PressArrowUp();
                 editor.AssertTextContains("◊ is a HoleNode");
+
+                editor.PressArrowDown();
+                editor.AssertTextContains("'◊ is a HoleNode");
+                editor.Type("xxx");
+                editor.AssertTextContains("xxx'◦ is a HoleNode");
+                editor.OpenCompletion();
+                editor.SelectCompletion("Banana");
+                editor.AssertTextContains("Banana' is a HoleNode");
             }
         }
 

@@ -60,6 +60,8 @@ namespace ProjectionalBlazorMonaco.Tests
             }
 
             RaiseKeyEvent(page, key, keyModifiers);
+
+            Dispatcher.UIThread.RunJobs();
         }
 
         private static void RaiseKeyEvent(Ast2Editor textBox, Key key, KeyModifiers inputModifiers)
@@ -146,13 +148,14 @@ namespace ProjectionalBlazorMonaco.Tests
 
         public static void SelectCompletion(this Ast2Editor page, string containsText)
         {
-            page.Editor.Completion.CompletionWindow.Hide();
+            page.Editor.Completion.Hide();
 
             page.Editor.Completion.ExternalCompletions.Single(x => x.Text.Contains(containsText))
                 .Complete(
                     page.Editor.EditorControl.TextArea,
                     new AnchorSegment(page.Editor.EditorControl.Document, page.CurrentOffset, 1),
                     new EventArgs());
+
         }
 
         public static void Type(this Ast2Editor page, string text)
