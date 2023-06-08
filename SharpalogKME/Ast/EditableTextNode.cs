@@ -58,7 +58,9 @@ namespace Ast2
 
         public static (UserInputResult, string) HandleTextInsertion(EditorState state, string insertingText, Node node, string text)
         {
-            int internalOffset = Math.Min(state.SelectionStart, state.SelectionEnd) - node.PositionInfo.StartOffset;
+            int realStart = Math.Min(state.SelectionStart, state.SelectionEnd) - node.PositionInfo.StartOffset;
+            int realEnd = Math.Max(state.SelectionStart, state.SelectionEnd) - node.PositionInfo.StartOffset;
+
             int backspaceLength = insertingText.Count(x => x == '\b');
             if (insertingText[0] == '\b')
             {
@@ -67,7 +69,7 @@ namespace Ast2
                     return (UserInputResult.Empty, text);
                 }
 
-                int target = internalOffset - backspaceLength;
+                int target = realEnd - backspaceLength;
                 int len = backspaceLength;
                 if (text[target] == '\n')
                 {
@@ -78,7 +80,8 @@ namespace Ast2
                 insertingText = insertingText.Replace("\b", "");
                 if (insertingText.Length == 0)
                 {
-                    return (UserInputResult.HandledNeedsGlobalRefresh(caretDelta: -1), text);
+                    int caretMove = state.CurrentPosition == Math.Min(state.SelectionStart, state.SelectionEnd) && state.SelectionStart != state.SelectionEnd ? 0 : -backspaceLength;
+                    return (UserInputResult.HandledNeedsGlobalRefresh(caretDelta: caretMove), text);
                 }
             }
 
@@ -86,13 +89,11 @@ namespace Ast2
             {
                 if (state.SelectionStart != state.SelectionEnd)
                 {
-                    int realStart = Math.Min(state.SelectionStart, state.SelectionEnd) - node.PositionInfo.StartOffset;
-                    int realEnd = Math.Max(state.SelectionStart, state.SelectionEnd) - node.PositionInfo.StartOffset;
                     bool ordered = state.SelectionEnd > state.SelectionStart;
                     text = text.Remove(realStart, realEnd - realStart);
                 }
 
-                text = text.Insert(internalOffset - backspaceLength, insertingText);
+                text = text.Insert(realStart - backspaceLength, insertingText);
                 return (UserInputResult.HandledNeedsGlobalRefresh(caretDelta: insertingText.Length - (state.SelectionStart < state.SelectionEnd ? Math.Abs(state.SelectionStart - state.SelectionEnd) : 0)), text);
             }
             else

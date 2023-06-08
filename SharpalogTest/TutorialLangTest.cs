@@ -77,6 +77,21 @@ namespace ProjectionalBlazorMonaco.Tests
 
                 editor.PressBackspace(count: 2);
                 editor.AssertTextContains("can be edited'◦");
+
+                editor.PressArrowLeft(count: 6);
+                editor.AssertTextContains("can be 'edited◦");
+
+                editor.PressArrowRight(shift: true, count: 2);
+                editor.AssertTextContains("can be ed'ited◦");
+
+                editor.PressBackspace();
+                editor.AssertTextContains("can be 'ited◦");
+
+                editor.PressArrowLeft(shift: true, count: 3);
+                editor.AssertTextContains("can 'be ited◦");
+
+                editor.PressBackspace();
+                editor.AssertTextContains("can 'ited◦");
             }
         }
 

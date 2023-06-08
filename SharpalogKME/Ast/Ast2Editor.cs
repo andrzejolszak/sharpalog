@@ -156,7 +156,8 @@ namespace Ast2
             }
             else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Back)
             {
-                this.TextEntering(null, new TextInputEventArgs() { Text = "\b" });
+                int selLen = Math.Abs(this.CurrentSelectionEnd - this.CurrentSelectionStart);
+                this.TextEntering(null, new TextInputEventArgs() { Text = new string('\b', selLen == 0 ? 1 : selLen) });
             }
             else if (e.Key == Key.LeftCtrl)
             {
