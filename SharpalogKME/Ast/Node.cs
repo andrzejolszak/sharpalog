@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Ast2
+﻿namespace Ast2
 {
     public struct UserInputResult
     {
@@ -106,15 +100,19 @@ namespace Ast2
         }
 
         // TODO: (maybe) this and Children will be removed from here when we get proper holes, lists, etc.
-        public Node AddChild(Node node)
+        public Node WithChildren(params Node[] nodes)
         {
             if (this.VisualChildren == null)
             {
                 this.VisualChildren = new List<Node>();
             }
 
-            this.VisualChildren.Add(node);
-            node.Parent = this;
+            foreach (Node node in nodes)
+            {
+                this.VisualChildren.Add(node);
+                node.Parent = this;
+            }
+
             return this;
         }
 
@@ -126,9 +124,9 @@ namespace Ast2
             }
         }
 
-        public UserInputResult OnTextChangingBubble(EditorState state, string insertingText, Node target)
+        public UserInputResult OnTextChangingCapture(EditorState state, string insertingText, Node target)
         {
-            UserInputResult parentRes = this.Parent?.OnTextChangingBubble(state, insertingText, target) ?? UserInputResult.Empty;
+            UserInputResult parentRes = this.Parent?.OnTextChangingCapture(state, insertingText, target) ?? UserInputResult.Empty;
             if (parentRes.EventHandled)
             {
                 return parentRes;
@@ -152,9 +150,9 @@ namespace Ast2
             return new List<AstAutocompleteItem>(0);
         }
 
-        public UserInputResult OnNodeIsSelectedBubble(EditorState state, bool hasFocus, Node target)
+        public UserInputResult OnNodeIsSelectedCapture(EditorState state, bool hasFocus, Node target)
         {
-            UserInputResult parentRes = this.Parent?.OnNodeIsSelectedBubble(state, hasFocus, target) ?? UserInputResult.Empty;
+            UserInputResult parentRes = this.Parent?.OnNodeIsSelectedCapture(state, hasFocus, target) ?? UserInputResult.Empty;
             if (parentRes.EventHandled)
             {
                 return parentRes;
@@ -168,9 +166,9 @@ namespace Ast2
             return UserInputResult.Empty;
         }
 
-        public UserInputResult OnKeyDownBubble(EditorState state, KeyEventArgs keys, Node target)
+        public UserInputResult OnKeyDownCapture(EditorState state, KeyEventArgs keys, Node target)
         {
-            UserInputResult parentRes = this.Parent?.OnKeyDownBubble(state, keys, target) ?? UserInputResult.Empty;
+            UserInputResult parentRes = this.Parent?.OnKeyDownCapture(state, keys, target) ?? UserInputResult.Empty;
             if (parentRes.EventHandled)
             {
                 return parentRes;
@@ -184,9 +182,9 @@ namespace Ast2
             return UserInputResult.Empty;
         }
 
-        public UserInputResult OnKeyUpBubble(EditorState state, KeyEventArgs keys, Node target)
+        public UserInputResult OnKeyUpCapture(EditorState state, KeyEventArgs keys, Node target)
         {
-            UserInputResult parentRes = this.Parent?.OnKeyUpBubble(state, keys, target) ?? UserInputResult.Empty;
+            UserInputResult parentRes = this.Parent?.OnKeyUpCapture(state, keys, target) ?? UserInputResult.Empty;
             if (parentRes.EventHandled)
             {
                 return parentRes;
@@ -200,9 +198,9 @@ namespace Ast2
             return UserInputResult.Empty;
         }
 
-        public UserInputResult OnMouseClickBubble(EditorState state, PointerPressedEventArgs button, Node target)
+        public UserInputResult OnMouseClickCapture(EditorState state, PointerPressedEventArgs button, Node target)
         {
-            UserInputResult parentRes = this.Parent?.OnMouseClickBubble(state, button, target) ?? UserInputResult.Empty;
+            UserInputResult parentRes = this.Parent?.OnMouseClickCapture(state, button, target) ?? UserInputResult.Empty;
             if (parentRes.EventHandled)
             {
                 return parentRes;
@@ -210,7 +208,7 @@ namespace Ast2
             return this.OnMouseClick(state, button, target);
         }
 
-        protected virtual UserInputResult OnMouseClick(EditorState state, PointerPressedEventArgs button, Node target)
+        public virtual UserInputResult OnMouseClick(EditorState state, PointerPressedEventArgs button, Node target)
         {
             return UserInputResult.Empty;
         }

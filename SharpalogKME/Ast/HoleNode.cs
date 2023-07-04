@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Sharplog.KME;
+﻿using Sharplog.KME;
 
 namespace Ast2
 {
@@ -67,7 +61,7 @@ namespace Ast2
 
             if (target != default)
             {
-                this.AddChild(target);
+                this.WithChildren(target);
                 this.View = null;
                 this.ScratchText = string.Empty;
             }
@@ -180,6 +174,11 @@ namespace Ast2
             }
 
             return base.OnKeyDown(state, keys, target);
+        }
+
+        public override UserInputResult OnMouseClick(EditorState state, PointerPressedEventArgs e, Node target)
+        {
+            return this.VisualChildren.SingleOrDefault()?.OnMouseClick(state, e, target) ?? base.OnMouseClick(state, e, target);
         }
     }
 }

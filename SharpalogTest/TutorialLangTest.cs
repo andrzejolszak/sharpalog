@@ -1,18 +1,8 @@
-﻿using FluentAssertions;
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using NUnit.Framework;
-using Sharplog.KME;
+﻿using Sharplog.KME;
 using Ast2;
-using Avalonia.Controls;
-using AvaloniaEdit.Document;
-using AvaloniaEdit.Editing;
 using AvaloniaEdit.AvaloniaMocks;
-using AvaloniaEdit.Rendering;
-using Moq;
 
-namespace ProjectionalBlazorMonaco.Tests
+namespace Sharplog.Projectional
 {
     public class TutorialLangTest
     {
@@ -192,11 +182,12 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.AssertTextContains("to an existing EditableTextNode.'◦");
 
                 editor.Type("y");
-                editor.AssertTextContains("to an existing EditableTextNode.y'◦");
-
                 editor.AssertTextContains("an existing EditableTextNode.y◦ is a Hole for ReferenceNode");
 
-                editor.ClickAsync("text=an", true);
+                editor.AssertTextContains("to an existing EditableTextNode.y'◦");
+
+                editor.PressHome();
+                editor.ClickCurrentNode(ctrl: true);
                 editor.AssertTextContains("that can refer to 'an existing EditableTextNode");
             }
         }
@@ -216,20 +207,20 @@ namespace ProjectionalBlazorMonaco.Tests
 
                 editor.OpenCompletion();
                 editor.SelectCompletion("bar");
-                editor.AssertTextContains("'bar is an EnumNode");
+                editor.AssertTextContains("bar' is an EnumNode");
 
-                editor.Type("x");
                 editor.PressBackspace();
+                editor.AssertTextContains("bar' is an EnumNode");
                 editor.PressEscape();
-                editor.AssertTextContains("b'ar is an EnumNode");
+                editor.AssertTextContains("bar' is an EnumNode");
 
                 editor.OpenCompletion();
-                editor.PressArrowRight(count: 2);
+                editor.PressArrowLeft(count: 2);
                 editor.AssertTextContains("b'ar is an EnumNode");
 
                 editor.OpenCompletion();
                 editor.SelectCompletion("foo");
-                editor.AssertTextContains("f'oo is an EnumNode");
+                editor.AssertTextContains("foo' is an EnumNode");
             }
         }
 
@@ -258,7 +249,6 @@ namespace ProjectionalBlazorMonaco.Tests
         }
 
         [Test]
-        [Ignore("inifinite loop via dispatcher jobs")]
         public void ListNode()
         {
             using (UnitTestApplication.Start(TestServices.StyledWindow))
@@ -281,10 +271,19 @@ namespace ProjectionalBlazorMonaco.Tests
                 editor.AssertTextContains("['cat, dog] is a ListNode");
 
                 editor.PressArrowRight(count: 3);
+                editor.AssertTextContains("[cat', dog] is a ListNode");
                 editor.PressBackspace();
                 editor.AssertTextContains("['dog] is a ListNode");
 
                 editor.PressArrowRight(count: 3);
+                editor.AssertTextContains("[dog'] is a ListNode");
+
+                editor.PressEnter();
+                editor.AssertTextContains("[dog, '◊] is a ListNode");
+
+                editor.PressArrowLeft();
+                editor.AssertTextContains("[dog'] is a ListNode");
+
                 editor.PressBackspace();
                 editor.AssertTextContains("['] is a ListNode");
             }

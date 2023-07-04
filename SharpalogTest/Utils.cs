@@ -1,15 +1,8 @@
 using FluentAssertions;
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using NUnit.Framework;
-using Sharplog.KME;
 using Ast2;
 using AvaloniaEdit;
 using AvaloniaEdit.Document;
-using AvaloniaEdit.Editing;
-
-namespace ProjectionalBlazorMonaco.Tests
+namespace Sharplog.Projectional
 {
     public static class Utils
     {
@@ -140,6 +133,11 @@ namespace ProjectionalBlazorMonaco.Tests
             Press(page, Key.End, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
         }
 
+        public static void PressHome(this Ast2Editor page, bool ctrl = false, bool alt = false, bool shift = false)
+        {
+            Press(page, Key.Home, (ctrl ? "Control+" : string.Empty) + (alt ? "Alt+" : string.Empty) + (shift ? "Shift+" : string.Empty));
+        }
+
         public static void OpenCompletion(this Ast2Editor page)
         {
             Press(page, Key.Space, "Control");
@@ -175,10 +173,10 @@ namespace ProjectionalBlazorMonaco.Tests
         }
 
 
-        public static void ClickAsync(this Ast2Editor page, string v, bool ctrl)
+        public static void ClickCurrentNode(this Ast2Editor textBox, bool ctrl)
         {
-            // TODO
-            throw new NotImplementedException();
+            UserInputResult res = textBox.CurrentNode.OnMouseClickCapture(textBox.GetEditorState(), new PointerPressedEventArgs(null, null, null, default, 0, default, ctrl ? KeyModifiers.Control : KeyModifiers.None, 1), textBox.CurrentNode);
+            textBox.HandleUserInputResult(res);
         }
     }
 }

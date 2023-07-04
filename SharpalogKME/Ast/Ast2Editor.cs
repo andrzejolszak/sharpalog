@@ -2,15 +2,12 @@
 using AvaloniaEdit;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
-using HarfBuzzSharp;
+using AvaloniaEdit.Rendering;
 using IntervalTree;
 using ProjectionalBlazorMonaco;
 using Sharplog.KME;
-using System;
 using System.Text;
-using static Sharplog.KME.CodeEditor;
 using static Sharplog.KME.Completion;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Ast2
 {
@@ -26,7 +23,7 @@ namespace Ast2
                 foreach (Action<Node, Ast2Editor> b in Tutorial.Builders)
                 {
                     b.Invoke(this.Root, this);
-                    this.Root.AddChild(ReadOnlyTextNode.NewLine()).AddChild(ReadOnlyTextNode.NewLine());
+                    this.Root.WithChildren(ReadOnlyTextNode.NewLine(), ReadOnlyTextNode.NewLine());
                 }
             }
             else
@@ -36,11 +33,6 @@ namespace Ast2
             }
 
             this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
-        }
-
-        private void ForceRefresh()
-        {
-            this.RefreshWholeEditor(UserInputResult.HandledNeedsGlobalRefresh());
         }
 
         public readonly CodeEditor Editor;
@@ -74,6 +66,11 @@ namespace Ast2
             this.Editor.EditorControl.KeyUp += this.OnKeyUp;
             this.TextArea.TextView.GestureRecognizers.Add(new MouseRecognizer() { Parent = this });
             this.TextArea.TextEntering += TextEntering;
+        }
+
+        public void ForceRefresh()
+        {
+            this.RefreshWholeEditor(UserInputResult.HandledNeedsGlobalRefresh());
         }
 
         public void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -123,7 +120,7 @@ namespace Ast2
             }
             else if (e.Key == Key.F5)
             {
-                this.HandleUserInputResult(UserInputResult.HandledNeedsGlobalRefresh());
+                this.ForceRefresh();
             }
             else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Left)
             {
@@ -154,8 +151,27 @@ namespace Ast2
                     this.MoveCaret(delta);
                 }
             }
+            else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Home)
+            {
+                DocumentLine line = this.Document.GetLineByNumber(this.CurrentPosition.Line);
+                int delta = -this.CurrentPosition.Column + 1;
+                if (delta < 0)
+                {
+                    this.MoveCaret(delta);
+                }
+            }
             else if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.Back)
             {
+                // TODO: multi select
+                UserInputResult res = this.CurrentNode.OnKeyDownCapture(this.GetEditorState(), e, this.CurrentNode);
+                res.NeedsGlobalEditorRefresh = true;
+                if (res.EventHandled)
+                {
+                    e.Handled = true;
+                    HandleUserInputResult(res);
+                    return;
+                }
+
                 int selLen = Math.Abs(this.CurrentSelectionEnd - this.CurrentSelectionStart);
                 this.TextEntering(null, new TextInputEventArgs() { Text = new string('\b', selLen == 0 ? 1 : selLen) });
             }
@@ -200,7 +216,7 @@ namespace Ast2
 
                 Node currNode = this.CurrentNode;
 
-                UserInputResult res = currNode.OnKeyDownBubble(this.GetEditorState(), e, currNode);
+                UserInputResult res = currNode.OnKeyDownCapture(this.GetEditorState(), e, currNode);
                 this.HandleUserInputResult(res);
             }
         }
@@ -249,7 +265,7 @@ namespace Ast2
                 (int, Node) node = this.Parent.AtPosition(this.Parent.Document.GetOffset(pos.Value.Location));
                 if (node.Item2 != null)
                 {
-                    UserInputResult res = node.Item2.OnMouseClickBubble(this.Parent.GetEditorState(), e, node.Item2);
+                    UserInputResult res = node.Item2.OnMouseClickCapture(this.Parent.GetEditorState(), e, node.Item2);
                     this.Parent.HandleUserInputResult(res);
                 }
             }
@@ -262,14 +278,13 @@ namespace Ast2
         private void TextEntering(object? sender, TextInputEventArgs e)
         {
             // Only fires on text entry (i.e. not on deletion, not on other keys). Use keyBindings and set handled instead. Raise textarea.KeyDown to invoke
-            // TODO: reverse bubbling
             if (this._refreshing || e == null || e.Text == null)
             {
                 return;
             }
            
             // TODO: multi select
-            UserInputResult res = this.CurrentNode.OnTextChangingBubble(this.GetEditorState(), e.Text, this.CurrentNode);
+            UserInputResult res = this.CurrentNode.OnTextChangingCapture(this.GetEditorState(), e.Text, this.CurrentNode);
             res.NeedsGlobalEditorRefresh = true;
 
             if (res.EventHandled)
@@ -338,6 +353,9 @@ namespace Ast2
             }
 
             {
+                PositionInfo oldNodePosition = this.CurrentNode?.PositionInfo;
+                int oldNodeOffset = this.CurrentOffset - oldNodePosition?.StartOffset ?? 0;
+
                 this._refreshing = true;
                 this._visibleNodesIntervalTree.Clear();
                 this.VisibleNodesList.Clear();
@@ -385,16 +403,21 @@ namespace Ast2
                 this._refreshing = false;
 
                 {
-                    bool cursorManipulated = false;
-
                     if (res.ChangeFocusToNode != null)
                     {
                         oldPos = this.GetPositionAt(res.ChangeFocusToNode.PositionInfo.StartOffset);
                     }
-                    
+
                     if (res.CaretDelta != null)
                     {
-                        oldPos = this.GetPositionAt(this.Document.GetOffset(oldPos) + res.CaretDelta.Value);
+                        if (res.ChangeFocusToNode == null && oldNode is not null)
+                        {
+                            oldPos = this.GetPositionAt(oldNode.PositionInfo.StartOffset + oldNodeOffset + res.CaretDelta.Value);
+                        }
+                        else
+                        {
+                            oldPos = this.GetPositionAt(this.Document.GetOffset(oldPos) + res.CaretDelta.Value);
+                        }
                     }
 
                     SetAndRevealPosition(oldPos);
@@ -473,7 +496,7 @@ namespace Ast2
         {
             ConsoleLog("OnKeyUp");
             Node currNode = this.CurrentNode;
-            UserInputResult res = currNode.OnKeyUpBubble(this.GetEditorState(), e, currNode);
+            UserInputResult res = currNode.OnKeyUpCapture(this.GetEditorState(), e, currNode);
             this.HandleUserInputResult(res);
         }
 
@@ -544,8 +567,8 @@ namespace Ast2
                 if (this.CurrentNode != current)
                 {
                     EditorState es = this.GetEditorState();
-                    UserInputResult? res1 = this.CurrentNode?.OnNodeIsSelectedBubble(es, false, this.CurrentNode);
-                    UserInputResult res2 = current.OnNodeIsSelectedBubble(es, true, current);
+                    UserInputResult? res1 = this.CurrentNode?.OnNodeIsSelectedCapture(es, false, this.CurrentNode);
+                    UserInputResult res2 = current.OnNodeIsSelectedCapture(es, true, current);
 
                     if (res1.HasValue)
                     {

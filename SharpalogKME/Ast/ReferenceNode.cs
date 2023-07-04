@@ -42,7 +42,7 @@ namespace Ast2
             }
         }
 
-        protected override UserInputResult OnMouseClick(EditorState state, PointerPressedEventArgs e, Node target)
+        public override UserInputResult OnMouseClick(EditorState state, PointerPressedEventArgs e, Node target)
         {
             // TODO left mouse button
             if (e.ClickCount == 1 && e.KeyModifiers.HasFlag(KeyModifiers.Control) && IsTargetAttached(state))

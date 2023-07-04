@@ -28,7 +28,7 @@ namespace Ast2
             base.CreateView(editorState);
         }
 
-        protected override UserInputResult OnMouseClick(EditorState state, PointerPressedEventArgs button, Node target)
+        public override UserInputResult OnMouseClick(EditorState state, PointerPressedEventArgs button, Node target)
         {
             this.IsChecked = !this.IsChecked;
             this.ValueChanged(this);

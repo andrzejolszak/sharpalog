@@ -5,19 +5,19 @@ namespace Ast2
 {
     public class ListNode<T> : Node where T:Node
     {
-        public ListNode(string leftParen, string rightParen, string separator, List<T> list = null)
+        public ListNode(string leftParen, string rightParen, string separator, List<Node> list = null)
         {
             this.LeftParen = leftParen;
             this.RightParen = rightParen;
             this.Separator = separator;
-            this.List = list ?? new List<T>();
+            this.List = list ?? new List<Node>();
             this.VisualChildren = new List<Node>();
             this.EmptyPlaceholder = new HoleNode<T>() { Parent = this } ;
             this.EmptyPlaceholder.ValueChanged += EmptyPlaceholder_ValueChanged;
         }
 
         public Type TargetNodeType { get; } = typeof(T);
-        public List<T> List { get; }
+        public List<Node> List { get; }
         public HoleNode<T> EmptyPlaceholder { get; }
         public int EmptyPlaceholderIndex { get; private set; } = -1;
         public string LeftParen { get; }
@@ -66,21 +66,54 @@ namespace Ast2
         {
             if (existing == null)
             {
-                this.List.Add((T)node);
+                this.List.Add(node);
             }
             else
             {
-                int index = this.List.IndexOf((T)existing);
-                this.List.Insert(index, (T)node);
+                int index = this.List.IndexOf(existing);
+                this.List.Insert(index, node);
             }
 
             this.EmptyPlaceholderIndex = -1;
         }
 
-        public void Remove(Node existing)
+        public UserInputResult Remove(Node target)
         {
-            this.List.Remove((T)existing);
-            this.EmptyPlaceholderIndex = -1;
+            if (target == this.EmptyPlaceholder && this.EmptyPlaceholderIndex > -1)
+            {
+                int index = this.EmptyPlaceholderIndex;
+                this.EmptyPlaceholderIndex = -1;
+                return UserInputResult.HandledNeedsGlobalRefresh(this.List.Count > 0 ? this.List[Math.Min(this.List.Count - 1, index)] : this, caretDelta: this.List.Count > 0 && this.List.Count == index ? this.List.Last().View.Text.Length : 0);
+            }
+
+            if (this.List.Count == 0)
+            {
+                return UserInputResult.HandledNeedsGlobalRefresh();
+            }
+
+            int idx = this.List.IndexOf(target);
+            if (idx < 0)
+            {
+                idx = this.VisualChildren.IndexOf(target);
+                if (idx > -1)
+                {
+                    Node t = this.VisualChildren[idx];
+                    if (t.View.Text == this.Separator || t.View.Text == this.RightParen)
+                    {
+                        t = this.VisualChildren[idx - 1];
+                    }
+
+                    idx = this.List.IndexOf(t);
+                }
+            }
+
+            if (idx < 0)
+            {
+                return UserInputResult.HandledNeedsGlobalRefresh();
+            }
+
+            this.List.RemoveAt(idx);
+            return UserInputResult.HandledNeedsGlobalRefresh(this.List.Count > 0 ? this.List[Math.Min(this.List.Count - 1, idx)] : this, caretDelta: this.List.Count > 0 ? 0 : 1);
         }
 
         protected override UserInputResult OnKeyDown(EditorState state, KeyEventArgs keys, Node target)
@@ -94,29 +127,11 @@ namespace Ast2
             }
             else if (keys.Key == Key.Escape && target == this.EmptyPlaceholder)
             {
-                this.EmptyPlaceholderIndex = -1;
-                return UserInputResult.HandledNeedsGlobalRefresh();
+                return this.Remove(target);
             }
             else if (keys.Key == Key.Back && target != this.EmptyPlaceholder && this.List.Count > 0)
             {
-                int newGlobalOffset = this.PositionInfo.StartOffset;
-                if (this.List.Contains(target as T))
-                {
-                    this.List.Remove(target as T);
-                    newGlobalOffset = target.PositionInfo.StartOffset;
-                }
-                else
-                {
-                    int idx = this.VisualChildren.IndexOf(target);
-                    if (idx > 0)
-                    {
-                        T t = this.VisualChildren[idx - 1] as T;
-                        this.List.Remove(t);
-                        newGlobalOffset = t.PositionInfo.StartOffset;
-                    }
-                }
-
-                return UserInputResult.HandledNeedsGlobalRefresh();
+                return this.Remove(target);
             }
 
             return base.OnKeyDown(state, keys, target);
@@ -137,7 +152,7 @@ namespace Ast2
 
         private bool AddEmptyPlaceholder(Node target, out UserInputResult res)
         {
-            if (target is ReadOnlyTextNode && !this.List.Contains(target as T))
+            if (target is ReadOnlyTextNode && !this.List.Contains(target))
             {
                 int idx = this.VisualChildren.IndexOf(target);
                 if (idx == this.VisualChildren.Count - 1)
@@ -146,7 +161,7 @@ namespace Ast2
                 }
                 else
                 {
-                    this.EmptyPlaceholderIndex = this.List.Count > 0 ? this.List.IndexOf(this.VisualChildren[idx + 1] as T) : 0;
+                    this.EmptyPlaceholderIndex = this.List.Count > 0 ? this.List.IndexOf(this.VisualChildren[idx + 1]) : 0;
                 }
 
                 res = UserInputResult.HandledNeedsGlobalRefresh(this.EmptyPlaceholder);
@@ -161,8 +176,7 @@ namespace Ast2
         {
             if (target == this.EmptyPlaceholder && !hasFocus)
             {
-                this.EmptyPlaceholderIndex = -1;
-                return UserInputResult.HandledNeedsGlobalRefresh();
+                return this.Remove(target);
             }
 
             return base.OnNodeIsSelectedChanged(state, hasFocus, target);
