@@ -65,7 +65,6 @@ namespace Sharplog.Projectional
                 KeyModifiers = inputModifiers,
                 Key = key,
                 Source = textBox.Editor.EditorControl,
-                Device = KeyboardDevice.Instance
             });
         }
 
@@ -167,7 +166,6 @@ namespace Sharplog.Projectional
             {
                 RoutedEvent = TextEditor.TextInputEvent,
                 Text = text,
-                Device = KeyboardDevice.Instance,
                 Source = textBox.Editor.EditorControl.TextArea
             });
         }

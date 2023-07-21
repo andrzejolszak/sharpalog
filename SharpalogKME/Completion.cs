@@ -88,7 +88,7 @@ public class Completion
 
     public class CompletionItem : ICompletionData
     {
-        public CompletionItem(string text, string description, string? replacementText = null, IBitmap? image = null, Action<TextArea, ISegment, EventArgs>? completionAction = null)
+        public CompletionItem(string text, string description, string? replacementText = null, IImage? image = null, Action<TextArea, ISegment, EventArgs>? completionAction = null)
         {
             this.Text = text;
             this.Image = image;
@@ -97,7 +97,7 @@ public class Completion
             this._completionAction = completionAction;
         }
 
-        public IBitmap Image { get; }
+        public IImage Image { get; }
 
         private readonly string _description;
         private readonly string? _replacementText;

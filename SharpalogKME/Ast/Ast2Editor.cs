@@ -238,23 +238,23 @@ namespace Ast2
             SetAndRevealPosition(moved);
         }
 
-        class MouseRecognizer : IGestureRecognizer
+        class MouseRecognizer : GestureRecognizer
         {
             public Ast2Editor Parent { get; set; }
 
-            public void Initialize(IInputElement target, IGestureRecognizerActionsDispatcher actions)
+            public void Initialize(IInputElement target)
             {
             }
 
-            public void PointerCaptureLost(IPointer pointer)
+            protected override void PointerCaptureLost(IPointer pointer)
             {
             }
 
-            public void PointerMoved(PointerEventArgs e)
+            protected override void PointerMoved(PointerEventArgs e)
             {
             }
 
-            public void PointerPressed(PointerPressedEventArgs e)
+            protected override void PointerPressed(PointerPressedEventArgs e)
             {
                 TextViewPosition? pos = this.Parent.Editor.EditorControl.GetPositionFromPoint(e.GetPosition(this.Parent.TextArea));
                 if (pos is null)
@@ -270,7 +270,7 @@ namespace Ast2
                 }
             }
 
-            public void PointerReleased(PointerReleasedEventArgs e)
+            protected override void PointerReleased(PointerReleasedEventArgs e)
             {
             }
         }
