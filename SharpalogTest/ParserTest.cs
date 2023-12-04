@@ -74,6 +74,17 @@ assert: foo(a, Y)?
 assert: not foo(c, Y)?
 assert: foo(a, Y), foo(X, b), not goo(f)?
 assert: foo(a, b)?
+assert: 2 > 1?
+assert: not 2 < 1?
+assert: X = 2, Y = 1, X > Y?
+assert: foo(a, b), count = 1?
+assert: foo(a, b), count > 0?
+assert: foo(a, b), count != 0?
+assert: foo(a, b), count <> 0?
+assert: foo(a, b), count < 2?
+assert: foo(a, b), count >= 1?
+assert: 2 < 1, count = 0?
+assert: 2 < 1, count < 1?
 
 bar(d).
 bar (X)?
