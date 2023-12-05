@@ -63,6 +63,27 @@ assert: foo(X), not foo(X, Y)?
         }
 
         [Test]
+        public void Objects()
+        {
+            Universe target = new Universe();
+            string src = @"
+object foo_base1 {foo(a1).}
+object o123 {foo(a2).}
+object gen_guid
+{
+    foo(abc).
+    bar(abcx).
+}
+
+assert: foo(foo_base1, a1)?
+assert: foo(o123, a2)?
+assert: foo(ID, abc), bar(ID, abcx), ID <> gen_guid?
+assert: object(X), count = 3?
+";
+            _ = target.ExecuteAll(src);
+        }
+
+        [Test]
         public void Asserts()
         {
             Universe target = new Universe();
@@ -203,6 +224,7 @@ assert: car(Y)?
         {
             Universe target = new Universe();
             string src = @"
+atom(a2SDA_213).
 foo(a,b) :- a=b.
 bar(c, X) :- X=t.
 

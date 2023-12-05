@@ -386,7 +386,7 @@ namespace Sharplog
                             throw new DatalogException("[line " + tokens[currentIndex-1].Line + "] Only queries can be use as asserts.");
                         }
 
-                        return new DeleteStatement(goals, null);
+                        return new DeleteStatement(goals);
                     }
                     else
                     {
@@ -415,6 +415,26 @@ namespace Sharplog
             if (!tokens.TryEat(ref currentIndex, Token.BraceOpen))
             {
                 throw new DatalogException("[line " + tokens[currentIndex].Line + "] Universe definition expected");
+            }
+
+            return true;
+        }
+
+        public static bool TryParseObjectDeclaration(List<Token<Token>> tokens, ref int currentIndex, out string objectId)
+        {
+            objectId = null;
+
+            if (!tokens.TryEatSequence(ref currentIndex, "object", Token.Identifier))
+            {
+                return false;
+            }
+
+            // Dealing with a universe
+            objectId = tokens[currentIndex - 1].Value;
+
+            if (!tokens.TryEat(ref currentIndex, Token.BraceOpen))
+            {
+                throw new DatalogException("[line " + tokens[currentIndex].Line + "] Object definition expected");
             }
 
             return true;

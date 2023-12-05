@@ -6,12 +6,10 @@ namespace Sharplog.Statement
     internal class DeleteStatement : Statement
     {
         private List<Expr> goals;
-        private string _ruleId;
 
-        internal DeleteStatement(List<Expr> goals, string ruleId)
+        internal DeleteStatement(List<Expr> goals)
         {
             this.goals = goals;
-            this._ruleId = ruleId;
         }
 
         /// <exception cref="Sharplog.DatalogException"/>

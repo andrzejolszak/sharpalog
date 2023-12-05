@@ -10,7 +10,7 @@ namespace Sharplog
         [Test]
         public void TestBase()
         {
-            IndexedSet indexedSet = new IndexedSet();
+            SignatureIndexedFactSet indexedSet = new SignatureIndexedFactSet();
             Assert.IsTrue((indexedSet.Count == 0));
             indexedSet.Add(Expr.CreateExpr("foo", "a"));
             indexedSet.Add(Expr.CreateExpr("foo", "b"));

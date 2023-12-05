@@ -25,7 +25,7 @@ namespace Sharplog
     /// </remarks>
     public sealed class Expr
     {
-        public string PredicateWithArity { get; }
+        public string PredicateWithArity { get; private set; }
 
         private int? _hashCode;
 
@@ -62,9 +62,18 @@ namespace Sharplog
 
         public string Predicate { get; }
 
-        public string[] Terms { get; }
+        public string[] Terms { get; private set; }
 
         public bool Negated { get; }
+
+        public void PrependTerm(string objectId)
+        {
+            string[] newTerms = new string[this.Terms.Length + 1];
+            newTerms[0] = objectId;
+            Array.Copy(this.Terms, 0, newTerms, 1, this.Terms.Length);
+            this.Terms = newTerms;
+            this.PredicateWithArity = this.Predicate + "/" + this.Terms.Length;
+        }
 
         public Expr Clone() => new Expr(this.Predicate, this.Terms.ToArray(), this.Negated);
 
@@ -237,7 +246,7 @@ namespace Sharplog
         /// <param name="that">The expression to unify with</param>
         /// <param name="bindings">The bindings of variables to values after unification</param>
         /// <returns>true if the expressions unify.</returns>
-        public bool GroundUnifyWith(Expr that, StackMap bindings)
+        public bool GroundUnifyWith(Expr that, VariableBindingStackMap bindings)
         {
 #if DEBUG
             if (!this.IsGround())
@@ -318,7 +327,7 @@ namespace Sharplog
         /// <summary>Evaluates a built-in predicate.</summary>
         /// <param name="bindings">A map of variable bindings</param>
         /// <returns>true if the operator matched.</returns>
-        public bool EvalBuiltIn(StackMap bindings)
+        public bool EvalBuiltIn(VariableBindingStackMap bindings)
         {
             // This method may throw a RuntimeException for a variety of possible reasons, but
             // these conditions are supposed to have been caught earlier in the chain by

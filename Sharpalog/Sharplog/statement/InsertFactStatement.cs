@@ -19,5 +19,7 @@ namespace Sharplog.Statement
             datalog.Fact(newFact);
             return null;
         }
+
+        public void PrependObjectId(string id) => this.fact.PrependTerm(id);
     }
 }

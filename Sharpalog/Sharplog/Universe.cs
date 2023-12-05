@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using Sharplog.Engine;
@@ -93,7 +94,7 @@ namespace Sharplog
     {
         private readonly IEngine _engine;
 
-        private readonly IndexedSet _currentExpansionCacheFacts = new IndexedSet();
+        private readonly SignatureIndexedFactSet _currentExpansionCacheFacts = new SignatureIndexedFactSet();
 
         private readonly HashSet<Expr> _currentExpansionCacheGoals = new HashSet<Expr>();
 
@@ -104,9 +105,9 @@ namespace Sharplog
         /// Creates a Jatalog instance with an empty IDB and EDB.
         /// </p>
         /// </remarks>
-        public Universe(bool bottomUpEvaluation = true, string name = null, IEngine engineInstance = null, IndexedSet edb = null, IDictionary<string, HashSet<Rule>> idb = null)
+        public Universe(bool bottomUpEvaluation = true, string name = null, IEngine engineInstance = null, SignatureIndexedFactSet edb = null, IDictionary<string, HashSet<Rule>> idb = null)
         {
-            this.Edb = edb ?? new IndexedSet();
+            this.Edb = edb ?? new SignatureIndexedFactSet();
             this.Idb = idb ?? new Dictionary<string, HashSet<Rule>>();
             this.Name = name;
 
@@ -130,7 +131,7 @@ namespace Sharplog
 
         public long CurrentFactExpansionCacheSize => this._currentExpansionCacheFacts.Count;
 
-        public IndexedSet Edb { get; }
+        public SignatureIndexedFactSet Edb { get; }
 
         public IDictionary<string, HashSet<Rule>> Idb { get; }
 
@@ -207,6 +208,7 @@ namespace Sharplog
                 List<(Statement.Statement, IDictionary<string, string>)> answers = new List<(Statement.Statement, IDictionary<string, string>)>();
                 Dictionary<string, Universe> universes = new Dictionary<string, Universe>();
                 Universe currentUniverse = this;
+                string? currentObjectId = null;
 
                 tokens = Parser._lexer
                     .Tokenize(stream)
@@ -231,14 +233,50 @@ namespace Sharplog
                             throw new DatalogException("[line " + tokens[i].Line + "] Cannot nest universes");
                         }
 
+                        if (currentObjectId is not null)
+                        {
+                            throw new DatalogException("[line " + tokens[i].Line + "] Cannot nest universes inside of objects");
+                        }
+
                         currentUniverse = new Universe(name: universe);
                         universes.Add(universe, currentUniverse);
                         continue;
                     }
 
+                    if (Parser.TryParseObjectDeclaration(tokens, ref i, out string objectId))
+                    {
+                        if (currentObjectId != null)
+                        {
+                            throw new DatalogException("[line " + tokens[i].Line + "] Nesting objects currently not supported");
+                        }
+
+                        if (objectId == "gen_guid")
+                        {
+                            objectId = "id_" + Guid.NewGuid().ToString().Replace("-", "_");
+                        }
+
+                        currentObjectId = objectId;
+                        Expr objectFact = new Expr("object", currentObjectId);
+                        this.Fact(objectFact);
+
+                        continue;
+                    }
+
                     if (tokens.TryEat(ref i, Token.BraceClose))
                     {
-                        currentUniverse = this;
+                        if (currentObjectId is not null)
+                        {
+                            currentObjectId = null;
+                        }
+                        else if (currentUniverse != this)
+                        {
+                            currentUniverse = this;
+                        }
+                        else
+                        {
+                            throw new DatalogException("[line " + tokens[i].Line + "] Invalid closing brace");
+                        }
+
                         continue;
                     }
 
@@ -274,6 +312,16 @@ namespace Sharplog
 
                     int statementLine = i;
                     Statement.Statement statement = Parser.ParseStmt(tokens, ref i, isAssert);
+
+                    if (currentObjectId is not null && (statement is InsertRuleStatement || statement is QueryStatement || statement is DeleteStatement))
+                    {
+                        throw new DatalogException("[line " + tokens[i].Line + "] Only insert-fact statements can be used within an object context");
+                    }
+
+                    if (currentObjectId is not null && statement is InsertFactStatement asInsertFact)
+                    {
+                        asInsertFact.PrependObjectId(currentObjectId);
+                    }
 
                     if (!parseOnly)
                     {
@@ -340,7 +388,7 @@ namespace Sharplog
             if (nonCachedGoals.Count > 0)
             {
                 List<Expr> orderedNonCacheGoals = _engine.ReorderQuery(nonCachedGoals);
-                IndexedSet factsForDownstreamPredicates = _engine.ExpandDatabase(this, orderedNonCacheGoals);
+                SignatureIndexedFactSet factsForDownstreamPredicates = _engine.ExpandDatabase(this, orderedNonCacheGoals);
 
                 this._currentExpansionCacheFacts.AddAll(factsForDownstreamPredicates.All);
                 this._currentExpansionCacheGoals.UnionWith(nonCachedGoals);
@@ -348,7 +396,7 @@ namespace Sharplog
 
             // Now match the expanded database to the goals
             List<Expr> orderedGoals = _engine.ReorderQuery(goals);
-            return _engine.MatchGoals(orderedGoals, 0, this._currentExpansionCacheFacts, new StackMap());
+            return _engine.MatchGoals(orderedGoals, 0, this._currentExpansionCacheFacts, new VariableBindingStackMap());
         }
 
         /// <summary>Executes a query with the specified goals against the database.</summary>

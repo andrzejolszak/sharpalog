@@ -6,7 +6,7 @@ namespace Sharplog.Engine
 {
     public class TopDownEngine : IEngine
     {
-        private void TopDown(IList<Expr> goals, int index, IndexedSet currentFacts, Universe jatalog, StackMap bindings, List<IDictionary<string, string>> res)
+        private void TopDown(IList<Expr> goals, int index, SignatureIndexedFactSet currentFacts, Universe jatalog, VariableBindingStackMap bindings, List<IDictionary<string, string>> res)
         {
             // TODO it should be possible to carry the current known facts in stack-wise manner to avoid repeated evaluations
             Expr goal = goals[index];
@@ -55,7 +55,7 @@ namespace Sharplog.Engine
                     foreach (Rule rule in rules)
                     {
                         // Binding names need to be first mapped to head names for this rule
-                        StackMap ruleBindings = new StackMap();
+                        VariableBindingStackMap ruleBindings = new VariableBindingStackMap();
                         for (int i = 0; i < goal.Arity; i++)
                         {
                             string goalArgName = goal.GetTerms()[i];
@@ -166,7 +166,7 @@ namespace Sharplog.Engine
                     foreach (Rule rule in rules)
                     {
                         // Binding names need to be first mapped to head names for this rule
-                        StackMap ruleBindings = new StackMap();
+                        VariableBindingStackMap ruleBindings = new VariableBindingStackMap();
                         for (int i = 0; i < goal.Arity; i++)
                         {
                             string goalArgName = goal.GetTerms()[i];
@@ -228,8 +228,8 @@ namespace Sharplog.Engine
             List<Expr> orderedGoals = ReorderQuery(goals);
 
             List<IDictionary<string, string>> res = new List<IDictionary<string, string>>();
-            StackMap bindings = new StackMap();
-            IndexedSet currentFacts = new IndexedSet();
+            VariableBindingStackMap bindings = new VariableBindingStackMap();
+            SignatureIndexedFactSet currentFacts = new SignatureIndexedFactSet();
             currentFacts.AddAll(jatalog.Edb.All);
             TopDown(orderedGoals, 0, currentFacts, jatalog, bindings, res);
             return res;
@@ -264,7 +264,7 @@ namespace Sharplog.Engine
             return ordered;
         }
 
-        public List<IDictionary<string, string>> MatchGoals(IList<Expr> goals, int index, IndexedSet facts, StackMap bindings)
+        public List<IDictionary<string, string>> MatchGoals(IList<Expr> goals, int index, SignatureIndexedFactSet facts, VariableBindingStackMap bindings)
         {
             throw new NotImplementedException();
         }
@@ -274,7 +274,7 @@ namespace Sharplog.Engine
             throw new NotImplementedException();
         }
 
-        public IndexedSet ExpandDatabase(Universe jatalog, List<Expr> goals)
+        public SignatureIndexedFactSet ExpandDatabase(Universe jatalog, List<Expr> goals)
         {
             throw new NotImplementedException();
         }

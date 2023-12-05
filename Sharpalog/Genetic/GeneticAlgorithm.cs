@@ -31,7 +31,7 @@
 
         public Universe Clone(Universe prototype)
         {
-            IndexedSet edb = new IndexedSet(prototype.Edb.Count);
+            SignatureIndexedFactSet edb = new SignatureIndexedFactSet(prototype.Edb.Count);
             edb.AddAll(prototype.Edb.All.Select(x => x.Clone()));
 
             Dictionary<string, HashSet<Rule>> idb = prototype.Idb.ToDictionary(x => x.Key, x => new HashSet<Rule>(x.Value.Select(y => y.Clone())));

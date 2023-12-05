@@ -20,7 +20,7 @@ namespace Sharplog.Engine
     /// and
     /// <c>parent</c>
     /// . The
-    /// <see cref="StackMap{K, V}.Get(object)"/>
+    /// <see cref="VariableBindingStackMap{K, V}.Get(object)"/>
     /// method will look up a key in self and if it doesn't find it, looks
     /// for it in
     /// <c>parent</c>
@@ -30,18 +30,18 @@ namespace Sharplog.Engine
     /// <c>self</c>
     /// . The parent in turn may also be a StackMap, so some method
     /// calls may be recursive. The
-    /// <see cref="StackMap{K, V}.Flatten()"/>
+    /// <see cref="VariableBindingStackMap{K, V}.Flatten()"/>
     /// method combines the map with its parents into a single one.
     /// </p><p>
     /// It is used by Jatalog for the scoped contexts where the variable bindings enter and leave scope frequently during the
     /// recursive building of the database, but where the parent Map&lt;&gt; needs to be kept for subsequent recursions.
     /// </p><p>
     /// Methods like
-    /// <see cref="StackMap{K, V}.()"/>
+    /// <see cref="VariableBindingStackMap{K, V}.()"/>
     /// ,
-    /// <see cref="StackMap{K, V}.Keys()"/>
+    /// <see cref="VariableBindingStackMap{K, V}.Keys()"/>
     /// and
-    /// <see cref="StackMap{K, V}.Values()"/>
+    /// <see cref="VariableBindingStackMap{K, V}.Values()"/>
     /// are required by the Map&lt;&gt; interface that their returned collections be backed
     /// by the Map&lt;&gt;. Therefore, their implementations here will flatten the map first. Once these methods are called StackMap just
     /// becomes a wrapper around the internal HashMap, hence Jatalog avoids these methods internally.
@@ -51,7 +51,7 @@ namespace Sharplog.Engine
     /// method also flattens
     /// <c>this</c>
     /// to avoid modifying the parent while and the
-    /// <see cref="StackMap{K, V}.Clear()"/>
+    /// <see cref="VariableBindingStackMap{K, V}.Clear()"/>
     /// method just sets parent to null
     /// and clears
     /// <c>self</c>
@@ -68,13 +68,13 @@ namespace Sharplog.Engine
     /// , but it proved to be significantly slower.
     /// </p>
     /// </summary>
-    public class StackMap
+    public class VariableBindingStackMap
     {
         private IDictionary<string, string> self;
 
         public List<string> Stack { get; } = new List<string>();
 
-        public StackMap(int initDictSize = 3)
+        public VariableBindingStackMap(int initDictSize = 3)
         {
             self = new Dictionary<string, string>(initDictSize);
         }

@@ -51,7 +51,7 @@ namespace Sharplog
         [Test]
         public void TestGoodUnification()
         {
-            StackMap bindings = new StackMap();
+            VariableBindingStackMap bindings = new VariableBindingStackMap();
             Expr e1 = new Expr("foo", "a", "b");
             Expr e2 = new Expr("foo", "a", "b");
             Assert.IsTrue(e1.GroundUnifyWith(e2, bindings));
@@ -74,7 +74,7 @@ namespace Sharplog
         [Test]
         public void TestBadUnification()
         {
-            StackMap bindings = new StackMap();
+            VariableBindingStackMap bindings = new VariableBindingStackMap();
             Expr e1 = new Expr("foo", "a", "b");
             Expr e2 = new Expr("foo", new string[] { "a", "b", "c" });
             //Assert.IsFalse(e1.GroundUnifyWith(e2, bindings));
@@ -114,7 +114,7 @@ namespace Sharplog
         public void TestSubstitute()
         {
             Expr e1 = new Expr("foo", "X", "Y");
-            StackMap bindings = new StackMap();
+            VariableBindingStackMap bindings = new VariableBindingStackMap();
             bindings.Add("X", "a");
             Expr e2 = e1.Substitute(bindings.DictionaryObject());
             Assert.IsTrue(e2.GetTerms()[0].Equals("a"));
@@ -131,7 +131,7 @@ namespace Sharplog
         public void TestQuotedStrings()
         {
             Expr e1 = new Expr("foo", "\"This is a quoted string");
-            StackMap bindings = new StackMap();
+            VariableBindingStackMap bindings = new VariableBindingStackMap();
             Assert.IsTrue(e1.ToString().Equals("foo(\"This is a quoted string\")"));
             bindings.Add("X", "\"This is a quoted string");
             bindings.Add("Y", "random");
@@ -151,7 +151,7 @@ namespace Sharplog
         [Test]
         public void TestEvalBuiltinEq()
         {
-            StackMap bindings = new StackMap();
+            VariableBindingStackMap bindings = new VariableBindingStackMap();
             Expr e1 = new Expr("=", "X", "Y");
             bindings.Add("X", "hello");
             bindings.Add("Y", "hello");
@@ -207,7 +207,7 @@ namespace Sharplog
         [Test]
         public void TestEvalBuiltinNe()
         {
-            StackMap bindings = new StackMap();
+            VariableBindingStackMap bindings = new VariableBindingStackMap();
             Expr e1 = new Expr("!=", "X", "Y");
             Assert.IsTrue(e1.Predicate.Equals("<>"));
             Assert.IsTrue(e1.PredicateWithArity.Equals("<>/2"));
@@ -272,7 +272,7 @@ namespace Sharplog
         [Test]
         public void TestEvalBuiltinOther()
         {
-            StackMap bindings = new StackMap();
+            VariableBindingStackMap bindings = new VariableBindingStackMap();
             bindings.Add("X", "100");
             bindings.Add("Y", "200");
             Expr e1 = new Expr("=!=", "X", "Y");

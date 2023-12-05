@@ -8,9 +8,9 @@ namespace Sharplog.Engine
 
         List<Expr> ReorderQuery(List<Expr> query);
 
-        IndexedSet ExpandDatabase(Universe jatalog, List<Expr> goals);
+        SignatureIndexedFactSet ExpandDatabase(Universe jatalog, List<Expr> goals);
 
-        List<IDictionary<string, string>> MatchGoals(IList<Expr> goals, int index, IndexedSet facts, StackMap bindings);
+        List<IDictionary<string, string>> MatchGoals(IList<Expr> goals, int index, SignatureIndexedFactSet facts, VariableBindingStackMap bindings);
 
         void TransformNewRule(Rule newRule);
     }

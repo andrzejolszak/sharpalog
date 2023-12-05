@@ -156,7 +156,7 @@ namespace Sharplog
         public void TestSubstitute()
         {
             Rule rule = Rule(new Expr("p", "A", "B"), new Expr("q", "A"), new Expr("q", "B"), new Expr("<>", "A", "B"));
-            StackMap bindings = new StackMap();
+            VariableBindingStackMap bindings = new VariableBindingStackMap();
             bindings.Add("A", "aa");
             bindings.Add("B", "bb");
             Rule subsRule = rule.Substitute(bindings);

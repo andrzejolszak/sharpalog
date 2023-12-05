@@ -9,21 +9,22 @@ namespace Sharplog.Engine
     /// <see cref="System.Collections.Generic.HashSet<object>{E}"/>
     /// that can quickly access a subset of its elements through an index.
     /// Jatalog uses it to quickly retrieve the facts with a specific predicate.
-    /// foo(bar, car);
-    /// foo(zar);
+    /// foo(bar, car).
+    /// foo(zar).
     /// ---------------
-    /// foo->{foo(bar, car), foo(zar)}
+    /// foo/2->foo(bar, car)
+    /// foo/1->foo(zar)
     /// </summary>
     /// <?/>
     /// <?/>
-public class IndexedSet
+public class SignatureIndexedFactSet
     {
         private HashSet<Expr> contents;
 
         private IDictionary<int, HashSet<Expr>> index;
 
         /// <summary>Default constructor.</summary>
-        public IndexedSet(int count = 0)
+        public SignatureIndexedFactSet(int count = 0)
         {
             index = new Dictionary<int, HashSet<Expr>>(count);
             contents = new HashSet<Expr>();
@@ -93,11 +94,6 @@ public class IndexedSet
         public bool Contains(Expr o)
         {
             return contents.Contains(o);
-        }
-
-        public bool ContainsIndex(Expr o)
-        {
-            return index.ContainsKey(o.Index());
         }
 
         public bool ContainsAllTest(IEnumerable<Expr> c)

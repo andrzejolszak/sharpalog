@@ -32,17 +32,17 @@ namespace Sharplog.Engine
             }
 
             List<Expr> orderedGoals = this.ReorderQuery(goals);
-            IndexedSet factsForDownstreamPredicates = ExpandDatabase(jatalog, orderedGoals);
+            SignatureIndexedFactSet factsForDownstreamPredicates = ExpandDatabase(jatalog, orderedGoals);
 
             // Now match the expanded database to the goals
-            return MatchGoals(orderedGoals, 0, factsForDownstreamPredicates, new StackMap());
+            return MatchGoals(orderedGoals, 0, factsForDownstreamPredicates, new VariableBindingStackMap());
         }
 
-        public IndexedSet ExpandDatabase(Universe jatalog, List<Expr> goals)
+        public SignatureIndexedFactSet ExpandDatabase(Universe jatalog, List<Expr> goals)
         {
             // Compute all downstream predicate names for the goals by following the rules, their goals, their rules, and so on...
             (HashSet<Expr> downstreamPredicates, HashSet<Rule> rulesForDownstreamPredicates) = GetAllDownstreamPredicates(jatalog, goals);
-            IndexedSet factsForDownstreamPredicates = new IndexedSet();
+            SignatureIndexedFactSet factsForDownstreamPredicates = new SignatureIndexedFactSet();
             foreach (Expr predicate in downstreamPredicates)
             {
                 factsForDownstreamPredicates.AddAll(jatalog.GetFacts(predicate));
@@ -213,7 +213,7 @@ namespace Sharplog.Engine
             return map;
         }
 
-        public List<IDictionary<string, string>> MatchGoals(IList<Expr> goals, int index, IndexedSet facts, StackMap bindings)
+        public List<IDictionary<string, string>> MatchGoals(IList<Expr> goals, int index, SignatureIndexedFactSet facts, VariableBindingStackMap bindings)
         {
             // PERF this flow allocs a lot of StackMaps with their Dictionaries
             Expr goal = goals[index];
@@ -354,7 +354,7 @@ namespace Sharplog.Engine
         * facts in each iteration of the loop.
         */
 
-        private void ExpandStrata(IndexedSet currentFacts, HashSet<Rule> strataRules)
+        private void ExpandStrata(SignatureIndexedFactSet currentFacts, HashSet<Rule> strataRules)
         {
             HashSet<Rule> remainingRules = strataRules;
 
@@ -400,7 +400,7 @@ namespace Sharplog.Engine
 
         /* Match the facts in the EDB against a specific rule */
 
-        private HashSet<Expr> GetRuleMatches(IndexedSet facts, Rule rule)
+        private HashSet<Expr> GetRuleMatches(SignatureIndexedFactSet facts, Rule rule)
         {
 #if DEBUG
             if ((rule.Body.Count == 0))
@@ -436,13 +436,13 @@ namespace Sharplog.Engine
             }
 
             // PERF: avoid evaluating same rule on same facts. NB: Fact and rule sets are not add-only
-            MatchGoals(rule.Head, rule.Body, seq, 0, facts, new StackMap(), res, null);
+            MatchGoals(rule.Head, rule.Body, seq, 0, facts, new VariableBindingStackMap(), res, null);
             return res;
         }
 
         private List<int> seq = new List<int>();
 
-        private void MatchGoals(Expr ruleHead, IList<Expr> goals, List<int> seq, int seqIndex, IndexedSet facts, StackMap bindings, HashSet<Expr> res, string[] reusableArray)
+        private void MatchGoals(Expr ruleHead, IList<Expr> goals, List<int> seq, int seqIndex, SignatureIndexedFactSet facts, VariableBindingStackMap bindings, HashSet<Expr> res, string[] reusableArray)
         {
             // TODO: semi-duplicated
             Expr goal = goals[seq[seqIndex]];

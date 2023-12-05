@@ -156,7 +156,7 @@ namespace Sharplog
         /// </remarks>
         /// <param name="bindings">The bindings to substitute.</param>
         /// <returns>the Rule with the substituted bindings.</returns>
-        public Rule Substitute(StackMap bindings)
+        public Rule Substitute(VariableBindingStackMap bindings)
         {
             List<Expr> subsBody = new List<Expr>();
             foreach (Expr e in Body)
