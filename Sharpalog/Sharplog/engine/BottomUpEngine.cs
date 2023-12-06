@@ -26,26 +26,28 @@ namespace Sharplog.Engine
         /// <exception cref="Sharplog.DatalogException"/>
         public List<IDictionary<string, string>> Query(Universe jatalog, List<Expr> goals)
         {
-            if (goals.Count == 0)
+            throw new InvalidOperationException("Not used");
+
+            /*if (goals.Count == 0)
             {
                 return new List<IDictionary<string, string>>(0);
             }
 
             List<Expr> orderedGoals = this.ReorderQuery(goals);
-            SignatureIndexedFactSet factsForDownstreamPredicates = ExpandDatabase(jatalog, orderedGoals);
+            SignatureIndexedFactSet factsForDownstreamPredicates = new SignatureIndexedFactSet();
+            ExpandDatabase(jatalog, orderedGoals, factsForDownstreamPredicates);
 
             // Now match the expanded database to the goals
-            return MatchGoals(orderedGoals, 0, factsForDownstreamPredicates, new VariableBindingStackMap());
+            return MatchGoals(orderedGoals, 0, factsForDownstreamPredicates, new VariableBindingStackMap());*/
         }
 
-        public SignatureIndexedFactSet ExpandDatabase(Universe jatalog, List<Expr> goals)
+        public void ExpandDatabase(Universe jatalog, List<Expr> goals, SignatureIndexedFactSet facts)
         {
             // Compute all downstream predicate names for the goals by following the rules, their goals, their rules, and so on...
             (HashSet<Expr> downstreamPredicates, HashSet<Rule> rulesForDownstreamPredicates) = GetAllDownstreamPredicates(jatalog, goals);
-            SignatureIndexedFactSet factsForDownstreamPredicates = new SignatureIndexedFactSet();
             foreach (Expr predicate in downstreamPredicates)
             {
-                factsForDownstreamPredicates.AddAll(jatalog.GetFacts(predicate));
+                facts.AddAll(jatalog.GetFacts(predicate));
             }
 
             // Build the database. A Set ensures that the facts are unique
@@ -54,11 +56,9 @@ namespace Sharplog.Engine
             {
                 if (rules.Count > 0)
                 {
-                    ExpandStrata(factsForDownstreamPredicates, rules);
+                    ExpandStrata(facts, rules);
                 }
             }
-
-            return factsForDownstreamPredicates;
         }
 
         public void TransformNewRule(Rule newRule)

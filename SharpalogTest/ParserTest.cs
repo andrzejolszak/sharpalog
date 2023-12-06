@@ -169,8 +169,71 @@ assert: bar(a)?
 foo(a,b)~
 assert: not foo(a,b)?
 
-foo(X, Y)~
-assert: not foo(c, d)?
+f(c).
+foo(X, Y), f(X)~
+assert: not foo(c, d), not f(c)?
+";
+            target.ExecuteAll(src);
+        }
+
+        [Test]
+        public void VariableBindingNameHandling()
+        {
+            Universe target = new Universe();
+            string src = @"
+foo(a, b).
+bar(a, b).
+
+baz(X, Y) :- taz(X, Y).
+taz(Y, X) :- faz(Y, X).
+faz(X, Y) :- foo(X, Y).
+
+assert: faz(a, b)?
+assert: taz(a, b)?
+assert: baz(a, b)?
+
+baz2(X, Y) :- taz2(Y, X).
+taz2(X, Y) :- faz2(X, Y).
+faz2(X, Y) :- foo(Y, X).
+
+assert: faz2(b, a)?
+assert: taz2(b, a)?
+assert: baz2(a, b)?
+
+foo2(c,c).
+
+assert: foo2(X,X)?
+assert: foo2(X,Y)?
+assert: foo2(_,X)?
+assert: foo2(X,_)?
+assert: not foo(X,X)?
+";
+            target.ExecuteAll(src);
+        }
+
+        [Test]
+        public void LongRule()
+        {
+            Universe target = new Universe();
+            string src = @"
+foo(a).
+foo(b).
+foo(c).
+foo(d).
+bar(b).
+bar(c).
+bar(d).
+car(c).
+car(d).
+dar(d).
+
+test(a, b, c, X) :- foo(X), bar(X), car(X), dar(X).
+test2(X, a, b, c) :- foo(X), bar(X), car(X), dar(X), test(Y, Z, C, D).
+test3(X, a, b, c) :- test(Y, Z, C, X), foo(X), bar(X), car(X), dar(X), test2(X, Y, Z, C).
+
+assert: test(a, b, c, d)?
+assert: test2(d, a, b, c)?
+assert: test3(d, a, b, c)?
 ";
             target.ExecuteAll(src);
         }

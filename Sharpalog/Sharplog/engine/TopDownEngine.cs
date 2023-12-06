@@ -274,7 +274,7 @@ namespace Sharplog.Engine
             throw new NotImplementedException();
         }
 
-        public SignatureIndexedFactSet ExpandDatabase(Universe jatalog, List<Expr> goals)
+        public void ExpandDatabase(Universe jatalog, List<Expr> goals, SignatureIndexedFactSet facts)
         {
             throw new NotImplementedException();
         }

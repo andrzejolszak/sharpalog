@@ -388,10 +388,7 @@ namespace Sharplog
             if (nonCachedGoals.Count > 0)
             {
                 List<Expr> orderedNonCacheGoals = _engine.ReorderQuery(nonCachedGoals);
-                SignatureIndexedFactSet factsForDownstreamPredicates = _engine.ExpandDatabase(this, orderedNonCacheGoals);
-
-                this._currentExpansionCacheFacts.AddAll(factsForDownstreamPredicates.All);
-                this._currentExpansionCacheGoals.UnionWith(nonCachedGoals);
+                _engine.ExpandDatabase(this, orderedNonCacheGoals, this._currentExpansionCacheFacts);
             }
 
             // Now match the expanded database to the goals
@@ -613,7 +610,7 @@ namespace Sharplog
                     IEnumerable<IDictionary<string, string>> aaa = statement.Execute(universe);
                     if (!aaa.Any())
                     {
-                        throw new DatalogException("Assertion failed");
+                        throw new DatalogException("Assertion failed: " + asQuery.ToString());
                     }
 
                     return null;
